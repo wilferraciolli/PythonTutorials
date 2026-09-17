@@ -6,7 +6,7 @@
 ###
 ### HEALTH CHECK
 ###
-GET {{baseUrl}}/
+GET {{baseUrl}}/health
 
 ###
 ### CREATE TODO

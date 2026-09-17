@@ -94,6 +94,6 @@ def delete_todo(todo_id: int):
 
 
 # Health check
-@app.get("/")
+@app.get("/health")
 def health_check():
     return {"status": "API is running"}
