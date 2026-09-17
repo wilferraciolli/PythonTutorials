@@ -2,6 +2,8 @@ from fastapi import FastAPI, APIRouter, HTTPException
 from datetime import datetime
 from typing import List
 from models import Todo, TodoCreate, TodoUpdate, TodoState
+from utils import TodoUtils
+
 
 router = APIRouter(prefix="/todos")
 
@@ -49,7 +51,14 @@ def get_todo(todo_id: int):
     if todo_id not in todos_db:
         raise HTTPException(status_code=404, detail="TODO not found")
 
-    return todos_db[todo_id]
+    todo_dict = todos_db[todo_id]
+    todo = Todo(**todo_dict)  # ← Convert dict to Todo object
+
+    # Check if overdue
+    if TodoUtils.is_overdue(todo):
+        print(f"⚠️ TODO {todo_id} is overdue!")
+
+    return todo
 
 
 # UPDATE - PUT
