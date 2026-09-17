@@ -29,6 +29,18 @@ Finally verify that all the dependencies were installed
 pip list
 ```
 
+### Dependencies
+Create the dependencies file Eg like pom.xml
+```bash
+pip freeze > requirements.txt
+```
 
+Install dependencies
+```bash
+pip install -r requirements.txt
+```
 
-
+## Running the app
+```bash
+uvicorn main:app --reload
+```
