@@ -1,7 +1,7 @@
 from fastapi import FastAPI, APIRouter, HTTPException
 from datetime import datetime
 from typing import List
-from models import Todo, TodoCreate, TodoState
+from models import Todo, TodoCreate, TodoUpdate, TodoState
 
 router = APIRouter(prefix="/todos")
 
@@ -20,8 +20,8 @@ def create_todo(todo: TodoCreate):
         "title": todo.title,
         "description": todo.description,
         "complete_by": todo.complete_by,
-        "state": TodoState.NEW,
-        "created_at": datetime.now()
+        "state": todo.state,
+        "created_date": datetime.now()
     }
 
     todos_db[next_id] = new_todo
@@ -54,7 +54,7 @@ def get_todo(todo_id: int):
 
 # UPDATE - PUT
 @router.put("/{todo_id}", response_model=Todo)
-def update_todo(todo_id: int, todo_update: TodoCreate):
+def update_todo(todo_id: int, todo_update: TodoUpdate):
     """Update a TODO"""
     if todo_id not in todos_db:
         raise HTTPException(status_code=404, detail="TODO not found")

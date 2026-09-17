@@ -29,7 +29,8 @@ Content-Type: application/json
 {
   "title": "Build Database Integration",
   "description": "Add SQLAlchemy and PostgreSQL support",
-  "complete_by": "2027-01-15T23:59:59"
+  "complete_by": "2027-01-15T23:59:59",
+  "state": "NEW"
 }
 
 ###
@@ -41,7 +42,8 @@ Content-Type: application/json
 {
   "title": "Deploy to Cloud",
   "description": "Deploy FastAPI app to Azure or AWS",
-  "complete_by": "2027-02-28T23:59:59"
+  "complete_by": "2027-02-28T23:59:59",
+  "state": "ACTIVE"
 }
 
 ###
@@ -83,7 +85,8 @@ Content-Type: application/json
 {
   "title": "Learn Python - UPDATED",
   "description": "Complete FastAPI course and master async/await",
-  "complete_by": "2027-01-31T23:59:59"
+  "complete_by": "2027-01-31T23:59:59",
+  "state": "ACTIVE"
 }
 
 ###

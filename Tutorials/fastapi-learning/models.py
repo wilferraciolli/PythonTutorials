@@ -8,11 +8,19 @@ class TodoState(str, Enum):
     ACTIVE = "ACTIVE"
     CLOSED = "CLOSED"
 
-# Request model
+# Request model for crating
 class TodoCreate(BaseModel):
     title: str
     description: str
     complete_by: datetime
+    state: TodoState = TodoState.NEW
+
+# Request model for updateing
+class TodoUpdate(BaseModel):
+    title: str
+    description: str
+    complete_by: datetime
+    state: TodoState
 
 # Response model
 class Todo(TodoCreate):
