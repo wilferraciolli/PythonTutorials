@@ -1,0 +1,112 @@
+### TODO API - HTTP Test File
+### Use with VS Code REST Client or IntelliJ
+
+@baseUrl = http://localhost:8000
+
+###
+### HEALTH CHECK
+###
+GET {{baseUrl}}/
+
+###
+### CREATE TODO
+###
+POST {{baseUrl}}/todos
+Content-Type: application/json
+
+{
+  "title": "Learn Python",
+  "description": "Complete FastAPI course from zero to hero",
+  "complete_by": "2026-12-31T23:59:59"
+}
+
+###
+### CREATE TODO 2
+###
+POST {{baseUrl}}/todos
+Content-Type: application/json
+
+{
+  "title": "Build Database Integration",
+  "description": "Add SQLAlchemy and PostgreSQL support",
+  "complete_by": "2027-01-15T23:59:59"
+}
+
+###
+### CREATE TODO 3
+###
+POST {{baseUrl}}/todos
+Content-Type: application/json
+
+{
+  "title": "Deploy to Cloud",
+  "description": "Deploy FastAPI app to Azure or AWS",
+  "complete_by": "2027-02-28T23:59:59"
+}
+
+###
+### GET ALL TODOS
+###
+GET {{baseUrl}}/todos
+
+###
+### GET ALL TODOS - Filter by NEW
+###
+GET {{baseUrl}}/todos?state=NEW
+
+###
+### GET ALL TODOS - Filter by ACTIVE
+###
+GET {{baseUrl}}/todos?state=ACTIVE
+
+###
+### GET ALL TODOS - Filter by CLOSED
+###
+GET {{baseUrl}}/todos?state=CLOSED
+
+###
+### GET TODO BY ID
+###
+GET {{baseUrl}}/todos/1
+
+###
+### GET TODO BY ID (2)
+###
+GET {{baseUrl}}/todos/2
+
+###
+### UPDATE TODO (Full Update)
+###
+PUT {{baseUrl}}/todos/1
+Content-Type: application/json
+
+{
+  "title": "Learn Python - UPDATED",
+  "description": "Complete FastAPI course and master async/await",
+  "complete_by": "2027-01-31T23:59:59"
+}
+
+###
+### UPDATE TODO STATE to ACTIVE
+###
+PATCH {{baseUrl}}/todos/1/state/ACTIVE
+
+###
+### UPDATE TODO STATE to CLOSED
+###
+PATCH {{baseUrl}}/todos/2/state/CLOSED
+
+###
+### UPDATE TODO STATE to NEW
+###
+PATCH {{baseUrl}}/todos/3/state/NEW
+
+###
+### DELETE TODO
+###
+DELETE {{baseUrl}}/todos/1
+
+###
+### DELETE TODO 2
+###
+DELETE {{baseUrl}}/todos/2
