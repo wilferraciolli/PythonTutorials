@@ -216,3 +216,8 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+/.idea/inspectionProfiles/profiles_settings.xml
+/.idea/.gitignore
+/.idea/modules.xml
+/.idea/PythonTutorials.iml
+/.idea/vcs.xml
