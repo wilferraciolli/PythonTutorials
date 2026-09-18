@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
+from links import build_tag_links
 from models import Tag, TagCreate
 from repositories.tag_repository import TagRepository
 
@@ -73,9 +74,11 @@ class TagService:
 
     @staticmethod
     def _row_to_tag(row: Dict[str, Any]) -> Tag:
+        tag_id = row["id"]
         return Tag(
-            id=row["id"],
+            id=tag_id,
             tag=row["tag"],
             resource_id=row["resource_id"],
             created_date=datetime.fromisoformat(row["created_date"]),
+            links=build_tag_links(tag_id),
         )

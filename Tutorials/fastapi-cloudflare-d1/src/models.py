@@ -1,7 +1,26 @@
 from enum import Enum
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 from pydantic import BaseModel, Field
+
+
+# Shared HATEOAS-style link, reused by any response DTO
+class Link(BaseModel):
+    """A single navigation link describing a related action on a resource."""
+    name: str
+    href: str
+    method: str = "GET"
+
+
+class LinkedResource(BaseModel):
+    """
+    Base class adding a `links` list to any response DTO.
+
+    Any model that inherits this gets a `links: List[Link]` field for free,
+    so the same Link shape/behavior is shared across Todo, Tag, and any
+    future resource - no copy-pasting the field definition each time.
+    """
+    links: List[Link] = Field(default_factory=list)
 
 
 # Enum for todo state
@@ -30,7 +49,7 @@ class TodoUpdate(BaseModel):
 
 
 # Response model
-class Todo(BaseModel):
+class Todo(LinkedResource):
     """Complete TODO object returned by API"""
     id: int
     title: str
@@ -47,10 +66,11 @@ class TagCreate(BaseModel):
     resource_id: int = Field(..., gt=0)
     tag: str = Field(..., min_length=1, max_length=50)
 
-class Tag(BaseModel):
+class Tag(LinkedResource):
     id: int
     resource_id: int
     tag: str
     created_date: datetime
     class Config:
         from_attributes = True
+

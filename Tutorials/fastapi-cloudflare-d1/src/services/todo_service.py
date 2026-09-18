@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
+from links import build_todo_links
 from models import Todo, TodoCreate, TodoState, TodoUpdate
 from repositories.todo_repository import TodoRepository
 from services.tag_service import TagService
@@ -91,11 +92,13 @@ class TodoService:
     @staticmethod
     def _row_to_todo(row: Dict[str, Any]) -> Todo:
         """Convert a raw D1 row (dict-like) into a validated Todo model."""
+        todo_id = row["id"]
         return Todo(
-            id=row["id"],
+            id=todo_id,
             title=row["title"],
             description=row.get("description") if hasattr(row, "get") else row["description"],
             complete_by=datetime.fromisoformat(row["complete_by"]),
             state=TodoState(row["state"]),
             created_date=datetime.fromisoformat(row["created_date"]),
+            links=build_todo_links(todo_id),
         )
