@@ -1,6 +1,8 @@
 from enum import Enum
 from datetime import datetime
-from pydantic import BaseModel
+from typing import Optional
+from pydantic import BaseModel, Field
+
 
 # Enum for todo state
 class TodoState(str, Enum):
@@ -8,23 +10,42 @@ class TodoState(str, Enum):
     ACTIVE = "ACTIVE"
     CLOSED = "CLOSED"
 
+
 # Request model for crating
 class TodoCreate(BaseModel):
-    title: str
-    description: str
+    """Model for creating a new TODO"""
+    title: str = Field(..., min_length=1, max_length=80)
+    description: Optional[str] = Field(None, max_length=200)
     complete_by: datetime
-    state: TodoState = TodoState.NEW
+    state: TodoState = Field(default=TodoState.NEW)
 
-# Request model for updateing
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "title": "Learn Python",
+                "description": "Complete FastAPI course",  # Optional in example
+                "complete_by": "2026-12-31T23:59:59",
+                "state": "NEW"
+            }
+        }
+
+
+# Request model for updating
 class TodoUpdate(BaseModel):
-    title: str
-    description: str
-    complete_by: datetime
-    state: TodoState
+    """Model for updating a TODO"""
+    title: Optional[str] = Field(None, min_length=1, max_length=80)
+    description: Optional[str] = Field(None, max_length=200)
+    complete_by: Optional[datetime] = None
+    state: Optional[TodoState] = None
+
 
 # Response model
-class Todo(TodoCreate):
+class Todo(BaseModel):
+    """Complete TODO object returned by API"""
     id: int
+    title: str
+    description: Optional[str] = None
+    complete_by: datetime
     state: TodoState
     created_date: datetime
 

@@ -2,6 +2,8 @@
 
 ## Running the app
 ```bash
+source venv/Scripts/activate
+
 uvicorn main:app --reload
 ```
 
