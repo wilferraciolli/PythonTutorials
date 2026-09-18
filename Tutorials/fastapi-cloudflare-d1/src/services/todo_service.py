@@ -3,14 +3,19 @@ from typing import Any, Dict, List, Optional
 
 from models import Todo, TodoCreate, TodoState, TodoUpdate
 from repositories.todo_repository import TodoRepository
+from services.tag_service import TagService
 from utils import TodoUtils
+
+OVERDUE_TAG = "overdue"
+NOT_STARTED_TAG = "not-started"
 
 
 class TodoService:
     """Business logic for TODOs, sitting between the router and the D1 repository."""
 
-    def __init__(self, repository: TodoRepository):
+    def __init__(self, repository: TodoRepository, tag_service: TagService):
         self.repository = repository
+        self.tag_service = tag_service
 
     async def create_todo(self, todo_create: TodoCreate) -> Todo:
         row = await self.repository.create(
@@ -20,7 +25,9 @@ class TodoService:
             state=todo_create.state,
             created_date=datetime.now(timezone.utc).isoformat(),
         )
-        return self._row_to_todo(row)
+        todo = self._row_to_todo(row)
+        await self._sync_auto_tags(todo)
+        return todo
 
     async def get_todo(self, todo_id: int) -> Optional[Todo]:
         row = await self.repository.get_by_id(todo_id)
@@ -49,17 +56,37 @@ class TodoService:
         if not row:
             return None
 
-        return self._row_to_todo(row)
+        todo = self._row_to_todo(row)
+        await self._sync_auto_tags(todo)
+        return todo
 
     async def update_todo_state(self, todo_id: int, new_state: TodoState) -> Optional[Todo]:
         row = await self.repository.update(todo_id, state=new_state)
         if not row:
             return None
 
-        return self._row_to_todo(row)
+        todo = self._row_to_todo(row)
+        await self._sync_auto_tags(todo)
+        return todo
 
     async def delete_todo(self, todo_id: int) -> bool:
-        return await self.repository.delete(todo_id)
+        deleted = await self.repository.delete(todo_id)
+        if deleted:
+            await self.tag_service.delete_all_tags_for_resource(todo_id)
+        return deleted
+
+    async def _sync_auto_tags(self, todo: Todo) -> None:
+        """
+        Keep the "overdue" and "not-started" tags in sync with the todo's
+        current state. The two are mutually exclusive - adding one removes
+        the other, so a todo never ends up wearing a stale tag.
+        """
+        if TodoUtils.is_overdue(todo):
+            await self.tag_service.add_tag_if_missing(todo.id, OVERDUE_TAG)
+            await self.tag_service.remove_tag_by_name(todo.id, NOT_STARTED_TAG)
+        elif todo.state == TodoState.NEW:
+            await self.tag_service.add_tag_if_missing(todo.id, NOT_STARTED_TAG)
+            await self.tag_service.remove_tag_by_name(todo.id, OVERDUE_TAG)
 
     @staticmethod
     def _row_to_todo(row: Dict[str, Any]) -> Todo:

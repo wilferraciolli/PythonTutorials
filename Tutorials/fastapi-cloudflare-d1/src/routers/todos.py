@@ -3,7 +3,9 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from models import Todo, TodoCreate, TodoState, TodoUpdate
+from repositories.tag_repository import TagRepository
 from repositories.todo_repository import TodoRepository
+from services.tag_service import TagService
 from services.todo_service import TodoService
 
 router = APIRouter(prefix="/todos", tags=["todos"])
@@ -18,7 +20,8 @@ def get_todo_service(request: Request) -> TodoService:
     so it cannot be created once at startup like our old `Depends(get_db)`.
     """
     env = request.scope["env"]
-    return TodoService(TodoRepository(env.DB))
+    tag_service = TagService(TagRepository(env.DB))
+    return TodoService(TodoRepository(env.DB), tag_service)
 
 
 @router.post("", response_model=Todo, status_code=201)

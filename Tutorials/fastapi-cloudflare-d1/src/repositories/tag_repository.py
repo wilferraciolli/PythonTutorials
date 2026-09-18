@@ -78,3 +78,26 @@ class TagRepository:
         await self.db.prepare("DELETE FROM tags WHERE id = ?").bind(id).run()
 
         return True
+
+    async def get_by_resource_and_tag(self, resource_id: int, tag: str) -> Optional[Dict[str, Any]]:
+        """Find a specific tag on a resource by name (used to avoid duplicates)."""
+        row = await (self.db.prepare("SELECT * FROM tags WHERE resource_id = ? AND tag = ?")
+                     .bind(resource_id, tag).first())
+
+        return row
+
+    async def delete_by_resource_and_tag(self, resource_id: int, tag: str) -> bool:
+        """Remove a specific tag from a resource by name, if it exists."""
+        existing = await self.get_by_resource_and_tag(resource_id, tag)
+
+        if not existing:
+            return False
+
+        await (self.db.prepare("DELETE FROM tags WHERE resource_id = ? AND tag = ?")
+               .bind(resource_id, tag).run())
+
+        return True
+
+    async def delete_all_for_resource(self, resource_id: int) -> None:
+        """Remove every tag attached to a resource (used when the resource itself is deleted)."""
+        await self.db.prepare("DELETE FROM tags WHERE resource_id = ?").bind(resource_id).run()

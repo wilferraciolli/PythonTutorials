@@ -50,6 +50,27 @@ class TagService:
     async def delete_tag(self, id: int) -> bool:
        return await self.repository.delete(id)
 
+    async def add_tag_if_missing(self, resource_id: int, tag_name: str) -> Tag:
+        """Add a tag to a resource, or return the existing one if it's already there."""
+        existing = await self.repository.get_by_resource_and_tag(resource_id, tag_name)
+        if existing:
+            return self._row_to_tag(existing)
+
+        row = await self.repository.create(
+            tag=tag_name,
+            resource_id=resource_id,
+            created_date=datetime.now(timezone.utc).isoformat(),
+        )
+        return self._row_to_tag(row)
+
+    async def remove_tag_by_name(self, resource_id: int, tag_name: str) -> bool:
+        """Remove a tag from a resource by name, if present."""
+        return await self.repository.delete_by_resource_and_tag(resource_id, tag_name)
+
+    async def delete_all_tags_for_resource(self, resource_id: int) -> None:
+        """Remove every tag attached to a resource (e.g. when the resource is deleted)."""
+        await self.repository.delete_all_for_resource(resource_id)
+
     @staticmethod
     def _row_to_tag(row: Dict[str, Any]) -> Tag:
         return Tag(
