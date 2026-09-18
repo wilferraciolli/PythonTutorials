@@ -47,7 +47,9 @@ Install dependencies
 pip install -r requirements.txt
 ```
 
-
+## Databases 
+Install the modules needed for the database, run the pip install and freeze to save the dependencies versions
+then create a file to handle the connection to the database and instantiate a repository.
 
 
 ## 📚 Understanding: FastAPI Routers (Like Java Controllers)
