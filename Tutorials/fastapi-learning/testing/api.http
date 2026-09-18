@@ -2,6 +2,7 @@
 ### Use with VS Code REST Client or IntelliJ
 
 @baseUrl = http://localhost:8000
+# @baseUrl = https://fastapi-todo-d1.wiliam334.workers.dev/
 
 ###
 ### HEALTH CHECK

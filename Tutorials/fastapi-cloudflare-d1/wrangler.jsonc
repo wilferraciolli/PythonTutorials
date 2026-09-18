@@ -1,0 +1,15 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "fastapi-todo-d1",
+	"main": "src/entry.py",
+	// Set this to today's date when you first deploy
+	"compatibility_date": "2026-09-18",
+	"compatibility_flags": ["python_workers"],
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "todo-db",
+			"database_id": "adf2711f-e2b4-40f9-9939-d6cc82a918b2"
+		}
+	]
+}

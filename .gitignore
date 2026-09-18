@@ -216,8 +216,13 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+/.idea/i*
 /.idea/inspectionProfiles/profiles_settings.xml
 /.idea/.gitignore
 /.idea/modules.xml
 /.idea/PythonTutorials.iml
 /.idea/vcs.xml
+/.idea/dataSources/data_sources_history.xml
+/.idea/dataSources.local.xml
+/.idea/dataSources.xml
+/.idea/fastapi-todo-d1.iml
