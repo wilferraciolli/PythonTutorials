@@ -41,3 +41,16 @@ class Todo(BaseModel):
 
     class Config:
         from_attributes = True
+
+# Response model
+class TagCreate(BaseModel):
+    resource_id: int = Field(..., gt=0)
+    tag: str = Field(..., min_length=1, max_length=50)
+
+class Tag(BaseModel):
+    id: int
+    resource_id: int
+    tag: str
+    created_date: datetime
+    class Config:
+        from_attributes = True
