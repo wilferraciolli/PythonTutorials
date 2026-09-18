@@ -28,28 +28,21 @@ async def search_tags(
 ) -> List[Tag]:
     return await service.search_tags(tag)
 
-@router.post("")
+@router.post("", response_model=Tag, status_code=201)
 async def create_tag(
         tag: TagCreate,
         service: TagService = Depends(get_tag_service)
 ) -> Tag:
     return await service.create_tag(tag)
 
-@router.get("")
+@router.get("", response_model=List[Tag], status_code=200)
 async def get_all_tags(
+        resource_id: Optional[int] = None,
         service: TagService = Depends(get_tag_service)
 ) -> List[Tag]:
-    return await service.get_all_tags()
+    return await service.get_all_tags(resource_id)
 
-@router.get("/{resource_id}")
-async def get_all_tags_for_resource(
-        resource_id: int,
-        service: TagService = Depends(get_tag_service)
-) -> List[Tag]:
-    return await service.get_all_tags_for_resource(resource_id)
-
-
-@router.get("/{id}")
+@router.get("/{id}", response_model=Tag, status_code=200)
 async def get_tag(
         id: int,
         service: TagService = Depends(get_tag_service)
@@ -60,9 +53,11 @@ async def get_tag(
 
     return tag
 
-@router.delete("/{id}")
+@router.delete("/{id}", status_code=204)
 async def delete_tag(
         id: int,
         service: TagService = Depends(get_tag_service)
 ) -> None:
-    return await service.delete_tag(id)
+    success = await service.delete_tag(id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Tag not found")

@@ -11,6 +11,13 @@ class TagService:
     def __init__(self, repository: TagRepository):
         self.repository = repository
 
+
+    async def search_tags(self, term: Optional[str] = None) -> List[Tag]:
+        rows = await self.repository.search_tags(term)
+
+        return [self._row_to_tag(row) for row in rows]
+
+
     async def create_tag(
             self,
             tag_create: TagCreate) -> Tag:
@@ -22,6 +29,7 @@ class TagService:
 
         return self._row_to_tag(row)
 
+
     async def get_tag(self, id: int) -> Optional[Tag]:
         row = await self.repository.get_by_id(id)
         if not row:
@@ -29,23 +37,18 @@ class TagService:
 
         return self._row_to_tag(row)
 
-    async def get_all_tags_for_resource(self, resource_id: int) -> List[Tag]:
-        rows = await self.repository.get_all_by_resource_id(resource_id)
+
+    async def get_all_tags(self, resource_id : Optional[int] = None) -> List[Tag]:
+        if resource_id:
+            rows = await self.repository.get_all_by_resource_id(resource_id)
+        else:
+            rows = await self.repository.get_all()
 
         return [self._row_to_tag(row) for row in rows]
 
-    async def search_tags(self, term: Optional[str] = None) -> List[Tag]:
-        rows = await self.repository.search_tags(term)
 
-        return [self._row_to_tag(row) for row in rows]
-
-    async def get_all_tags(self) -> List[Tag]:
-        rows = await self.repository.get_all()
-
-        return [self._row_to_tag(row) for row in rows]
-
-    async def delete_tag(self, id: int) -> None:
-        await self.repository.delete(id)
+    async def delete_tag(self, id: int) -> bool:
+       return await self.repository.delete(id)
 
     @staticmethod
     def _row_to_tag(row: Dict[str, Any]) -> Tag:

@@ -52,9 +52,9 @@ class TagRepository:
 
     async def search_tags(self, term: Optional[str] = None) -> List[Dict[str, Any]]:
         if term:
-            result = await self.db.prepare("SELECT * FROM tags WHERE tag LIKE ?").bind(term).all()
+            result = await self.db.prepare("SELECT * FROM tags WHERE tag LIKE ?").bind(f"%{term}%").all()
         else:
-            result = await self.db.prepare("SELECT * FROM tags WHERE resource_id = ?").all()
+            result = await self.db.prepare("SELECT * FROM tags").all()
 
         return self._get(result, "results", [])
 
