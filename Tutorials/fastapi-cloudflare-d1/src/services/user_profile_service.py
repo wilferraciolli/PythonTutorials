@@ -68,14 +68,6 @@ class UserProfileService:
             },
         }
 
-    def build_meta_links(self) -> dict[str, Link]:
-        return {
-            "createTodo": Link(href="/todos", method="POST"),
-            "todoTemplate": Link(href="/todos/template", method="GET"),
-            "tags": Link(href="/tags", method="GET"),
-            "tagTemplate": Link(href="/tags/template", method="GET"),
-        }
-
     def build_response(
         self,
         user_profile: UserProfile,
@@ -85,6 +77,6 @@ class UserProfileService:
             data_name="userProfile",
             data=user_profile,
             metadata=self.build_metadata(),
-            meta_links=self.build_meta_links(),
+            meta_links={},
             messages=messages,
         )

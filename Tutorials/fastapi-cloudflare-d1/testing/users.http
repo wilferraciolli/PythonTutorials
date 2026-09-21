@@ -1,5 +1,5 @@
 @baseUrl = http://127.0.0.1:8001
-@userId = aacd53a1-b5b3-4434-b9d9-08a8aaaff324
+@userId = 9f8d5fe1-80af-4701-8786-e260cf4a59ae
 
 ### User template
 GET {{baseUrl}}/users/template
