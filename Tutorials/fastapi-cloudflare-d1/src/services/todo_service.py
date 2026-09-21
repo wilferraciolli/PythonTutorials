@@ -3,14 +3,13 @@ from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
 from api_response import envelope
-from models import Link, Todo, TodoCreate, TodoState, TodoUpdate
+from models import Link, Todo, TodoCreate, TodoState, TodoUpdate, format_utc_datetime
 from repositories.todo_repository import TodoRepository
 from services.tag_service import TagService
 from utils import TodoUtils
 
 OVERDUE_TAG = "overdue"
 NOT_STARTED_TAG = "not-started"
-ZERO_UUID = "00000000-0000-0000-0000-000000000000"
 
 
 class TodoService:
@@ -20,14 +19,27 @@ class TodoService:
         self.repository = repository
         self.tag_service = tag_service
 
-    def get_template(self) -> Todo:
-        return  Todo(
-            id=ZERO_UUID,
-            title="",
-            description="",
-            complete_by=datetime.now(timezone.utc),
-            state=TodoState.NEW,
-            created_date=datetime.now(timezone.utc)
+    def build_template_response(self) -> Dict[str, Any]:
+        """
+        Build a create-template response.
+
+        Templates use the create DTO shape, not the persisted Todo shape, so
+        server-managed fields like id and created_date are omitted entirely.
+        """
+        template = {
+            "id": "",
+            "title": "",
+            "description": "",
+            "complete_by": format_utc_datetime(datetime.now(timezone.utc)),
+            "state": TodoState.NEW,
+            "created_date": ""
+        }
+
+        return envelope(
+            "todo",
+            template,
+            self._template_metadata(),
+            self._meta_links(),
         )
 
     async def create_todo(self, todo_create: TodoCreate) -> Todo:
@@ -203,6 +215,24 @@ class TodoService:
             "created_date": {
                 "readOnly": True
             }
+        }
+
+    def _template_metadata(self) -> Dict[str, Any]:
+        """Metadata for a create template: only fields the client can submit."""
+        return {
+            "title": {
+                "mandatory": True,
+            },
+            "complete_by": {
+                "mandatory": True,
+            },
+            "state": {
+                "mandatory": True,
+                "values": [
+                    {"id": state.value, "value": state.value.title()}
+                    for state in TodoState
+                ],
+            },
         }
 
     def _meta_links(self, *, can_create: bool = True) -> Dict[str, Link]:

@@ -13,6 +13,26 @@ class TagService:
     def __init__(self, repository: TagRepository):
         self.repository = repository
 
+    def build_template_response(self) -> Dict[str, Any]:
+        """
+        Build a create-template response.
+
+        Templates use the create DTO shape, so server-managed fields like id
+        and created_date are omitted entirely.
+        """
+        template = {
+            "id": "",
+            "resource_id": "",
+            "tag": "",
+            "created_date": ""
+        }
+
+        return envelope(
+            "tag",
+            template,
+            self._template_metadata(),
+            self._meta_links(),
+        )
 
     async def search_tags(self, term: Optional[str] = None) -> List[Tag]:
         rows = await self.repository.search_tags(term)
@@ -139,6 +159,17 @@ class TagService:
             "created_date": {
                 "readOnly": True
             }
+        }
+
+    def _template_metadata(self) -> Dict[str, Any]:
+        """Metadata for a create template: only fields the client can submit."""
+        return {
+            "resource_id": {
+                "mandatory": True
+            },
+            "tag": {
+                "mandatory": True,
+            },
         }
 
     def _meta_links(self, *, can_create: bool = True) -> Dict[str, Link]:

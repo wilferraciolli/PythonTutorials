@@ -25,10 +25,9 @@ def get_todo_service(request: Request) -> TodoService:
 
 
 @router.get("/template", status_code=200)
-async def create_todo(service: TodoService = Depends(get_todo_service)) -> Dict[str, Any]:
+async def get_todo_template(service: TodoService = Depends(get_todo_service)) -> Dict[str, Any]:
     """Get a TODO template"""
-    template = service.get_template()
-    return service.build_response("todo", template)
+    return service.build_template_response()
 
 
 @router.post("", status_code=201)

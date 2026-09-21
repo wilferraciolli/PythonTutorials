@@ -29,6 +29,11 @@ async def search_tags(
     tags = await service.search_tags(tag)
     return service.build_response("tags", tags)
 
+@router.get("/template", status_code=200)
+async def get_tag_template(service: TagService = Depends(get_tag_service)) -> Dict[str, Any]:
+    """Get a Tag template"""
+    return service.build_template_response()
+
 @router.post("", status_code=201)
 async def create_tag(
         tag: TagCreate,
