@@ -1,0 +1,5 @@
+@baseUrl = http://127.0.0.1:8001
+@userId = replace-with-user-uuid
+
+### User profile
+GET {{baseUrl}}/users/{{userId}}/profile
