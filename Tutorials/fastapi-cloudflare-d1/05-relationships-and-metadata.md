@@ -58,10 +58,87 @@ above). `TodoService.delete_todo()` explicitly calls
 `TagService.delete_all_tags_for_resource(todo_id)` after a successful
 delete, so orphaned tags never accumulate.
 
-## 2. Metadata: the shared `links` field
+## 2. Standard response envelope
+
+Every successful endpoint response now uses the same top-level shape:
+
+```json
+{
+  "_data": {
+    "todo": {}
+  },
+  "_metadata": {},
+  "_metaLinks": {}
+}
+```
+
+The resource name inside `_data` changes based on the endpoint:
+
+| Endpoint type | `_data` key | Value shape |
+|---|---|---|
+| Single todo | `todo` | object |
+| Todo list | `todos` | array |
+| Single tag | `tag` | object |
+| Tag list | `tags` | array |
+
+For example, `GET /todos` returns:
+
+```json
+{
+  "_data": {
+    "todos": [
+      {
+        "id": 1,
+        "title": "Example",
+        "links": {
+          "self": { "href": "/todos/1", "method": "GET" }
+        }
+      }
+    ]
+  },
+  "_metadata": {
+    "id": { "readOnly": true, "hidden": true },
+    "title": { "mandatory": true }
+  },
+  "_metaLinks": {
+    "createTodo": { "href": "/todos", "method": "POST" }
+  }
+}
+```
+
+This is split across two concerns:
+
+- `api_response.py`
+  - `envelope(...)` wraps payloads consistently.
+- Application services (`TodoService`, `TagService`)
+  - `build_response(...)` constructs the full response envelope for that request.
+  - `_metadata(...)` describes fields using current business state.
+  - `_meta_links(...)` exposes collection-level actions based on permissions.
+  - `_links(...)` exposes resource-level actions based on permissions.
+
+Routers are responsible for choosing the `_data` key (`todo`, `todos`,
+`tag`, `tags`) and passing the correct metadata/meta-links for that resource.
+Services still return plain domain DTOs (`Todo`, `Tag`), which keeps business
+logic independent from response formatting.
+
+Metadata and links are intentionally not static constants. For example, once
+a todo has moved from `NEW` to `ACTIVE`, the `NEW` state is no longer offered
+inside `_metadata.state.values`. Later, when authentication exists, the same
+application service logic can omit links such as `delete` if the current user
+does not have permission to perform that action.
+
+`_messages` is optional and only appears when the service has something
+useful to communicate, such as a warning or informational message. It is not
+included as an empty array on every successful response.
+
+Delete endpoints intentionally return `204 No Content` with no response body.
+That is the standard HTTP shape for a successful delete and avoids returning
+an envelope that contains no real resource data.
+
+## 3. Metadata: the shared `links` field
 
 Every response DTO (`Todo`, `Tag`, and any future resource) includes a
-`links` array describing related actions the client can take next — without
+`links` object describing related actions the client can take next — without
 the client needing to hardcode URL patterns.
 
 ### Example response
@@ -74,13 +151,13 @@ the client needing to hardcode URL patterns.
   "complete_by": "2027-01-01T00:00:00",
   "state": "NEW",
   "created_date": "2026-09-18T15:30:48.831000Z",
-  "links": [
-    { "name": "self",   "href": "/todos/2",             "method": "GET" },
-    { "name": "update", "href": "/todos/2",             "method": "PUT" },
-    { "name": "delete", "href": "/todos/2",             "method": "DELETE" },
-    { "name": "addTag", "href": "/tags",                "method": "POST" },
-    { "name": "tags",   "href": "/tags?resource_id=2",  "method": "GET" }
-  ]
+  "links": {
+    "self":   { "href": "/todos/2",             "method": "GET" },
+    "update": { "href": "/todos/2",             "method": "PUT" },
+    "delete": { "href": "/todos/2",             "method": "DELETE" },
+    "addTag": { "href": "/tags",                "method": "POST" },
+    "tags":   { "href": "/tags?resource_id=2",  "method": "GET" }
+  }
 }
 ```
 
@@ -91,12 +168,11 @@ that any DTO can inherit from to get a `links` field for free:
 
 ```python
 class Link(BaseModel):
-    name: str
     href: str
     method: str = "GET"
 
 class LinkedResource(BaseModel):
-    links: List[Link] = Field(default_factory=list)
+    links: Dict[str, Link] = Field(default_factory=dict)
 
 class Todo(LinkedResource):
     id: int
@@ -109,25 +185,36 @@ class Tag(LinkedResource):
     # ...
 ```
 
-**`links.py`** — small, pure functions that build the right list of links
-for a given resource id. No database access, no side effects — just a
-lookup table of "what actions exist for this resource":
+**Application services** — `TodoService` and `TagService` build the right
+links for each resource using the resource's current state plus future
+permission flags. This happens during each stateless request, not at startup
+and not from a static config file:
 
 ```python
-def build_todo_links(todo_id: int) -> List[Link]:
-    return [
-        Link(name="self",   href=f"/todos/{todo_id}", method="GET"),
-        Link(name="update", href=f"/todos/{todo_id}", method="PUT"),
-        Link(name="delete", href=f"/todos/{todo_id}", method="DELETE"),
-        Link(name="addTag", href="/tags",             method="POST"),
-        Link(name="tags",   href=f"/tags?resource_id={todo_id}", method="GET"),
-    ]
+def _links(
+    self,
+    todo: Todo,
+    *,
+    can_update: bool = True,
+    can_delete: bool = True,
+    can_add_tag: bool = True,
+    can_view_tags: bool = True,
+) -> Dict[str, Link]:
+    links = {"self": Link(href=f"/todos/{todo.id}", method="GET")}
 
-def build_tag_links(tag_id: int) -> List[Link]:
-    return [
-        Link(name="self",   href=f"/tags/{tag_id}", method="GET"),
-        Link(name="delete", href=f"/tags/{tag_id}", method="DELETE"),
-    ]
+    if can_update:
+        links["update"] = Link(href=f"/todos/{todo.id}", method="PUT")
+
+    if can_delete:
+        links["delete"] = Link(href=f"/todos/{todo.id}", method="DELETE")
+
+    if can_add_tag:
+        links["addTag"] = Link(href="/tags", method="POST")
+
+    if can_view_tags:
+        links["tags"] = Link(href=f"/tags?resource_id={todo.id}", method="GET")
+
+    return links
 ```
 
 **Services** attach the links at the same point they convert a raw D1 row
@@ -137,22 +224,23 @@ includes correct links with zero extra effort per-endpoint.
 
 ### Why this approach?
 
-- **Single source of truth**: link-building logic lives in one file
-  (`links.py`), not scattered across every router.
+- **Single source of truth**: link/metadata business rules live in the
+  relevant application service (`TodoService` or `TagService`), not scattered
+  across every router.
 - **Reusable across resources**: `LinkedResource` means adding `links` to a
   brand-new DTO later is a one-line inheritance change, not a
   copy-pasted field.
 - **Discoverability for API clients**: a client can follow `links` instead
-  of hardcoding URL patterns — if a route ever changes, only `links.py`
-  needs updating.
+  of hardcoding URL patterns — if a route ever changes, only the relevant
+  service method needs updating.
 - **Cheap to compute**: links are just string formatting (no DB calls), so
   attaching them costs virtually nothing per request.
 
 ### What's intentionally *not* done (yet)
 
 - No `_links` HAL-style nesting (`{"_links": {"self": {"href": ...}}}`) —
-  we used a flat `links: [...]` array instead, which is simpler to read and
-  matches what was asked for.
+  we used a resource-level `links: {...}` object instead, which is simpler
+  to read and matches the API shape used by this project.
 - No pagination links (`next`/`prev`) — not needed yet since `GET /todos`
   and `GET /tags` return full lists, not paged ones.
 - No `resource_type` column on `tags` — deferred until there's a second

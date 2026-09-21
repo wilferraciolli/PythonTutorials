@@ -1,8 +1,8 @@
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from links import build_tag_links
-from models import Tag, TagCreate
+from api_response import envelope
+from models import Link, Tag, TagCreate
 from repositories.tag_repository import TagRepository
 
 
@@ -72,13 +72,77 @@ class TagService:
         """Remove every tag attached to a resource (e.g. when the resource is deleted)."""
         await self.repository.delete_all_for_resource(resource_id)
 
-    @staticmethod
-    def _row_to_tag(row: Dict[str, Any]) -> Tag:
+    def build_response(
+        self,
+        data_name: str,
+        data: Any,
+        messages: Optional[List[Dict[str, str]]] = None,
+    ) -> Dict[str, Any]:
+        """
+        Build the full Tag response envelope for this stateless request.
+
+        Metadata and links are calculated here in the application service,
+        because they can depend on business rules and future permissions.
+        """
+        tag = data if isinstance(data, Tag) else None
+        return envelope(
+            data_name,
+            data,
+            self._metadata(tag),
+            self._meta_links(),
+            messages,
+        )
+
+    def _row_to_tag(self, row: Dict[str, Any]) -> Tag:
         tag_id = row["id"]
-        return Tag(
+        tag = Tag(
             id=tag_id,
             tag=row["tag"],
             resource_id=row["resource_id"],
             created_date=datetime.fromisoformat(row["created_date"]),
-            links=build_tag_links(tag_id),
         )
+        tag.links = self._links(tag)
+        return tag
+
+    def _links(
+        self,
+        tag: Tag,
+        *,
+        can_delete: bool = True,
+    ) -> Dict[str, Link]:
+        """Resource-level Tag links, calculated per request."""
+        links = {
+            "self": Link(href=f"/tags/{tag.id}", method="GET"),
+        }
+
+        if can_delete:
+            links["delete"] = Link(href=f"/tags/{tag.id}", method="DELETE")
+
+        return links
+
+    def _metadata(self, tag: Optional[Tag] = None) -> Dict[str, Any]:
+        """Field metadata for Tag payloads, calculated per request."""
+        return {
+            "id": {
+                "readOnly": True,
+                "hidden": True,
+            },
+            "resource_id": {
+                "mandatory": True
+            },
+            "tag": {
+                "mandatory": True,
+            },
+            "created_date": {
+                "readOnly": True
+            }
+        }
+
+    def _meta_links(self, *, can_create: bool = True) -> Dict[str, Link]:
+        """Collection-level Tag links, calculated per request."""
+        if not can_create:
+            return {}
+
+        return {
+            "createTag": Link(href="/tags", method="POST"),
+        }

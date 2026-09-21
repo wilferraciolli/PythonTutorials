@@ -1,8 +1,8 @@
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from links import build_todo_links
-from models import Todo, TodoCreate, TodoState, TodoUpdate
+from api_response import envelope
+from models import Link, Todo, TodoCreate, TodoState, TodoUpdate
 from repositories.todo_repository import TodoRepository
 from services.tag_service import TagService
 from utils import TodoUtils
@@ -17,6 +17,16 @@ class TodoService:
     def __init__(self, repository: TodoRepository, tag_service: TagService):
         self.repository = repository
         self.tag_service = tag_service
+
+    def get_template(self) -> Todo:
+        return  Todo(
+            id=0,
+            title="",
+            description="",
+            complete_by=datetime.now(timezone.utc),
+            state=TodoState.NEW,
+            created_date=datetime.now(timezone.utc)
+        )
 
     async def create_todo(self, todo_create: TodoCreate) -> Todo:
         row = await self.repository.create(
@@ -76,6 +86,28 @@ class TodoService:
             await self.tag_service.delete_all_tags_for_resource(todo_id)
         return deleted
 
+    def build_response(
+        self,
+        data_name: str,
+        data: Any,
+        messages: Optional[List[Dict[str, str]]] = None,
+    ) -> Dict[str, Any]:
+        """
+        Build the full Todo response envelope for this stateless request.
+
+        Metadata and links are calculated here in the application service,
+        because they are business decisions. Later, this method can use the
+        current user/permissions to hide fields or remove links like delete.
+        """
+        todo = data if isinstance(data, Todo) else None
+        return envelope(
+            data_name,
+            data,
+            self._metadata(todo),
+            self._meta_links(),
+            messages,
+        )
+
     async def _sync_auto_tags(self, todo: Todo) -> None:
         """
         Keep the "overdue" and "not-started" tags in sync with the todo's
@@ -89,16 +121,92 @@ class TodoService:
             await self.tag_service.add_tag_if_missing(todo.id, NOT_STARTED_TAG)
             await self.tag_service.remove_tag_by_name(todo.id, OVERDUE_TAG)
 
-    @staticmethod
-    def _row_to_todo(row: Dict[str, Any]) -> Todo:
+    def _row_to_todo(self, row: Dict[str, Any]) -> Todo:
         """Convert a raw D1 row (dict-like) into a validated Todo model."""
         todo_id = row["id"]
-        return Todo(
+        todo = Todo(
             id=todo_id,
             title=row["title"],
             description=row.get("description") if hasattr(row, "get") else row["description"],
             complete_by=datetime.fromisoformat(row["complete_by"]),
             state=TodoState(row["state"]),
             created_date=datetime.fromisoformat(row["created_date"]),
-            links=build_todo_links(todo_id),
         )
+        todo.links = self._links(todo)
+        return todo
+
+    def _links(
+        self,
+        todo: Todo,
+        *,
+        can_update: bool = True,
+        can_delete: bool = True,
+        can_add_tag: bool = True,
+        can_view_tags: bool = True,
+    ) -> Dict[str, Link]:
+        """
+        Resource-level links for this Todo, calculated per request.
+
+        Permission flags are hard-coded for now because there is no auth yet.
+        Once auth exists, these values should come from the current user.
+        """
+        links = {
+            "self": Link(href=f"/todos/{todo.id}", method="GET"),
+        }
+
+        if can_update:
+            links["update"] = Link(href=f"/todos/{todo.id}", method="PUT")
+
+        if can_delete:
+            links["delete"] = Link(href=f"/todos/{todo.id}", method="DELETE")
+
+        if can_add_tag:
+            links["addTag"] = Link(href="/tags", method="POST")
+
+        if can_view_tags:
+            links["tags"] = Link(href=f"/tags?resource_id={todo.id}", method="GET")
+
+        return links
+
+    def _metadata(self, todo: Optional[Todo] = None) -> Dict[str, Any]:
+        """
+        Field metadata for Todo payloads, calculated per request.
+
+        Example business rule:
+        - If a todo has already left NEW, NEW is no longer offered as an
+          allowed state value.
+        """
+        state_values = [
+            {"id": state.value, "value": state.value.title()}
+            for state in TodoState
+            if todo is None or todo.state == TodoState.NEW or state != TodoState.NEW
+        ]
+
+        return {
+            "id": {
+                "readOnly": True,
+                "hidden": True,
+            },
+            "title": {
+                "mandatory": True,
+            },
+            "complete_by": {
+                "mandatory": True,
+            },
+            "state": {
+                "mandatory": True,
+                "values": state_values,
+            },
+            "created_date": {
+                "readOnly": True
+            }
+        }
+
+    def _meta_links(self, *, can_create: bool = True) -> Dict[str, Link]:
+        """Collection-level Todo links, calculated per request."""
+        if not can_create:
+            return {}
+
+        return {
+            "createTodo": Link(href="/todos", method="POST"),
+        }

@@ -168,7 +168,7 @@ curl.exe --ssl-no-revoke https://fastapi-todo-d1.<your-subdomain>.workers.dev/do
 | POST | `/todos` | Create a todo (`title`, optional `description`, `complete_by`) |
 | PUT | `/todos/{id}` | Full update of a todo |
 | PATCH | `/todos/{id}/state/{state}` | Update only the state (`NEW`, `ACTIVE`, `CLOSED`) |
-| DELETE | `/todos/{id}` | Delete a todo (returns `204`) |
+| DELETE | `/todos/{id}` | Delete a todo (returns `204 No Content`) |
 | GET | `/docs` | Interactive Swagger UI |
 | GET | `/openapi.json` | OpenAPI schema |
 

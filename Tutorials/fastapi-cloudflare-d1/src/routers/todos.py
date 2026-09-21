@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 
@@ -24,54 +24,63 @@ def get_todo_service(request: Request) -> TodoService:
     return TodoService(TodoRepository(env.DB), tag_service)
 
 
-@router.post("", response_model=Todo, status_code=201)
-async def create_todo(todo: TodoCreate, service: TodoService = Depends(get_todo_service)) -> Todo:
+@router.get("/template", status_code=200)
+async def create_todo(service: TodoService = Depends(get_todo_service)) -> Dict[str, Any]:
     """Create a new TODO"""
-    return await service.create_todo(todo)
+    template = service.get_template()
+    return service.build_response("todo", template)
 
 
-@router.get("", response_model=List[Todo])
+@router.post("", status_code=201)
+async def create_todo(todo: TodoCreate, service: TodoService = Depends(get_todo_service)) -> Dict[str, Any]:
+    """Create a new TODO"""
+    created = await service.create_todo(todo)
+    return service.build_response("todo", created)
+
+
+@router.get("")
 async def get_all_todos(
     state: Optional[TodoState] = None,
     service: TodoService = Depends(get_todo_service),
-) -> List[Todo]:
+) -> Dict[str, Any]:
     """Get all TODOs, optionally filtered by state"""
-    return await service.get_all_todos(state=state)
+    todos = await service.get_all_todos(state=state)
+    return service.build_response("todos", todos)
 
 
-@router.get("/{todo_id}", response_model=Todo)
-async def get_todo(todo_id: int, service: TodoService = Depends(get_todo_service)) -> Todo:
+@router.get("/{todo_id}")
+async def get_todo(todo_id: int, service: TodoService = Depends(get_todo_service)) -> Dict[str, Any]:
     """Get a single TODO by ID"""
     todo = await service.get_todo(todo_id)
     if not todo:
         raise HTTPException(status_code=404, detail=f"TODO {todo_id} not found")
-    return todo
+    return service.build_response("todo", todo)
 
 
-@router.put("/{todo_id}", response_model=Todo)
+@router.put("/{todo_id}")
 async def update_todo(
     todo_id: int,
     todo_update: TodoUpdate,
     service: TodoService = Depends(get_todo_service),
-) -> Todo:
+) -> Dict[str, Any]:
     """Update a TODO (partial update - only send fields you want to change)"""
     todo = await service.update_todo(todo_id, todo_update)
     if not todo:
         raise HTTPException(status_code=404, detail=f"TODO {todo_id} not found")
-    return todo
+    return service.build_response("todo", todo)
 
 
-@router.patch("/{todo_id}/state/{new_state}", response_model=Todo)
+@router.patch("/{todo_id}/state/{new_state}")
 async def update_todo_state(
     todo_id: int,
     new_state: TodoState,
     service: TodoService = Depends(get_todo_service),
-) -> Todo:
+) -> Dict[str, Any]:
     """Update only the state of a TODO"""
     todo = await service.update_todo_state(todo_id, new_state)
     if not todo:
         raise HTTPException(status_code=404, detail=f"TODO {todo_id} not found")
-    return todo
+    return service.build_response("todo", todo)
 
 
 @router.delete("/{todo_id}", status_code=204)

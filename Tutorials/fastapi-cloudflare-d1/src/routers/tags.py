@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 
@@ -25,33 +25,36 @@ def get_tag_service(request: Request) -> TagService:
 async def search_tags(
         tag: Optional[str] = None,
         service: TagService = Depends(get_tag_service)
-) -> List[Tag]:
-    return await service.search_tags(tag)
+) -> Dict[str, Any]:
+    tags = await service.search_tags(tag)
+    return service.build_response("tags", tags)
 
-@router.post("", response_model=Tag, status_code=201)
+@router.post("", status_code=201)
 async def create_tag(
         tag: TagCreate,
         service: TagService = Depends(get_tag_service)
-) -> Tag:
-    return await service.create_tag(tag)
+) -> Dict[str, Any]:
+    created = await service.create_tag(tag)
+    return service.build_response("tag", created)
 
-@router.get("", response_model=List[Tag], status_code=200)
+@router.get("", status_code=200)
 async def get_all_tags(
         resource_id: Optional[int] = None,
         service: TagService = Depends(get_tag_service)
-) -> List[Tag]:
-    return await service.get_all_tags(resource_id)
+) -> Dict[str, Any]:
+    tags = await service.get_all_tags(resource_id)
+    return service.build_response("tags", tags)
 
-@router.get("/{id}", response_model=Tag, status_code=200)
+@router.get("/{id}", status_code=200)
 async def get_tag(
         id: int,
         service: TagService = Depends(get_tag_service)
-) -> Tag:
+) -> Dict[str, Any]:
     tag = await service.get_tag(id)
     if not tag:
         raise HTTPException(status_code=404, detail="Tag not found")
 
-    return tag
+    return service.build_response("tag", tag)
 
 @router.delete("/{id}", status_code=204)
 async def delete_tag(
