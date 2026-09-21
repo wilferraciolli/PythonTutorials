@@ -37,7 +37,7 @@ class UserRole(str, Enum):
 class UserCreate(BaseModel):
     name: str
     email: str
-    roleIds: list[UserRole] = Field(default_factory=lambda: [UserRole.STANDARD])
+    roleIds: Optional[list[UserRole]] = Field(default_factory=lambda: [UserRole.STANDARD])
 
 class UserUpdate(BaseModel):
     name: Optional[str] = None
@@ -54,6 +54,12 @@ class User(LinkedResource):
     @field_serializer("created_date")
     def serialize_created_date(self, value: datetime) -> str:
         return format_utc_datetime(value)
+
+
+class UserProfile(LinkedResource):
+    id: str
+    name: str
+    roleIds: list[UserRole]
 
 
 # Enum for todo state

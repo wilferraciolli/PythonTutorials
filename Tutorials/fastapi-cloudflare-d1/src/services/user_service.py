@@ -70,7 +70,7 @@ class UserService:
         if not role_ids:
             return [UserRole.STANDARD]
 
-        return role_ids
+        return list(dict.fromkeys(role_ids))
 
     async def delete_user(self, user_id: str) -> bool:
         return await self.user_repository.delete(user_id)

@@ -23,6 +23,7 @@ class UserRepository:
         role_ids: list[UserRole],
         created_date: str,
     ) -> Dict[str, Any]:
+        role_ids = self.normalise_role_ids(role_ids)
         await self.db.execute(
             "INSERT INTO users (id, name, email, created_date) VALUES (?, ?, ?, ?)",
             (user_id, name, email, created_date),
@@ -111,6 +112,7 @@ class UserRepository:
         user_id: str,
         role_ids: list[UserRole],
     ) -> None:
+        role_ids = self.normalise_role_ids(role_ids)
         await self.db.execute(
             "DELETE FROM user_roles WHERE user_id = ?",
             (user_id,),
@@ -121,3 +123,9 @@ class UserRepository:
                 "INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)",
                 (user_id, role_id.value),
             )
+
+    def normalise_role_ids(self, role_ids: list[UserRole]) -> list[UserRole]:
+        if not role_ids:
+            return [UserRole.STANDARD]
+
+        return list(dict.fromkeys(role_ids))
