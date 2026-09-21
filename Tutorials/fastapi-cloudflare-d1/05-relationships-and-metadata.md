@@ -12,8 +12,8 @@ just a Todo. It does this with a simple foreign-key-style column:
 
 ```sql
 CREATE TABLE tags (
-    id            INTEGER PRIMARY KEY AUTOINCREMENT,
-    resource_id   INTEGER NOT NULL,   -- points at ANY resource's id
+    id            TEXT PRIMARY KEY,
+    resource_id   TEXT NOT NULL,      -- points at ANY resource's UUID
     tag           TEXT NOT NULL,
     created_date  TEXT DEFAULT CURRENT_TIMESTAMP
 );
@@ -91,7 +91,7 @@ For example, `GET /todos` returns:
         "id": 1,
         "title": "Example",
         "links": {
-          "self": { "href": "/todos/1", "method": "GET" }
+          "self": { "href": "/todos/9cc3c931-4b26-4c5b-93d9-c889ab6f58e1", "method": "GET" }
         }
       }
     ]
@@ -145,18 +145,18 @@ the client needing to hardcode URL patterns.
 
 ```json
 {
-  "id": 2,
+  "id": "9cc3c931-4b26-4c5b-93d9-c889ab6f58e1",
   "title": "Link Test",
   "description": null,
   "complete_by": "2027-01-01T00:00:00",
   "state": "NEW",
   "created_date": "2026-09-18T15:30:48.831000Z",
   "links": {
-    "self":   { "href": "/todos/2",             "method": "GET" },
-    "update": { "href": "/todos/2",             "method": "PUT" },
-    "delete": { "href": "/todos/2",             "method": "DELETE" },
+    "self":   { "href": "/todos/9cc3c931-4b26-4c5b-93d9-c889ab6f58e1",             "method": "GET" },
+    "update": { "href": "/todos/9cc3c931-4b26-4c5b-93d9-c889ab6f58e1",             "method": "PUT" },
+    "delete": { "href": "/todos/9cc3c931-4b26-4c5b-93d9-c889ab6f58e1",             "method": "DELETE" },
     "addTag": { "href": "/tags",                "method": "POST" },
-    "tags":   { "href": "/tags?resource_id=2",  "method": "GET" }
+    "tags":   { "href": "/tags?resource_id=9cc3c931-4b26-4c5b-93d9-c889ab6f58e1",  "method": "GET" }
   }
 }
 ```
@@ -175,12 +175,12 @@ class LinkedResource(BaseModel):
     links: Dict[str, Link] = Field(default_factory=dict)
 
 class Todo(LinkedResource):
-    id: int
+    id: str
     title: str
     # ...
 
 class Tag(LinkedResource):
-    id: int
+    id: str
     tag: str
     # ...
 ```

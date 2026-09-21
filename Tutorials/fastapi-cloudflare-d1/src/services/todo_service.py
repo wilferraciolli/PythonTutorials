@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
+from uuid import uuid4
 
 from api_response import envelope
 from models import Link, Todo, TodoCreate, TodoState, TodoUpdate
@@ -9,6 +10,7 @@ from utils import TodoUtils
 
 OVERDUE_TAG = "overdue"
 NOT_STARTED_TAG = "not-started"
+ZERO_UUID = "00000000-0000-0000-0000-000000000000"
 
 
 class TodoService:
@@ -20,7 +22,7 @@ class TodoService:
 
     def get_template(self) -> Todo:
         return  Todo(
-            id=0,
+            id=ZERO_UUID,
             title="",
             description="",
             complete_by=datetime.now(timezone.utc),
@@ -30,6 +32,7 @@ class TodoService:
 
     async def create_todo(self, todo_create: TodoCreate) -> Todo:
         row = await self.repository.create(
+            todo_id=str(uuid4()),
             title=todo_create.title,
             description=todo_create.description,
             complete_by=todo_create.complete_by.isoformat(),
@@ -40,7 +43,7 @@ class TodoService:
         await self._sync_auto_tags(todo)
         return todo
 
-    async def get_todo(self, todo_id: int) -> Optional[Todo]:
+    async def get_todo(self, todo_id: str) -> Optional[Todo]:
         row = await self.repository.get_by_id(todo_id)
         if not row:
             return None
@@ -58,7 +61,7 @@ class TodoService:
         rows = await self.repository.get_all(state=state)
         return [self._row_to_todo(row) for row in rows]
 
-    async def update_todo(self, todo_id: int, todo_update: TodoUpdate) -> Optional[Todo]:
+    async def update_todo(self, todo_id: str, todo_update: TodoUpdate) -> Optional[Todo]:
         update_data = todo_update.model_dump(exclude_unset=True)
         if "complete_by" in update_data and update_data["complete_by"] is not None:
             update_data["complete_by"] = todo_update.complete_by.isoformat()
@@ -71,7 +74,7 @@ class TodoService:
         await self._sync_auto_tags(todo)
         return todo
 
-    async def update_todo_state(self, todo_id: int, new_state: TodoState) -> Optional[Todo]:
+    async def update_todo_state(self, todo_id: str, new_state: TodoState) -> Optional[Todo]:
         row = await self.repository.update(todo_id, state=new_state)
         if not row:
             return None
@@ -80,7 +83,7 @@ class TodoService:
         await self._sync_auto_tags(todo)
         return todo
 
-    async def delete_todo(self, todo_id: int) -> bool:
+    async def delete_todo(self, todo_id: str) -> bool:
         deleted = await self.repository.delete(todo_id)
         if deleted:
             await self.tag_service.delete_all_tags_for_resource(todo_id)

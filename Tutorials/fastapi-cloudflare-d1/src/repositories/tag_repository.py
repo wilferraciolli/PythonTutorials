@@ -31,20 +31,19 @@ class TagRepository:
 
     async def create(
             self,
+            id: str,
             tag: str,
-            resource_id: int,
+            resource_id: str,
             created_date: str
     ) -> Dict[str, Any]:
-        result = await self.db.prepare(
-            "INSERT INTO tags (tag, resource_id, created_date) "
-            "VALUES (?, ?, ?)"
-        ).bind(tag, resource_id, created_date).run()
+        await self.db.prepare(
+            "INSERT INTO tags (id, tag, resource_id, created_date) "
+            "VALUES (?, ?, ?, ?)"
+        ).bind(id, tag, resource_id, created_date).run()
 
-        new_id = self._get(self._get(result, "meta"), "last_row_id")
+        return await self.get_by_id(id)
 
-        return await self.get_by_id(new_id)
-
-    async def get_all_by_resource_id(self, resource_id: int) -> List[Dict[str, Any]]:
+    async def get_all_by_resource_id(self, resource_id: str) -> List[Dict[str, Any]]:
         result = await (self.db.prepare("SELECT * FROM tags WHERE resource_id = ?")
                         .bind(resource_id).all())
 
@@ -64,12 +63,12 @@ class TagRepository:
 
         return self._get(result, "results", [])
 
-    async def get_by_id(self, id: int) -> Optional[Dict[str, Any]]:
+    async def get_by_id(self, id: str) -> Optional[Dict[str, Any]]:
         row = await self.db.prepare("SELECT * FROM tags WHERE id = ?").bind(id).first()
 
         return row
 
-    async def delete(self, id: int) -> bool:
+    async def delete(self, id: str) -> bool:
         existing = await self.get_by_id(id)
 
         if not existing:
@@ -79,14 +78,14 @@ class TagRepository:
 
         return True
 
-    async def get_by_resource_and_tag(self, resource_id: int, tag: str) -> Optional[Dict[str, Any]]:
+    async def get_by_resource_and_tag(self, resource_id: str, tag: str) -> Optional[Dict[str, Any]]:
         """Find a specific tag on a resource by name (used to avoid duplicates)."""
         row = await (self.db.prepare("SELECT * FROM tags WHERE resource_id = ? AND tag = ?")
                      .bind(resource_id, tag).first())
 
         return row
 
-    async def delete_by_resource_and_tag(self, resource_id: int, tag: str) -> bool:
+    async def delete_by_resource_and_tag(self, resource_id: str, tag: str) -> bool:
         """Remove a specific tag from a resource by name, if it exists."""
         existing = await self.get_by_resource_and_tag(resource_id, tag)
 
@@ -98,6 +97,6 @@ class TagRepository:
 
         return True
 
-    async def delete_all_for_resource(self, resource_id: int) -> None:
+    async def delete_all_for_resource(self, resource_id: str) -> None:
         """Remove every tag attached to a resource (used when the resource itself is deleted)."""
         await self.db.prepare("DELETE FROM tags WHERE resource_id = ?").bind(resource_id).run()

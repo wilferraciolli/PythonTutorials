@@ -33,6 +33,7 @@ class TodoRepository:
 
     async def create(
         self,
+        todo_id: str,
         title: str,
         description: Optional[str],
         complete_by: str,
@@ -40,15 +41,14 @@ class TodoRepository:
         created_date: str,
     ) -> Dict[str, Any]:
         """Insert a new TODO and return the full row."""
-        result = await self.db.prepare(
-            "INSERT INTO todos (title, description, complete_by, state, created_date) "
-            "VALUES (?, ?, ?, ?, ?)"
-        ).bind(title, description, complete_by, state.value, created_date).run()
+        await self.db.prepare(
+            "INSERT INTO todos (id, title, description, complete_by, state, created_date) "
+            "VALUES (?, ?, ?, ?, ?, ?)"
+        ).bind(todo_id, title, description, complete_by, state.value, created_date).run()
 
-        new_id = self._get(self._get(result, "meta"), "last_row_id")
-        return await self.get_by_id(new_id)
+        return await self.get_by_id(todo_id)
 
-    async def get_by_id(self, todo_id: int) -> Optional[Dict[str, Any]]:
+    async def get_by_id(self, todo_id: str) -> Optional[Dict[str, Any]]:
         """Fetch a single TODO row by id, or None if not found."""
         row = await self.db.prepare("SELECT * FROM todos WHERE id = ?").bind(todo_id).first()
         return row
@@ -64,7 +64,7 @@ class TodoRepository:
 
         return self._get(result, "results", [])
 
-    async def update(self, todo_id: int, **fields) -> Optional[Dict[str, Any]]:
+    async def update(self, todo_id: str, **fields) -> Optional[Dict[str, Any]]:
         """Update only the provided fields on a TODO, then return the fresh row."""
         updatable = {k: v for k, v in fields.items() if v is not None}
         if not updatable:
@@ -80,7 +80,7 @@ class TodoRepository:
         await self.db.prepare(f"UPDATE todos SET {set_clause} WHERE id = ?").bind(*values).run()
         return await self.get_by_id(todo_id)
 
-    async def delete(self, todo_id: int) -> bool:
+    async def delete(self, todo_id: str) -> bool:
         """Delete a TODO. Returns True if a row existed and was removed."""
         existing = await self.get_by_id(todo_id)
         if not existing:

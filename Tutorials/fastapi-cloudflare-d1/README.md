@@ -174,11 +174,11 @@ curl.exe --ssl-no-revoke https://fastapi-todo-d1.<your-subdomain>.workers.dev/do
 
 ## Known Beta Caveats
 
-- **Python Workers are in beta.** The exact shape of D1 row objects and the
-  `result.meta.last_row_id` attribute (used in `todo_repository.py`) is based
-  on the documented JS-equivalent API; `TodoRepository._get()` defensively
-  handles both dict-like and attribute-like access, but if a `workers-py`
-  version update changes this shape, that's the first place to check.
+- **Python Workers are in beta.** The exact shape of D1 row objects returned
+  by `.first()` / `.all()` is based on the documented JS-equivalent API;
+  repository `_get()` helpers defensively handle both dict-like and
+  attribute-like access, but if a `workers-py` version update changes this
+  shape, that's the first place to check.
 - No traditional SQLAlchemy ORM — all SQL in `todo_repository.py` is raw and
   parameterized via `.bind(...)` to avoid SQL injection.
 - `env` (and therefore `env.DB`) is only available per-request

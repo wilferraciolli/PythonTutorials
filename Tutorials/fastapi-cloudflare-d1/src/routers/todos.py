@@ -26,7 +26,7 @@ def get_todo_service(request: Request) -> TodoService:
 
 @router.get("/template", status_code=200)
 async def create_todo(service: TodoService = Depends(get_todo_service)) -> Dict[str, Any]:
-    """Create a new TODO"""
+    """Get a TODO template"""
     template = service.get_template()
     return service.build_response("todo", template)
 
@@ -49,7 +49,7 @@ async def get_all_todos(
 
 
 @router.get("/{todo_id}")
-async def get_todo(todo_id: int, service: TodoService = Depends(get_todo_service)) -> Dict[str, Any]:
+async def get_todo(todo_id: str, service: TodoService = Depends(get_todo_service)) -> Dict[str, Any]:
     """Get a single TODO by ID"""
     todo = await service.get_todo(todo_id)
     if not todo:
@@ -59,7 +59,7 @@ async def get_todo(todo_id: int, service: TodoService = Depends(get_todo_service
 
 @router.put("/{todo_id}")
 async def update_todo(
-    todo_id: int,
+    todo_id: str,
     todo_update: TodoUpdate,
     service: TodoService = Depends(get_todo_service),
 ) -> Dict[str, Any]:
@@ -72,7 +72,7 @@ async def update_todo(
 
 @router.patch("/{todo_id}/state/{new_state}")
 async def update_todo_state(
-    todo_id: int,
+    todo_id: str,
     new_state: TodoState,
     service: TodoService = Depends(get_todo_service),
 ) -> Dict[str, Any]:
@@ -84,7 +84,7 @@ async def update_todo_state(
 
 
 @router.delete("/{todo_id}", status_code=204)
-async def delete_todo(todo_id: int, service: TodoService = Depends(get_todo_service)) -> None:
+async def delete_todo(todo_id: str, service: TodoService = Depends(get_todo_service)) -> None:
     """Delete a TODO"""
     success = await service.delete_todo(todo_id)
     if not success:

@@ -50,7 +50,7 @@ For a single resource:
 {
   "_data": {
     "todo": {
-      "id": 123,
+      "id": "9cc3c931-4b26-4c5b-93d9-c889ab6f58e1",
       "title": "Learn FastAPI"
     }
   }
@@ -64,7 +64,7 @@ For a list:
   "_data": {
     "todos": [
       {
-        "id": 123,
+        "id": "9cc3c931-4b26-4c5b-93d9-c889ab6f58e1",
         "title": "Learn FastAPI"
       }
     ]
@@ -91,19 +91,19 @@ Example:
 
 ```json
 {
-  "id": 123,
+  "id": "9cc3c931-4b26-4c5b-93d9-c889ab6f58e1",
   "title": "Learn FastAPI",
   "links": {
     "self": {
-      "href": "/todos/123",
+      "href": "/todos/9cc3c931-4b26-4c5b-93d9-c889ab6f58e1",
       "method": "GET"
     },
     "update": {
-      "href": "/todos/123",
+      "href": "/todos/9cc3c931-4b26-4c5b-93d9-c889ab6f58e1",
       "method": "PUT"
     },
     "delete": {
-      "href": "/todos/123",
+      "href": "/todos/9cc3c931-4b26-4c5b-93d9-c889ab6f58e1",
       "method": "DELETE"
     },
     "addTag": {
@@ -259,7 +259,7 @@ Example todo template:
 {
   "_data": {
     "todo": {
-      "id": 0,
+      "id": "00000000-0000-0000-0000-000000000000",
       "title": "",
       "description": "",
       "complete_by": "2026-09-21T12:00:00Z",
@@ -314,8 +314,8 @@ Example tag template:
 {
   "_data": {
     "tag": {
-      "id": 0,
-      "resource_id": 0,
+      "id": "00000000-0000-0000-0000-000000000000",
+      "resource_id": "00000000-0000-0000-0000-000000000000",
       "tag": "",
       "created_date": "2026-09-21T12:00:00Z",
       "links": {}
@@ -364,7 +364,7 @@ Good router shape:
 
 ```python
 @router.get("/{todo_id}")
-async def get_todo(todo_id: int, service: TodoService = Depends(get_todo_service)):
+async def get_todo(todo_id: str, service: TodoService = Depends(get_todo_service)):
     todo = await service.get_todo(todo_id)
     if not todo:
         raise HTTPException(status_code=404, detail=f"TODO {todo_id} not found")

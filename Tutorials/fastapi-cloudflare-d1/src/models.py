@@ -58,7 +58,7 @@ class TodoUpdate(BaseModel):
 # Response model
 class Todo(LinkedResource):
     """Complete TODO object returned by API"""
-    id: int
+    id: str
     title: str
     description: Optional[str] = None
     complete_by: datetime
@@ -74,12 +74,12 @@ class Todo(LinkedResource):
 
 # Response model
 class TagCreate(BaseModel):
-    resource_id: int = Field(..., gt=0)
+    resource_id: str = Field(..., min_length=1)
     tag: str = Field(..., min_length=1, max_length=50)
 
 class Tag(LinkedResource):
-    id: int
-    resource_id: int
+    id: str
+    resource_id: str
     tag: str
     created_date: datetime
     class Config:

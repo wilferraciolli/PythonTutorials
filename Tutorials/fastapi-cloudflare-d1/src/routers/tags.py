@@ -39,7 +39,7 @@ async def create_tag(
 
 @router.get("", status_code=200)
 async def get_all_tags(
-        resource_id: Optional[int] = None,
+        resource_id: Optional[str] = None,
         service: TagService = Depends(get_tag_service)
 ) -> Dict[str, Any]:
     tags = await service.get_all_tags(resource_id)
@@ -47,7 +47,7 @@ async def get_all_tags(
 
 @router.get("/{id}", status_code=200)
 async def get_tag(
-        id: int,
+        id: str,
         service: TagService = Depends(get_tag_service)
 ) -> Dict[str, Any]:
     tag = await service.get_tag(id)
@@ -58,7 +58,7 @@ async def get_tag(
 
 @router.delete("/{id}", status_code=204)
 async def delete_tag(
-        id: int,
+        id: str,
         service: TagService = Depends(get_tag_service)
 ) -> None:
     success = await service.delete_tag(id)
