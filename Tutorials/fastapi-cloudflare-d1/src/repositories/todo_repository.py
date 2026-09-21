@@ -13,7 +13,7 @@ class TodoRepository:
     and D1 over HTTP.
     """
 
-    def __init__(self, db: Database):
+    def __init__(self, db: Database) -> None:
         self.db = db
 
     async def create(
@@ -32,7 +32,10 @@ class TodoRepository:
             (todo_id, title, description, complete_by, state.value, created_date),
         )
 
-        return await self.get_by_id(todo_id)
+        created = await self.get_by_id(todo_id)
+        if created is None:
+            raise RuntimeError(f"created todo was not found: {todo_id}")
+        return created
 
     async def get_by_id(self, todo_id: str) -> Optional[Dict[str, Any]]:
         """Fetch a single TODO row by id, or None if not found."""
@@ -48,7 +51,7 @@ class TodoRepository:
 
         return await self.db.fetch_all("SELECT * FROM todos ORDER BY id")
 
-    async def update(self, todo_id: str, **fields) -> Optional[Dict[str, Any]]:
+    async def update(self, todo_id: str, **fields: Any) -> Optional[Dict[str, Any]]:
         """Update only the provided fields on a TODO, then return the fresh row."""
         updatable = {k: v for k, v in fields.items() if v is not None}
         if not updatable:

@@ -29,13 +29,38 @@ class LinkedResource(BaseModel):
     """
     links: Dict[str, Link] = Field(default_factory=dict)
 
+# Enum for user role
+class UserRole(str, Enum):
+    STANDARD = "STANDARD"
+    ADMIN = "ADMIN"
+
+class UserCreate(BaseModel):
+    name: str
+    email: str
+    roleIds: list[UserRole] = Field(default_factory=lambda: [UserRole.STANDARD])
+
+class UserUpdate(BaseModel):
+    name: Optional[str] = None
+    email: Optional[str] = None
+    roleIds: Optional[list[UserRole]] = None
+
+class User(LinkedResource):
+    id: str
+    name: str
+    email: str
+    roleIds: list[UserRole]
+    created_date: datetime
+
+    @field_serializer("created_date")
+    def serialize_created_date(self, value: datetime) -> str:
+        return format_utc_datetime(value)
+
 
 # Enum for todo state
 class TodoState(str, Enum):
     NEW = "NEW"
     ACTIVE = "ACTIVE"
     CLOSED = "CLOSED"
-
 
 # Request model for creating
 class TodoCreate(BaseModel):
@@ -45,7 +70,6 @@ class TodoCreate(BaseModel):
     complete_by: datetime
     state: TodoState = Field(default=TodoState.NEW)
 
-
 # Request model for updating
 class TodoUpdate(BaseModel):
     """Model for updating a TODO"""
@@ -53,7 +77,6 @@ class TodoUpdate(BaseModel):
     description: Optional[str] = Field(None)
     complete_by: Optional[datetime] = None
     state: Optional[TodoState] = None
-
 
 # Response model
 class Todo(LinkedResource):
@@ -71,6 +94,7 @@ class Todo(LinkedResource):
     @field_serializer("complete_by", "created_date")
     def serialize_datetime(self, value: datetime) -> str:
         return format_utc_datetime(value)
+
 
 # Response model
 class TagCreate(BaseModel):

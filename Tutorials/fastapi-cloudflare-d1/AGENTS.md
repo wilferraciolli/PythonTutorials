@@ -1,8 +1,9 @@
 # AI agent instructions
 
-Before creating or changing this Python FastAPI app, read:
+Before creating or changing this Python FastAPI app, read the central Python
+conventions:
 
-- `../PYTHON_APP_CONVENTIONS.md`
+- `../../../ai-conventions/python/PYTHON_APP_CONVENTIONS.md`
 
 Follow those conventions for:
 

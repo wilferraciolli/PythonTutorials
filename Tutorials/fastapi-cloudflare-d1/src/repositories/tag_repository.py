@@ -12,7 +12,7 @@ class TagRepository:
     and D1 over HTTP.
     """
 
-    def __init__(self, db: Database):
+    def __init__(self, db: Database) -> None:
         self.db = db
 
     async def create(
@@ -28,7 +28,10 @@ class TagRepository:
             (id, tag, resource_id, created_date),
         )
 
-        return await self.get_by_id(id)
+        created = await self.get_by_id(id)
+        if created is None:
+            raise RuntimeError(f"created tag was not found: {id}")
+        return created
 
     async def get_all_by_resource_id(self, resource_id: str) -> List[Dict[str, Any]]:
         return await self.db.fetch_all("SELECT * FROM tags WHERE resource_id = ?", (resource_id,))

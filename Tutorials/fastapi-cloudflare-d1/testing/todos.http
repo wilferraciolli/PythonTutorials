@@ -1,0 +1,42 @@
+@baseUrl = http://127.0.0.1:8001
+@todoId = replace-with-todo-uuid
+
+### Todo template
+GET {{baseUrl}}/todos/template
+
+### List todos
+GET {{baseUrl}}/todos
+
+### List todos by state
+GET {{baseUrl}}/todos?state=NEW
+
+### Create todo
+POST {{baseUrl}}/todos
+Content-Type: application/json
+
+{
+  "title": "Learn FastAPI",
+  "description": "Practice the portable API conventions",
+  "complete_by": "2099-01-01T00:00:00Z",
+  "state": "NEW"
+}
+
+### Get todo by id
+GET {{baseUrl}}/todos/{{todoId}}
+
+### Full update todo
+PUT {{baseUrl}}/todos/{{todoId}}
+Content-Type: application/json
+
+{
+  "title": "Learn FastAPI properly",
+  "description": "Update via the full update endpoint",
+  "complete_by": "2099-02-01T00:00:00Z",
+  "state": "ACTIVE"
+}
+
+### Patch todo state
+PATCH {{baseUrl}}/todos/{{todoId}}/state/CLOSED
+
+### Delete todo
+DELETE {{baseUrl}}/todos/{{todoId}}

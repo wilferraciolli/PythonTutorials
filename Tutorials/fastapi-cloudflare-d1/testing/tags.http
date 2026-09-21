@@ -1,0 +1,27 @@
+@baseUrl = http://127.0.0.1:8001
+@tagId = replace-with-tag-uuid
+@resourceId = replace-with-resource-uuid
+
+### Tag template
+GET {{baseUrl}}/tags/template
+
+### List all tags
+GET {{baseUrl}}/tags
+
+### List tags for resource
+GET {{baseUrl}}/tags?resource_id={{resourceId}}
+
+### Search tags
+GET {{baseUrl}}/tags?term=over
+
+### Create tag
+POST {{baseUrl}}/tags
+Content-Type: application/json
+
+{
+  "resource_id": "{{resourceId}}",
+  "tag": "manual"
+}
+
+### Delete tag
+DELETE {{baseUrl}}/tags/{{tagId}}
