@@ -1,7 +1,15 @@
 from enum import Enum
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_serializer
+
+
+def format_utc_datetime(value: datetime) -> str:
+    """Serialize datetimes as UTC seconds: YYYY-MM-DDTHH:MM:SSZ."""
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+
+    return value.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 # Shared HATEOAS-style link, reused by any response DTO
@@ -60,6 +68,10 @@ class Todo(LinkedResource):
     class Config:
         from_attributes = True
 
+    @field_serializer("complete_by", "created_date")
+    def serialize_datetime(self, value: datetime) -> str:
+        return format_utc_datetime(value)
+
 # Response model
 class TagCreate(BaseModel):
     resource_id: int = Field(..., gt=0)
@@ -72,3 +84,7 @@ class Tag(LinkedResource):
     created_date: datetime
     class Config:
         from_attributes = True
+
+    @field_serializer("created_date")
+    def serialize_datetime(self, value: datetime) -> str:
+        return format_utc_datetime(value)
