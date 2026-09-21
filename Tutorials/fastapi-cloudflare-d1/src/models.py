@@ -62,6 +62,13 @@ class UserProfile(LinkedResource):
     roleIds: list[UserRole]
 
 
+class Me(LinkedResource):
+    id: str
+    name: str
+    email: Optional[str] = None
+    roleIds: list[str]
+
+
 # Enum for todo state
 class TodoState(str, Enum):
     NEW = "NEW"

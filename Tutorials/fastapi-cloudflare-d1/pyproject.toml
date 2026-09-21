@@ -6,6 +6,7 @@ dependencies = [
     "aiosqlite",
     "fastapi",
     "httpx",
+    "pyjwt[crypto]",
     "uvicorn",
 ]
 

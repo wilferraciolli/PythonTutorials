@@ -1,22 +1,28 @@
 @baseUrl = http://127.0.0.1:8001
 @tagId = replace-with-tag-uuid
 @resourceId = replace-with-resource-uuid
+@token = paste-clerk-jwt-here
 
 ### Tag template
 GET {{baseUrl}}/tags/template
+Authorization: Bearer {{token}}
 
 ### List all tags
 GET {{baseUrl}}/tags
+Authorization: Bearer {{token}}
 
 ### List tags for resource
 GET {{baseUrl}}/tags?resource_id={{resourceId}}
+Authorization: Bearer {{token}}
 
 ### Search tags
 GET {{baseUrl}}/tags?term=over
+Authorization: Bearer {{token}}
 
 ### Create tag
 POST {{baseUrl}}/tags
 Content-Type: application/json
+Authorization: Bearer {{token}}
 
 {
   "resource_id": "{{resourceId}}",
@@ -25,3 +31,4 @@ Content-Type: application/json
 
 ### Delete tag
 DELETE {{baseUrl}}/tags/{{tagId}}
+Authorization: Bearer {{token}}

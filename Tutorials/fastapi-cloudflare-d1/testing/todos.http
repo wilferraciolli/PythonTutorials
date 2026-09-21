@@ -1,18 +1,23 @@
 @baseUrl = http://127.0.0.1:8001
 @todoId = replace-with-todo-uuid
+@token = paste-clerk-jwt-here
 
 ### Todo template
 GET {{baseUrl}}/todos/template
+Authorization: Bearer {{token}}
 
 ### List todos
 GET {{baseUrl}}/todos
+Authorization: Bearer {{token}}
 
 ### List todos by state
 GET {{baseUrl}}/todos?state=NEW
+Authorization: Bearer {{token}}
 
 ### Create todo
 POST {{baseUrl}}/todos
 Content-Type: application/json
+Authorization: Bearer {{token}}
 
 {
   "title": "Learn FastAPI",
@@ -23,10 +28,12 @@ Content-Type: application/json
 
 ### Get todo by id
 GET {{baseUrl}}/todos/{{todoId}}
+Authorization: Bearer {{token}}
 
 ### Full update todo
 PUT {{baseUrl}}/todos/{{todoId}}
 Content-Type: application/json
+Authorization: Bearer {{token}}
 
 {
   "title": "Learn FastAPI properly",
@@ -37,6 +44,8 @@ Content-Type: application/json
 
 ### Patch todo state
 PATCH {{baseUrl}}/todos/{{todoId}}/state/CLOSED
+Authorization: Bearer {{token}}
 
 ### Delete todo
 DELETE {{baseUrl}}/todos/{{todoId}}
+Authorization: Bearer {{token}}

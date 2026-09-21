@@ -5,6 +5,10 @@
 	// Set this to today's date when you first deploy
 	"compatibility_date": "2026-09-18",
 	"compatibility_flags": ["python_workers"],
+	"vars": {
+		"CLERK_JWKS_URL": "https://one-python-4861.clerk.accounts.dev/.well-known/jwks.json",
+		"CLERK_AUDIENCE": "wiltech-dev-api"
+	},
 	"d1_databases": [
 		{
 			"binding": "DB",

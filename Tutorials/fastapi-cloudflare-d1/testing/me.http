@@ -1,9 +1,6 @@
 @baseUrl = http://127.0.0.1:8001
 @token = paste-clerk-jwt-here
 
-### Health check
-GET {{baseUrl}}/health
+### Current authenticated user
+GET {{baseUrl}}/me
 Authorization: Bearer {{token}}
-
-### Swagger/OpenAPI JSON
-GET {{baseUrl}}/openapi.json

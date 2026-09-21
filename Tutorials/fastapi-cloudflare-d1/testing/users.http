@@ -1,15 +1,19 @@
 @baseUrl = http://127.0.0.1:8001
 @userId = 9f8d5fe1-80af-4701-8786-e260cf4a59ae
+@token = paste-clerk-jwt-here
 
 ### User template
 GET {{baseUrl}}/users/template
+Authorization: Bearer {{token}}
 
 ### List users
 GET {{baseUrl}}/users
+Authorization: Bearer {{token}}
 
 ### Create user
 POST {{baseUrl}}/users
 Content-Type: application/json
+Authorization: Bearer {{token}}
 
 {
   "name": "Jon Doe",
@@ -19,10 +23,12 @@ Content-Type: application/json
 
 ### Get user by id
 GET {{baseUrl}}/users/{{userId}}
+Authorization: Bearer {{token}}
 
 ### Full update user
 PUT {{baseUrl}}/users/{{userId}}
 Content-Type: application/json
+Authorization: Bearer {{token}}
 
 {
   "name": "Jonathan Doe",
@@ -32,3 +38,4 @@ Content-Type: application/json
 
 ### Delete user
 DELETE {{baseUrl}}/users/{{userId}}
+Authorization: Bearer {{token}}

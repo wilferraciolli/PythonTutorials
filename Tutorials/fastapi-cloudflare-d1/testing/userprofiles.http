@@ -1,5 +1,7 @@
 @baseUrl = http://127.0.0.1:8001
 @userId = 9f8d5fe1-80af-4701-8786-e260cf4a59ae
+@token = paste-clerk-jwt-here
 
 ### User profile
 GET {{baseUrl}}/users/{{userId}}/profile
+Authorization: Bearer {{token}}
