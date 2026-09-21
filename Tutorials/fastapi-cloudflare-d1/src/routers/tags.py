@@ -2,6 +2,7 @@ from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 
+from database import get_database
 from models import Tag, TagCreate
 from repositories.tag_repository import TagRepository
 from services.tag_service import TagService
@@ -11,14 +12,12 @@ router = APIRouter(prefix="/tags", tags=["tags"])
 
 def get_tag_service(request: Request) -> TagService:
     """
-    Build a Service per-request.
+    Build a TagService per-request using the configured database adapter.
 
-    Unlike SQLAlchemy's global `engine`, the D1 binding (`env.DB`) only exists
-    on the incoming request's `scope["env"]` - Cloudflare injects it per call,
-    so it cannot be created once at startup like our old `Depends(get_db)`.
+    The app can run against local SQLite, Cloudflare D1 binding, or D1 HTTP
+    without repositories/services depending on a concrete database runtime.
     """
-    env = request.scope["env"]
-    return TagService(TagRepository(env.DB))
+    return TagService(TagRepository(get_database(request)))
 
 
 @router.get("/search")

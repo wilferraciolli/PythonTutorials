@@ -1,26 +1,28 @@
-# FastAPI TODO API — Cloudflare Python Workers + D1
+# FastAPI TODO API — portable FastAPI with SQLite + Cloudflare D1
 
-This is the Cloudflare-deployable version of the TODO API. It reuses the same
-Pydantic models/business-logic shape as the local SQLAlchemy tutorial project
-(`../fastapi-learning`), but the data layer is rewritten to talk to
-**Cloudflare D1** via a binding instead of a SQLAlchemy connection string.
+This TODO API keeps the app code portable:
+
+- **Local uvicorn/Docker** uses SQLite through the shared `Database` protocol.
+- **Cloudflare Workers** uses the native D1 binding (`env.DB`) through the same
+  protocol.
+- **Optional non-Worker hosting** can still talk to Cloudflare D1 via HTTP.
+
+The repository layer does not know whether the database is SQLite, Cloudflare
+D1 binding, or D1 HTTP.
 
 ## Status
 
-✅ **Deployed and live**: https://fastapi-todo-d1.wiliam334.workers.dev
+✅ **Cloudflare deployment**: https://fastapi-todo-d1.wiliam334.workers.dev
 
-Verified working both locally (D1 emulation) and in production (real D1
-database `todo-db`): health check, full CRUD (POST/GET/PUT/PATCH/DELETE), and
-`/docs` Swagger UI all confirmed.
+Verified working with Cloudflare D1 and portable local SQLite mode.
 
 ## Why a separate project?
 
-D1 has no connection string — it's only reachable from inside a Cloudflare
-Worker via `env.DB`. That means the repository layer, the dev server
-(`wrangler`/`pywrangler` instead of `uvicorn`), and the dependency management
-(`pyproject.toml` + `uv` instead of `requirements.txt` + `venv`) are all
-different. Keeping it as a separate project avoids breaking the working local
-`fastapi-learning` tutorial.
+The project started as a Cloudflare D1 Worker app, but the database access is
+now behind a small adapter interface. That means the same routers, services,
+DTOs, response envelope, metadata, links, templates, UUIDs, and UTC date
+formatting can be reused if the app later moves to Docker, Render, or another
+host.
 
 ## Project Structure
 
@@ -28,18 +30,30 @@ different. Keeping it as a separate project avoids breaking the working local
 fastapi-cloudflare-d1/
 ├── src/
 │   ├── entry.py                 # FastAPI app + Workers ASGI entrypoint
-│   ├── models.py                # Pydantic models (TodoCreate, TodoUpdate, Todo, TodoState)
+│   ├── main.py                  # Plain FastAPI app for uvicorn/Docker
+│   ├── database.py              # SQLite, D1 binding, and D1 HTTP adapters
+│   ├── config.py                # Runtime config from Worker env / .env / OS env
+│   ├── api_response.py          # Shared response envelope model
+│   ├── models.py                # Pydantic DTOs and UTC date formatting
 │   ├── utils.py                 # TodoUtils (overdue / due-soon helpers)
 │   ├── repositories/
-│   │   └── todo_repository.py   # Raw SQL via env.DB binding (NOT SQLAlchemy)
+│   │   ├── tag_repository.py
+│   │   └── todo_repository.py   # Raw parameterized SQL via Database protocol
 │   ├── services/
-│   │   └── todo_service.py      # Business logic, async, calls the repository
+│   │   ├── tag_service.py
+│   │   └── todo_service.py      # Business logic, metadata, links, auto-tagging
 │   └── routers/
 │       ├── health.py
-│       └── todos.py             # Async endpoints; extracts env from Request.scope
+│       ├── tags.py
+│       └── todos.py
+├── migrations/
+│   └── 001_create_tables.sql     # SQLite/Docker local migrations
+├── Dockerfile
+├── docker-compose.yml
+├── .env.example
 ├── schema.sql                    # CREATE TABLE todos (...)
 ├── wrangler.jsonc                 # Worker config + D1 binding
-├── pyproject.toml                 # Python deps (fastapi, workers-py, workers-runtime-sdk)
+├── pyproject.toml
 └── .gitignore
 ```
 
@@ -49,7 +63,8 @@ fastapi-cloudflare-d1/
 |---|---|---|
 | Node.js + npm | Runs `wrangler` (the Cloudflare CLI) | https://nodejs.org (LTS) |
 | `uv` | Python package/venv manager used by this project | PowerShell: `powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 \| iex"` |
-| A free Cloudflare account | Hosts the Worker + D1 database | https://dash.cloudflare.com/sign-up |
+| Docker | Optional local SQLite container workflow | https://www.docker.com/products/docker-desktop/ |
+| A free Cloudflare account | Optional: hosts the Worker + D1 database | https://dash.cloudflare.com/sign-up |
 
 > **Corporate proxy / TLS-inspecting network note:** if `uv` fails with
 > `invalid peer certificate: UnknownIssuer`, set `$env:UV_NATIVE_TLS = "true"`
@@ -59,7 +74,55 @@ fastapi-cloudflare-d1/
 > curl command. Both are local-network quirks, not problems with the deployed
 > API — other machines/browsers work fine.
 
-## Running Locally
+## Database modes
+
+Set **one active** `DATABASE_MODE` at a time:
+
+```env
+# Local uvicorn/Docker
+DATABASE_MODE=sqlite
+DATABASE_PATH=./local.db
+
+# Cloudflare Workers native binding
+DATABASE_MODE=d1_binding
+
+# Optional: non-Worker host using Cloudflare D1 over HTTP
+DATABASE_MODE=d1_http
+CF_ACCOUNT_ID=...
+CF_D1_DATABASE_ID=...
+CF_D1_API_TOKEN=...
+```
+
+Do not keep multiple `DATABASE_MODE=` lines active in the same `.env`; the last
+one wins.
+
+## Running locally with SQLite and uvicorn
+
+This mode does not use Wrangler or Cloudflare. Migrations are applied
+automatically from `migrations/` the first time the SQLite file is opened.
+
+```powershell
+uv sync
+
+Copy-Item .env.example .env
+# Keep DATABASE_MODE=sqlite in .env
+
+uv run uvicorn main:app --app-dir src --host 127.0.0.1 --port 8001 --reload
+```
+
+Server runs at `http://127.0.0.1:8001`.
+
+## Running locally with Docker + SQLite
+
+```powershell
+Copy-Item .env.example .env
+docker compose up --build
+```
+
+The SQLite database lives in the named Docker volume `sqlite-data` at
+`/data/local.db`, so it behaves the same on Windows, macOS, and Linux.
+
+## Running locally with Cloudflare D1 emulation
 
 Local dev uses a **local D1 emulation** (a SQLite file wrangler manages under
 `.wrangler/state/`) — no Cloudflare login or real database required.
@@ -128,6 +191,8 @@ Paste the real ID into the `d1_databases` block:
 ]
 ```
 > The `binding` **must stay `"DB"`** — the code reads `request.scope["env"].DB`.
+> In Cloudflare Worker mode you can omit `DATABASE_MODE`; the app defaults to
+> `d1_binding` when `env.DB` exists.
 
 ### 4. Apply the schema to the remote (real) database
 ```powershell
@@ -164,11 +229,16 @@ curl.exe --ssl-no-revoke https://fastapi-todo-d1.<your-subdomain>.workers.dev/do
 |---|---|---|
 | GET | `/health` | Health check |
 | GET | `/todos` | List all todos |
+| GET | `/todos/template` | Create-template payload for todos |
 | GET | `/todos/{id}` | Get one todo |
 | POST | `/todos` | Create a todo (`title`, optional `description`, `complete_by`) |
 | PUT | `/todos/{id}` | Full update of a todo |
 | PATCH | `/todos/{id}/state/{state}` | Update only the state (`NEW`, `ACTIVE`, `CLOSED`) |
 | DELETE | `/todos/{id}` | Delete a todo (returns `204 No Content`) |
+| GET | `/tags` | List/search tags, optionally by `resource_id` or `term` |
+| GET | `/tags/template` | Create-template payload for tags |
+| POST | `/tags` | Create a tag for a resource |
+| DELETE | `/tags/{id}` | Delete a tag (returns `204 No Content`) |
 | GET | `/docs` | Interactive Swagger UI |
 | GET | `/openapi.json` | OpenAPI schema |
 
@@ -179,10 +249,7 @@ curl.exe --ssl-no-revoke https://fastapi-todo-d1.<your-subdomain>.workers.dev/do
   repository `_get()` helpers defensively handle both dict-like and
   attribute-like access, but if a `workers-py` version update changes this
   shape, that's the first place to check.
-- No traditional SQLAlchemy ORM — all SQL in `todo_repository.py` is raw and
-  parameterized via `.bind(...)` to avoid SQL injection.
+- No traditional SQLAlchemy ORM — repository SQL is raw and parameterized.
 - `env` (and therefore `env.DB`) is only available per-request
-  (`request.scope["env"]`), not as a global/startup-time object — this is why
-  `get_todo_service` in `routers/todos.py` takes a `Request` and builds a
-  fresh repository/service per call, instead of using a global engine like
-  the SQLAlchemy version does.
+  (`request.scope["env"]`), not as a global/startup-time object. Routers build
+  services per request through `get_database(request)`.

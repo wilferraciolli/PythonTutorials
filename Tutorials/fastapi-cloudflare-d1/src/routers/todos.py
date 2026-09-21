@@ -2,6 +2,7 @@ from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 
+from database import get_database
 from models import Todo, TodoCreate, TodoState, TodoUpdate
 from repositories.tag_repository import TagRepository
 from repositories.todo_repository import TodoRepository
@@ -13,15 +14,14 @@ router = APIRouter(prefix="/todos", tags=["todos"])
 
 def get_todo_service(request: Request) -> TodoService:
     """
-    Build a TodoService per-request.
+    Build a TodoService per-request using the configured database adapter.
 
-    Unlike SQLAlchemy's global `engine`, the D1 binding (`env.DB`) only exists
-    on the incoming request's `scope["env"]` - Cloudflare injects it per call,
-    so it cannot be created once at startup like our old `Depends(get_db)`.
+    The app can run against local SQLite, Cloudflare D1 binding, or D1 HTTP
+    without repositories/services depending on a concrete database runtime.
     """
-    env = request.scope["env"]
-    tag_service = TagService(TagRepository(env.DB))
-    return TodoService(TodoRepository(env.DB), tag_service)
+    db = get_database(request)
+    tag_service = TagService(TagRepository(db))
+    return TodoService(TodoRepository(db), tag_service)
 
 
 @router.get("/template", status_code=200)
