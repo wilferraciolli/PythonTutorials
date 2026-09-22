@@ -29,6 +29,19 @@ export class TagsStore {
   readonly isLoading = computed(() => this.listResource.isLoading());
   readonly loadError = computed(() => this.listResource.error());
 
+  // The collection's own `createTag` link — tags are the one resource that
+  // still POSTs straight to a create link rather than going through a
+  // template (there's nothing to default: `tag` and `resource_id` are both
+  // freeform), so this is the direct-POST shape the todos flow moved away
+  // from.
+  async createTag(payload: { tag: string; resource_id: string }): Promise<Tag> {
+    const link = this.listResource.value()?._metaLinks?.['createTag'];
+    const url = this.api.requireLink(link, 'No create-tag link available yet — try again.');
+    const created = await this.api.post<'tag', Tag, { tag: string; resource_id: string }>('tag', url, payload);
+    this.listResource.reload();
+    return created;
+  }
+
   async deleteTag(tag: Tag): Promise<void> {
     const url = this.api.requireLink(tag.links['delete'], `Not permitted to delete tag ${tag.id}`);
     await this.api.delete(url);

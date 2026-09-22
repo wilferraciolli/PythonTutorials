@@ -30,28 +30,40 @@ host.
 fastapi-cloudflare-d1/
 ├── src/
 │   ├── entry.py                 # FastAPI app + Workers ASGI entrypoint
-│   ├── main.py                  # Plain FastAPI app for uvicorn/Docker
+│   ├── main.py                  # Plain FastAPI app for uvicorn/Docker; wires
+│   │                             # routers + the Clerk auth dependency
+│   ├── auth.py                  # Clerk JWT verification (JWKS fetch/cache)
 │   ├── database.py              # SQLite, D1 binding, and D1 HTTP adapters
 │   ├── config.py                # Runtime config from Worker env / .env / OS env
 │   ├── api_response.py          # Shared response envelope model
 │   ├── models.py                # Pydantic DTOs and UTC date formatting
 │   ├── utils.py                 # TodoUtils (overdue / due-soon helpers)
 │   ├── repositories/
-│   │   ├── tag_repository.py
-│   │   └── todo_repository.py   # Raw parameterized SQL via Database protocol
+│   │   ├── tag_repository.py    # Reads via tag_resource_view (see below)
+│   │   ├── todo_repository.py   # Raw parameterized SQL via Database protocol
+│   │   └── user_repository.py
 │   ├── services/
 │   │   ├── tag_service.py
-│   │   └── todo_service.py      # Business logic, metadata, links, auto-tagging
+│   │   ├── todo_service.py      # Business logic, metadata, links, auto-tagging
+│   │   ├── user_service.py      # /users CRUD
+│   │   ├── user_profile_service.py  # /users/{id}/profile navigation hub
+│   │   └── me_service.py        # /me — maps the Clerk identity to a users row
 │   └── routers/
 │       ├── health.py
+│       ├── me.py
 │       ├── tags.py
-│       └── todos.py
-├── migrations/
-│   └── 001_create_tables.sql     # SQLite/Docker local migrations
+│       ├── todos.py
+│       ├── user_profile.py
+│       └── users.py
+├── migrations/                   # Auto-applied, in order, against local SQLite
+│   ├── 001_create_users.sql
+│   ├── 001_create_tables.sql     # todos + tags tables
+│   └── 002_create_tag_resource_view.sql  # tag_resource_view (tag ↔ resource join)
 ├── Dockerfile
 ├── docker-compose.yml
 ├── .env.example
-├── schema.sql                    # CREATE TABLE todos (...)
+├── schema.sql                    # Consolidated snapshot of the migrations above,
+│                                  # applied manually to D1 via wrangler
 ├── wrangler.jsonc                 # Worker config + D1 binding
 ├── pyproject.toml
 └── .gitignore
@@ -76,6 +88,19 @@ fastapi-cloudflare-d1/
 
 > After installing `uv`, restart your terminal (or `source ~/.bashrc` in Git
 > Bash) so the updated `PATH` picks up `~/.local/bin` where it installs.
+
+## Authentication
+
+Every endpoint except `/health` requires a Clerk-issued JWT:
+`Authorization: Bearer <token>`. `auth.py` verifies it against
+`CLERK_JWKS_URL`/`CLERK_AUDIENCE` (from `.env` or `wrangler.jsonc` `vars`) —
+there is no dev bypass, so a plain `curl` with no header gets `401 Unauthorized`
+on every route below.
+
+The `showcase` Angular app handles sign-in end to end. To call the API
+directly (`curl`, Swagger's "Try it out", etc.), sign in through that app and
+copy the bearer token it sends — e.g. from your browser's Network tab on any
+request to this API — into your own request.
 
 ## Database modes
 
@@ -149,7 +174,10 @@ Server runs at `http://127.0.0.1:8787`. Try it:
 ```powershell
 curl.exe http://127.0.0.1:8787/health
 curl.exe http://127.0.0.1:8787/docs        # Swagger UI in a browser
-curl.exe http://127.0.0.1:8787/users/<user-id>/todos
+
+# Everything past here needs a bearer token — see "Authentication" above.
+$token = "<paste-a-clerk-jwt-here>"
+curl.exe http://127.0.0.1:8787/users/<user-id>/todos -H "Authorization: Bearer $token"
 ```
 
 To create a todo (PowerShell quoting is finicky with inline JSON, so use a
@@ -157,7 +185,8 @@ temp file):
 ```powershell
 '{"title":"Test","description":"Local test","complete_by":"2026-12-31T23:59:59"}' |
   Out-File -Encoding utf8 -NoNewline body.json
-curl.exe -X POST http://127.0.0.1:8787/users/<user-id>/todos -H "Content-Type: application/json" --data-binary "@body.json"
+curl.exe -X POST http://127.0.0.1:8787/users/<user-id>/todos `
+  -H "Content-Type: application/json" -H "Authorization: Bearer $token" --data-binary "@body.json"
 Remove-Item body.json
 ```
 
@@ -228,9 +257,20 @@ curl.exe --ssl-no-revoke https://fastapi-todo-d1.<your-subdomain>.workers.dev/do
 
 ## API Reference
 
+All paths require a bearer token (see "Authentication" above) except
+`/health`, `/docs`, and `/openapi.json`.
+
 | Method | Path | Description |
 |---|---|---|
 | GET | `/health` | Health check |
+| GET | `/me` | Current user — upserted from the Clerk token's identity on first call |
+| GET | `/users` | List users |
+| GET | `/users/template` | Create-template payload for users |
+| GET | `/users/{id}` | Get one user |
+| POST | `/users` | Create a user |
+| PUT | `/users/{id}` | Update a user |
+| DELETE | `/users/{id}` | Delete a user (returns `204 No Content`) |
+| GET | `/users/{id}/profile` | Navigation hub — links to that user's todos, tags, etc. |
 | GET | `/users/{user_id}/todos` | List all todos for a user |
 | GET | `/users/{user_id}/todos/template` | Create-template payload for todos |
 | GET | `/users/{user_id}/todos/{id}` | Get one todo |
@@ -238,12 +278,22 @@ curl.exe --ssl-no-revoke https://fastapi-todo-d1.<your-subdomain>.workers.dev/do
 | PUT | `/users/{user_id}/todos/{id}` | Full update of a todo |
 | PATCH | `/users/{user_id}/todos/{id}/state/{state}` | Update only the state (`NEW`, `ACTIVE`, `CLOSED`) |
 | DELETE | `/users/{user_id}/todos/{id}` | Delete a todo (returns `204 No Content`) |
-| GET | `/tags` | List/search tags, optionally by `resource_id` or `term` |
+| GET | `/tags` | List tags, optionally filtered by `resource_id` |
+| GET | `/tags/search?tag=` | Search tags by tag name *or* the tagged resource's name |
 | GET | `/tags/template` | Create-template payload for tags |
-| POST | `/tags` | Create a tag for a resource |
+| GET | `/tags/{id}` | Get one tag |
+| POST | `/tags` | Create a tag for a resource (`resource_id`, `tag`) |
 | DELETE | `/tags/{id}` | Delete a tag (returns `204 No Content`) |
 | GET | `/docs` | Interactive Swagger UI |
 | GET | `/openapi.json` | OpenAPI schema |
+
+Every Tag response embeds `resource: {id, value}` — the tagged resource's
+display name, resolved through the `tag_resource_view` SQL view (todos are
+the only taggable resource today; see `migrations/002_create_tag_resource_view.sql`).
+`resource` is `null` when the resource can't be resolved (e.g. it's been
+deleted); `/tags/search` matches against both the tag text and that resolved
+name, so searching `"groceries"` can surface a tag literally named `"urgent"`
+if it's attached to a todo titled "Buy groceries".
 
 ## Known Beta Caveats
 

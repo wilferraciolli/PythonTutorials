@@ -1,22 +1,155 @@
 .TagsPage {
+  &-header {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+  }
+
   &-title {
-    margin: 0 0 1rem;
+    margin: 0;
     font: var(--mat-sys-headline-small);
   }
 
-  &-search {
-    width: 20rem;
-    max-width: 100%;
-    margin-bottom: 1rem;
-  }
-
-  &-error,
-  &-loading,
-  &-empty {
+  &-count {
+    font: var(--mat-sys-label-medium);
     color: var(--mat-sys-on-surface-variant);
   }
 
-  &-table {
-    width: 100%;
+  // One toolbar, not a card-plus-a-separate-search-field: the primary
+  // action (compose) and the secondary one (filter) share a row and wrap
+  // together on narrow viewports instead of stacking as two boxed panels.
+  &-toolbar {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  &-compose {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+
+    mat-form-field {
+      width: 13rem;
+    }
+
+    button {
+      margin-top: 4px; // aligns with the input row, not the field labels
+      white-space: nowrap;
+    }
+  }
+
+  &-search {
+    width: 14rem;
+    max-width: 100%;
+  }
+
+  &-error {
+    color: var(--mat-sys-error);
+  }
+
+  &-loading {
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  // A single hairline — the one structural rule on the page — marking
+  // where "compose" ends and "browse" begins. Not decoration.
+  &-divider {
+    height: 1px;
+    background: var(--mat-sys-outline-variant);
+    margin: 1.25rem 0;
+  }
+
+  &-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 3rem 0;
+    color: var(--mat-sys-on-surface-variant);
+
+    mat-icon {
+      font-size: 2rem;
+      width: 2rem;
+      height: 2rem;
+      opacity: 0.5;
+    }
+
+    p {
+      margin: 0;
+    }
+  }
+
+  // A plain row list rather than a table — no header row, no grid lines;
+  // the chip / id / date positions are self-explanatory after one glance.
+  &-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  &-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.625rem 0.25rem;
+    border-bottom: 1px solid var(--mat-sys-outline-variant);
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    // The remove control stays quiet until the row has attention — it
+    // reads as "here if you need it" rather than a row of delete buttons.
+    mat-chip-set {
+      ::ng-deep .mat-mdc-chip-remove {
+        opacity: 0.45;
+        transition: opacity 0.15s ease;
+      }
+    }
+
+    &:hover,
+    &:focus-within {
+      mat-chip-set ::ng-deep .mat-mdc-chip-remove {
+        opacity: 1;
+      }
+    }
+  }
+
+  &-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex: none;
+  }
+
+  &-resource {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font: var(--mat-sys-body-medium);
+    color: var(--mat-sys-on-surface-variant);
+
+    // Falls back to the raw resource_id when the API couldn't resolve a
+    // name (an orphaned tag) — monospaced so it visibly reads as an id,
+    // not a name that happens to look cryptic.
+    &--unresolved {
+      font-family: 'Roboto Mono', ui-monospace, monospace;
+      font-size: 0.8125rem;
+      opacity: 0.75;
+    }
+  }
+
+  &-date {
+    flex: none;
+    font: var(--mat-sys-body-small);
+    color: var(--mat-sys-on-surface-variant);
   }
 }

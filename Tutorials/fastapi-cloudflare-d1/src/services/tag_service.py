@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
 from api_response import envelope
-from models import Link, Tag, TagCreate
+from models import EmbeddedRef, Link, Tag, TagCreate
 from repositories.tag_repository import TagRepository
 
 
@@ -118,10 +118,12 @@ class TagService:
 
     def _row_to_tag(self, row: Dict[str, Any]) -> Tag:
         tag_id = row["id"]
+        resource_name = row.get("resource_name") if hasattr(row, "get") else row["resource_name"]
         tag = Tag(
             id=tag_id,
             tag=row["tag"],
             resource_id=row["resource_id"],
+            resource=EmbeddedRef(id=row["resource_id"], value=resource_name) if resource_name else None,
             created_date=datetime.fromisoformat(row["created_date"]),
         )
         tag.links = self._links(tag)

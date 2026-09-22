@@ -2,6 +2,16 @@ from typing import Any, Dict, List, Optional
 
 from database import Database
 
+# tag_resource_view joins tags to the resource they're attached to (see
+# migrations/002_create_tag_resource_view.sql). Reads go through it so every
+# row already carries resource_name; the tag_id/tag_name columns are aliased
+# back to id/tag so the rest of the repository (and TagService._row_to_tag)
+# doesn't need to know the view exists.
+_SELECT_TAG = (
+    "SELECT tag_id AS id, tag_name AS tag, resource_id, resource_name, created_date "
+    "FROM tag_resource_view"
+)
+
 
 class TagRepository:
     """
@@ -34,19 +44,23 @@ class TagRepository:
         return created
 
     async def get_all_by_resource_id(self, resource_id: str) -> List[Dict[str, Any]]:
-        return await self.db.fetch_all("SELECT * FROM tags WHERE resource_id = ?", (resource_id,))
+        return await self.db.fetch_all(f"{_SELECT_TAG} WHERE resource_id = ?", (resource_id,))
 
     async def search_tags(self, term: Optional[str] = None) -> List[Dict[str, Any]]:
         if term:
-            return await self.db.fetch_all("SELECT * FROM tags WHERE tag LIKE ?", (f"%{term}%",))
+            like = f"%{term}%"
+            return await self.db.fetch_all(
+                f"{_SELECT_TAG} WHERE tag_name LIKE ? OR resource_name LIKE ?",
+                (like, like),
+            )
 
-        return await self.db.fetch_all("SELECT * FROM tags")
+        return await self.db.fetch_all(_SELECT_TAG)
 
     async def get_all(self) -> List[Dict[str, Any]]:
-        return await self.db.fetch_all("SELECT * FROM tags")
+        return await self.db.fetch_all(_SELECT_TAG)
 
     async def get_by_id(self, id: str) -> Optional[Dict[str, Any]]:
-        return await self.db.fetch_one("SELECT * FROM tags WHERE id = ?", (id,))
+        return await self.db.fetch_one(f"{_SELECT_TAG} WHERE id = ?", (id,))
 
     async def delete(self, id: str) -> bool:
         existing = await self.get_by_id(id)
@@ -61,7 +75,7 @@ class TagRepository:
     async def get_by_resource_and_tag(self, resource_id: str, tag: str) -> Optional[Dict[str, Any]]:
         """Find a specific tag on a resource by name (used to avoid duplicates)."""
         return await self.db.fetch_one(
-            "SELECT * FROM tags WHERE resource_id = ? AND tag = ?",
+            f"{_SELECT_TAG} WHERE resource_id = ? AND tag_name = ?",
             (resource_id, tag),
         )
 

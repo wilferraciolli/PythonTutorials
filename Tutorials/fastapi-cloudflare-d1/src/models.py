@@ -19,6 +19,17 @@ class Link(BaseModel):
     method: str = "GET"
 
 
+class EmbeddedRef(BaseModel):
+    """
+    An embedded reference to another resource — `id` plus its display
+    `value` — so a client can render a human-readable name without a
+    second round trip to look it up. Same `id`/`value` shape the API
+    already uses for metadata option lists (e.g. Todo's `state` values).
+    """
+    id: str
+    value: str
+
+
 class LinkedResource(BaseModel):
     """
     Base class adding a `links` map to any response DTO.
@@ -119,6 +130,9 @@ class TagCreate(BaseModel):
 class Tag(LinkedResource):
     id: str
     resource_id: str
+    # The resource_id's display name, embedded from tag_resource_view —
+    # None when the resource can't be resolved (e.g. it's been deleted).
+    resource: Optional[EmbeddedRef] = None
     tag: str
     created_date: datetime
     class Config:

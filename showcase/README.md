@@ -3,8 +3,22 @@
 Angular front end for the `Tutorials/fastapi-cloudflare-d1` API — a Python FastAPI
 service running as a Cloudflare Worker against a D1 database.
 
-Right now it is a single public home page: some text and a Clerk sign-in button.
-Everything else (guarded routes, screens per endpoint) gets added on top of that.
+## Routes
+
+| Path | Auth | Screen |
+|---|---|---|
+| `/` | Public | Home — intro text + Clerk sign-in button |
+| `/profile` | Sign-in required | Current user's name/email/roles (read-only; sourced from `/me`) |
+| `/todos` | Sign-in required | List the signed-in user's todos, filterable by state |
+| `/todos/new`, `/todos/:id/edit` | Sign-in required | Create/edit a todo, including its tags |
+| `/tags` | Sign-in required | Browse, search, create, and delete tags across every resource |
+
+Signed-out visitors hitting a guarded route are redirected to `/`
+(`core/auth/auth.guard.ts`). Every guarded screen talks to the API through
+links the API itself returns in each response (`_metaLinks`, per-resource
+`links`) rather than hand-built URLs — see `ngx-api-client`'s
+`LinkService`/`ApiClientService`, and `fastapi-cloudflare-d1/README.md`'s API
+Reference for what each response actually contains.
 
 ## Running it
 
