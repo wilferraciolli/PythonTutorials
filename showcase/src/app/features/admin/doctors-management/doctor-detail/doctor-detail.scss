@@ -1,0 +1,102 @@
+// `.App-page` (AdminShell-main, styles.scss) sets max-width/centering/gutter.
+.DoctorDetail {
+  &-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  &-name {
+    margin: 0 0 0.2rem;
+    font-size: 1.4rem;
+  }
+
+  &-specialization {
+    margin: 0 0 0.4rem;
+    color: #666;
+  }
+
+  &-ward-chip {
+    display: inline-block;
+    background: #eee;
+    border-radius: 999px;
+    padding: 0.15rem 0.6rem;
+    font-size: 0.75rem;
+    margin-inline-end: 0.4rem;
+  }
+
+  &-status-badge {
+    display: inline-block;
+    background: #ddd;
+    color: #333;
+    border-radius: 999px;
+    padding: 0.15rem 0.6rem;
+    font-size: 0.75rem;
+
+    &.is-active {
+      background: #dff5e1;
+      color: #1e7d34;
+    }
+  }
+
+  &-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.4rem;
+  }
+
+  // `.App-button` (styles.scss) provides sizing/color/hover for both.
+
+  &-section {
+    margin-bottom: 1.5rem;
+  }
+
+  &-section-title {
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+  }
+
+  &-row {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.3rem 0;
+    border-bottom: 1px solid #f0f0f0;
+
+    &-label {
+      color: #666;
+      min-width: 180px;
+    }
+  }
+
+  &-qualification-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+
+    li {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.3rem 0;
+      border-bottom: 1px solid #f0f0f0;
+    }
+  }
+
+  &-qualification-type {
+    color: #666;
+    font-size: 0.8rem;
+  }
+
+  &-error {
+    color: #d33;
+  }
+
+  &-loading {
+    color: #666;
+  }
+}

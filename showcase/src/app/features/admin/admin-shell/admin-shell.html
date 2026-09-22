@@ -1,0 +1,50 @@
+<div class="AdminShell">
+  <aside class="AdminShell-sidebar">
+    <a class="AdminShell-back-link" routerLink="/board">← {{ i18n.t('navigation.profileMenu.backToBoard') }}</a>
+    <nav class="AdminShell-nav">
+      <a class="AdminShell-nav-link" routerLink="/admin" routerLinkActive="is-active" [routerLinkActiveOptions]="{ exact: true }">
+        {{ i18n.t('navigation.sidebar.dashboard') }}
+      </a>
+      <a class="AdminShell-nav-link" routerLink="/admin/wards" routerLinkActive="is-active">{{ i18n.t('navigation.sidebar.wards') }}</a>
+      <a class="AdminShell-nav-link" routerLink="/admin/doctors" routerLinkActive="is-active">{{ i18n.t('navigation.sidebar.doctors') }}</a>
+      <a class="AdminShell-nav-link" routerLink="/admin/procedures" routerLinkActive="is-active">{{ i18n.t('navigation.sidebar.procedures') }}</a>
+      <a class="AdminShell-nav-link" routerLink="/admin/users" routerLinkActive="is-active">{{ i18n.t('navigation.sidebar.users') }}</a>
+    </nav>
+  </aside>
+
+  <div class="AdminShell-content">
+    <div class="AdminShell-mobile-header">
+      <a class="AdminShell-back-link" routerLink="/board">← {{ i18n.t('navigation.profileMenu.backToBoard') }}</a>
+    </div>
+
+    <nav mat-tab-nav-bar class="AdminShell-tabs" [tabPanel]="tabPanel" [mat-stretch-tabs]="false">
+      <a
+        mat-tab-link
+        routerLink="/admin"
+        routerLinkActive
+        #dashboardTab="routerLinkActive"
+        [routerLinkActiveOptions]="{ exact: true }"
+        [active]="dashboardTab.isActive"
+      >
+        {{ i18n.t('navigation.sidebar.dashboard') }}
+      </a>
+      <a mat-tab-link routerLink="/admin/wards" routerLinkActive #wardsTab="routerLinkActive" [active]="wardsTab.isActive">
+        {{ i18n.t('navigation.sidebar.wards') }}
+      </a>
+      <a mat-tab-link routerLink="/admin/doctors" routerLinkActive #doctorsTab="routerLinkActive" [active]="doctorsTab.isActive">
+        {{ i18n.t('navigation.sidebar.doctors') }}
+      </a>
+      <a mat-tab-link routerLink="/admin/procedures" routerLinkActive #proceduresTab="routerLinkActive" [active]="proceduresTab.isActive">
+        {{ i18n.t('navigation.sidebar.procedures') }}
+      </a>
+      <a mat-tab-link routerLink="/admin/users" routerLinkActive #usersTab="routerLinkActive" [active]="usersTab.isActive">
+        {{ i18n.t('navigation.sidebar.users') }}
+      </a>
+    </nav>
+    <mat-tab-nav-panel #tabPanel></mat-tab-nav-panel>
+
+    <main class="AdminShell-main App-page">
+      <router-outlet />
+    </main>
+  </div>
+</div>

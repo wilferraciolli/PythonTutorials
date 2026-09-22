@@ -1,0 +1,51 @@
+<div class="WardsList">
+  <header class="WardsList-header">
+    <h2 class="WardsList-title">Wards</h2>
+    <a class="WardsList-add-button App-button App-button-primary App-button-sm" routerLink="/admin/wards/new">+ Add ward</a>
+  </header>
+
+  @if (actionError()) {
+    <p class="WardsList-error">{{ actionError() }}</p>
+  }
+
+  @if (store.loadError()) {
+    <p class="WardsList-error">Couldn't load wards — check the API is reachable.</p>
+  } @else if (store.isLoading() && store.wards().length === 0) {
+    <p class="WardsList-loading">Loading wards…</p>
+  } @else if (store.wards().length === 0) {
+    <p class="WardsList-empty">No wards yet.</p>
+  } @else {
+    <div class="WardsList-table-wrapper">
+      <table class="WardsList-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Beds</th>
+            <th>Available</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (ward of store.wards(); track ward.id) {
+            <tr>
+              <td>{{ ward.name }}</td>
+              <td>{{ ward.bed_count }}</td>
+              <td>{{ ward.available_beds }}</td>
+              <td class="WardsList-actions">
+                <a class="App-button App-button-secondary App-button-sm" [routerLink]="['/admin/wards', ward.id, 'edit']">Edit</a>
+                <button
+                  type="button"
+                  class="App-button App-button-danger App-button-sm"
+                  [disabled]="pendingId() === ward.id"
+                  (click)="onDelete(ward)"
+                >
+                  {{ pendingId() === ward.id ? 'Deleting…' : 'Delete' }}
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

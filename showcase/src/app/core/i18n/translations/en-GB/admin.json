@@ -1,0 +1,14 @@
+{
+  "dashboard": {
+    "title": "Dashboard",
+    "wards": "Wards",
+    "beds": "Beds",
+    "occupied": "Occupied",
+    "preparing": "Preparing",
+    "cleaning": "Cleaning",
+    "available": "Available",
+    "manageWards": "Manage wards",
+    "manageDoctors": "Manage doctors",
+    "manageUsers": "Manage users"
+  }
+}

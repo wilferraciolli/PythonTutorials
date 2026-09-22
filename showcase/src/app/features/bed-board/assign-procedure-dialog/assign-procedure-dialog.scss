@@ -1,0 +1,67 @@
+.AssignProcedureDialog {
+  &-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 19;
+  }
+
+  &-panel {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    border-radius: 10px;
+    padding: 1.25rem;
+    width: min(420px, calc(100vw - 2rem));
+    max-height: calc(100vh - 2rem);
+    overflow-y: auto;
+    z-index: 20;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  }
+
+  &-title {
+    margin: 0 0 1rem;
+    font-size: 1.05rem;
+  }
+
+  &-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+  }
+
+  &-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.85rem;
+
+    input,
+    select,
+    textarea {
+      padding: 0.4rem 0.6rem;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-family: inherit;
+    }
+
+    &-error {
+      color: #d33;
+      font-size: 0.75rem;
+    }
+  }
+
+  &-error {
+    color: #d33;
+    font-size: 0.85rem;
+  }
+
+  &-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.6rem;
+  }
+}

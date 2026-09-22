@@ -1,0 +1,114 @@
+@use 'breakpoints' as bp;
+
+.AdminShell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+
+  @include bp.up(sm) {
+    flex-direction: row;
+  }
+
+  // Real sidebar at `sm` and up only — below that it renders as
+  // `.AdminShell-tabs` (a `mat-tab-nav-bar`) instead. This used to stay
+  // in the DOM at every width and just flex-wrap its links into a row,
+  // which is the "buttons wrap and take all the space" problem on phones.
+  &-sidebar {
+    display: none;
+
+    @include bp.up(sm) {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      flex-shrink: 0;
+      width: 200px;
+      background: #1a1a1a;
+      color: white;
+      padding: 0.75rem 1rem;
+      gap: 0.75rem 1.5rem;
+    }
+  }
+
+  &-back-link {
+    color: #aaa;
+    font-size: 0.8rem;
+    text-decoration: none;
+
+    &:hover {
+      color: white;
+    }
+  }
+
+  &-nav {
+    display: flex;
+    flex-direction: column;
+  }
+
+  &-nav-link {
+    color: #ddd;
+    text-decoration: none;
+    padding: 0.5rem 0.6rem;
+    border-radius: 6px;
+    font-size: 0.9rem;
+
+    &:hover {
+      background: #333;
+    }
+
+    &.is-active {
+      background: var(--tenant-primary);
+      color: white;
+      font-weight: 600;
+    }
+  }
+
+  &-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  // Mobile-only equivalent of the sidebar's back-link — the sidebar
+  // itself is `display: none` below `sm`, so this is the only place the
+  // link exists at that width.
+  &-mobile-header {
+    padding: 0.75rem 1rem 0;
+
+    @include bp.up(sm) {
+      display: none;
+    }
+
+    // `.AdminShell-back-link`'s default gray-on-dark styling above is
+    // tuned for the sidebar's black background — this instance sits on
+    // the page's own white background instead.
+    .AdminShell-back-link {
+      color: #666;
+
+      &:hover {
+        color: #1a1a1a;
+      }
+    }
+  }
+
+  // Mobile-only nav — mat-tab-nav-bar paginates (scroll arrows) instead
+  // of wrapping when the 5 tabs don't fit, which is the whole point of
+  // switching to it below `sm`.
+  &-tabs {
+    @include bp.up(sm) {
+      display: none;
+    }
+  }
+
+  &-main {
+    flex: 1;
+    // Without an explicit width, `overflow-y: auto` on a flex item inside a
+    // column flex container (`.AdminShell-content`) makes some browsers
+    // size it to fit its content instead of stretching to the container's
+    // full width — invisible with a shrink-wrapping `<table>` inside, very
+    // visible with something that needs a real width to lay out against
+    // (e.g. ag-grid-angular in doctors-list).
+    width: 100%;
+    overflow-y: auto;
+  }
+}

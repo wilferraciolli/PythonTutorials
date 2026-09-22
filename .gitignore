@@ -227,3 +227,4 @@ __marimo__/
 /.idea/dataSources.xml
 /.idea/fastapi-todo-d1.iml
 /.idea/gyp-next.iml
+/.idea/prettier.xml

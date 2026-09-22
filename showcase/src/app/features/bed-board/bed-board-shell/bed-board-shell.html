@@ -1,0 +1,67 @@
+<div class="BedBoardShell App-page">
+  <header class="BedBoardShell-header">
+    <h2 class="BedBoardShell-title">{{ i18n.t('navigation.navbar.beds') }}</h2>
+    @if (store.overdueCount() > 0) {
+      <span class="BedBoardShell-overdue-badge">{{ i18n.t('beds.card.overdueBadge', { count: store.overdueCount() }) }}</span>
+    }
+  </header>
+
+  @if (store.wardIds().length > 1) {
+    <div class="BedBoardShell-ward-filter">
+      <button
+        type="button"
+        class="BedBoardShell-ward-filter-clear App-button App-button-secondary App-button-sm App-button-pill"
+        [class.is-active]="store.wardFilters().size === 0"
+        [disabled]="store.wardFilters().size === 0"
+        (click)="store.clearWardFilters()"
+      >
+        {{ i18n.t('common.labels.allWards') }}
+      </button>
+      <mat-chip-listbox multiple [attr.aria-label]="i18n.t('beds.filters.byWard')" (change)="onWardFilterChange($event)">
+        @for (wardId of store.wardIds(); track wardId) {
+          <mat-chip-option [value]="wardId" [selected]="store.wardFilters().has(wardId)">
+            {{ wardLabel(wardId) }}
+          </mat-chip-option>
+        }
+      </mat-chip-listbox>
+    </div>
+  }
+
+  @if (store.loadError()) {
+    <p class="BedBoardShell-error">{{ i18n.t('common.messages.loadError') }}</p>
+  } @else if (store.isLoading() && store.beds().length === 0) {
+    <p class="BedBoardShell-loading">{{ i18n.t('beds.messages.loadingBeds') }}</p>
+  } @else if (store.filteredBeds().length === 0) {
+    <p class="BedBoardShell-empty">{{ i18n.t('beds.messages.noBedsFound') }}</p>
+  } @else {
+    <div class="BedBoardShell-grid">
+      @for (bed of store.filteredBeds(); track bed.id) {
+        <app-bed-card
+          [bed]="bed"
+          [statusOptions]="store.statusOptions()"
+          (statusChange)="onStatusChange(bed.id, $event)"
+          (assignProcedure)="openAssignProcedure(bed)"
+          (adjustDuration)="openAdjustDuration(bed)"
+        />
+      }
+    </div>
+  }
+
+  @if (activeDialog(); as dialog) {
+    @if (dialog.kind === 'assign') {
+      <app-assign-procedure-dialog
+        [bedId]="dialog.bed.id"
+        [bedNumber]="dialog.bed.bed_number"
+        (closed)="closeDialog()"
+      />
+    } @else {
+      <app-adjust-duration-dialog
+        [bedId]="dialog.bed.id"
+        [bedNumber]="dialog.bed.bed_number"
+        [currentDurationMinutes]="dialog.bed.expected_duration_minutes"
+        [occupiedMinutes]="dialog.bed.occupied_minutes"
+        (closed)="closeDialog()"
+      />
+    }
+  }
+</div>

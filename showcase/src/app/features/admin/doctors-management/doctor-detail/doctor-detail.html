@@ -1,0 +1,71 @@
+<div class="DoctorDetail">
+  @if (loadError()) {
+    <p class="DoctorDetail-error">Couldn't load this doctor — check the API is reachable.</p>
+  } @else if (isLoading() && !doctor()) {
+    <p class="DoctorDetail-loading">Loading doctor…</p>
+  } @else if (doctor(); as doctor) {
+    <div class="DoctorDetail-header">
+      <div>
+        <h1 class="DoctorDetail-name">{{ doctor.first_name }} {{ doctor.last_name }}</h1>
+        <p class="DoctorDetail-specialization">{{ doctor.specialization }}</p>
+        <span class="DoctorDetail-ward-chip">
+          {{ doctor.ward_id ? wardLabel(doctor.ward_id) : 'All Wards' }}
+        </span>
+        <span class="DoctorDetail-status-badge" [class.is-active]="doctor.is_active">
+          {{ doctor.is_active ? 'Active' : 'Inactive' }}
+        </span>
+      </div>
+
+      <div class="DoctorDetail-actions">
+        <a class="DoctorDetail-edit-button App-button App-button-primary App-button-sm" [routerLink]="['/admin/doctors', doctor.id, 'edit']">Edit</a>
+        <a class="DoctorDetail-back-link App-button App-button-ghost App-button-sm" routerLink="/admin/doctors">Back to list</a>
+      </div>
+    </div>
+
+    <section class="DoctorDetail-section">
+      <h3 class="DoctorDetail-section-title">Contact</h3>
+      <div class="DoctorDetail-row">
+        <span class="DoctorDetail-row-label">Email:</span>
+        <span>{{ doctor.email }}</span>
+      </div>
+      <div class="DoctorDetail-row">
+        <span class="DoctorDetail-row-label">Phone:</span>
+        <span>{{ doctor.phone }}</span>
+      </div>
+      <div class="DoctorDetail-row">
+        <span class="DoctorDetail-row-label">License number:</span>
+        <span>{{ doctor.license_number }}</span>
+      </div>
+      <div class="DoctorDetail-row">
+        <span class="DoctorDetail-row-label">Years of experience:</span>
+        <span>{{ doctor.years_of_experience ?? '—' }}</span>
+      </div>
+      @if (doctor.secondary_specializations.length > 0) {
+        <div class="DoctorDetail-row">
+          <span class="DoctorDetail-row-label">Secondary specializations:</span>
+          <span>{{ doctor.secondary_specializations.join(', ') }}</span>
+        </div>
+      }
+      @if (doctor.bio) {
+        <div class="DoctorDetail-row">
+          <span class="DoctorDetail-row-label">Bio:</span>
+          <span>{{ doctor.bio }}</span>
+        </div>
+      }
+    </section>
+
+    @if (doctor.qualifications.length > 0) {
+      <section class="DoctorDetail-section">
+        <h3 class="DoctorDetail-section-title">Qualifications</h3>
+        <ul class="DoctorDetail-qualification-list">
+          @for (qualification of doctor.qualifications; track $index) {
+            <li>
+              <strong>{{ qualification.name }}</strong>
+              <span class="DoctorDetail-qualification-type">{{ qualificationTypeLabel(qualification.type) }}</span>
+            </li>
+          }
+        </ul>
+      </section>
+    }
+  }
+</div>

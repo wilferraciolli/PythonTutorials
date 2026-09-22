@@ -1,0 +1,97 @@
+@use 'breakpoints' as bp;
+
+.NavBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  row-gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #e5e5e5;
+  background: white;
+
+  @include bp.up(sm) {
+    gap: 1.5rem;
+    padding: 0.75rem 1.5rem;
+  }
+
+  &-brand {
+    font-weight: 700;
+    font-size: 1.05rem;
+    color: var(--tenant-primary);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  &-links {
+    // Hidden below `sm`: on a phone these duplicate what's already one tap
+    // away in the profile menu (Beds/Insights/Admin), and showing them
+    // here too was what made the bar wrap/collapse awkwardly on narrow
+    // screens. Above `sm` there's room for both.
+    display: none;
+    gap: 1.25rem;
+    flex-wrap: wrap;
+
+    @include bp.up(sm) {
+      display: flex;
+    }
+  }
+
+  &-link {
+    color: #555;
+    text-decoration: none;
+    font-size: 0.9rem;
+
+    &:hover {
+      color: #1a1a1a;
+    }
+
+    &.is-active {
+      color: var(--tenant-primary);
+      font-weight: 600;
+    }
+  }
+
+  &-actions {
+    margin-inline-start: auto;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  &-lang {
+    display: flex;
+    align-items: center;
+    gap: 0.15rem;
+    padding: 0.2rem;
+    padding-inline-start: 0.5rem;
+    border-radius: 999px;
+    background: var(--tenant-background-accent);
+  }
+
+  &-lang-icon {
+    color: var(--tenant-primary);
+    margin-inline-end: 0.15rem;
+  }
+
+  &-lang-option {
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    border-radius: 999px;
+    padding: 0.3rem 0.65rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: #5c6b8a;
+
+    &:hover {
+      color: #1a1a1a;
+    }
+
+    &.is-active {
+      background: var(--tenant-primary);
+      color: white;
+    }
+  }
+}

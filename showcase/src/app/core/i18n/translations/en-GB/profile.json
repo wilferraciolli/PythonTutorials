@@ -1,0 +1,20 @@
+{
+  "profile": {
+    "myProfile": "My profile",
+    "editProfile": "Edit profile",
+    "jobTitle": "Job title",
+    "noJobTitle": "No job title set",
+    "role": "Role",
+    "roleUser": "Standard user",
+    "roleAdmin": "Administrator",
+    "ward": "Ward",
+    "language": "Language",
+    "languageHint": "Only affects your own view. Leave unset to use your organization's default.",
+    "timezone": "Timezone",
+    "timezoneHint": "Set by your organization administrator — applies to every user.",
+    "manageWards": "Manage wards",
+    "manageDoctors": "Manage doctors",
+    "manageUsers": "Manage users",
+    "loadingProfile": "Loading profile…"
+  }
+}

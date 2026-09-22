@@ -1,0 +1,43 @@
+<div class="AssignProcedureDialog">
+  <div class="AssignProcedureDialog-backdrop" (click)="onCancel()"></div>
+  <div class="AssignProcedureDialog-panel">
+    <h3 class="AssignProcedureDialog-title">Assign procedure — Bed {{ bedNumber() }}</h3>
+
+    <form [formRoot]="assignForm" class="AssignProcedureDialog-form">
+      <label class="AssignProcedureDialog-field">
+        <span>Procedure type<span class="App-required" aria-hidden="true">*</span></span>
+        <select [formField]="assignForm.procedure_type_id" aria-required="true">
+          <option value="">Select…</option>
+          @for (procedure of store.procedures(); track procedure.id) {
+            <option [value]="procedure.id">{{ procedure.name }} ({{ procedure.typical_duration_minutes }}m)</option>
+          }
+        </select>
+        @if (assignForm.procedure_type_id().touched() && assignForm.procedure_type_id().invalid()) {
+          <span class="AssignProcedureDialog-field-error">Required</span>
+        }
+      </label>
+
+      <label class="AssignProcedureDialog-field">
+        <span>Expected duration (minutes)<span class="App-required" aria-hidden="true">*</span></span>
+        <input type="number" [formField]="assignForm.expected_duration_minutes" aria-required="true" />
+        @if (assignForm.expected_duration_minutes().touched() && assignForm.expected_duration_minutes().invalid()) {
+          <span class="AssignProcedureDialog-field-error">At least 15 minutes</span>
+        }
+      </label>
+
+      <label class="AssignProcedureDialog-field">
+        <span>Procedure notes (optional)</span>
+        <textarea rows="3" [formField]="assignForm.procedure_notes"></textarea>
+      </label>
+
+      @if (saveError()) {
+        <p class="AssignProcedureDialog-error">{{ saveError() }}</p>
+      }
+
+      <div class="AssignProcedureDialog-actions">
+        <button type="button" class="App-button App-button-ghost" (click)="onCancel()">Cancel</button>
+        <button type="submit" class="App-button App-button-primary" [disabled]="saving()">{{ saving() ? 'Assigning…' : 'Assign procedure' }}</button>
+      </div>
+    </form>
+  </div>
+</div>

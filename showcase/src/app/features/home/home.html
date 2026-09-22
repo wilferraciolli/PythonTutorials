@@ -1,0 +1,13 @@
+<div class="Home App-page">
+  <h1 class="Home-title">Resource Management</h1>
+  <p class="Home-lead">
+    Ward bed tracking, procedure assignment, and utilisation insights for the team — this page is
+    public, everything past it needs a sign-in.
+  </p>
+
+  @if (auth.isSignedIn()) {
+    <a class="Home-cta App-button App-button-primary App-button-lg" routerLink="/board">Go to the bed board</a>
+  } @else {
+    <button type="button" class="Home-cta App-button App-button-primary App-button-lg" (click)="signIn()">Sign in</button>
+  }
+</div>

@@ -1,0 +1,56 @@
+<div class="BedCard" [class.is-overdue]="bed().is_overdue">
+  <h3 class="BedCard-title">{{ i18n.t('common.labels.bed') }} {{ bed().bed_number }}</h3>
+  <div class="BedCard-ward">{{ wardLabel(bed().ward_id) }}</div>
+
+  <div class="BedCard-status-field">
+    <label class="App-visually-hidden" [attr.for]="'bed-status-' + bed().id">{{ i18n.t('beds.card.changeStatus') }}</label>
+    <select
+      [id]="'bed-status-' + bed().id"
+      class="BedCard-status-select BedCard-status-select-{{ bed().status }}"
+      (change)="emitStatus($any($event.target).value)"
+    >
+      @for (option of statusOptions(); track option.id) {
+        <!-- `[selected]` per-option, not `[value]` on the select itself —
+             a plain (non-ngModel) select's `[value]` binding can run before
+             its `@for`-generated `<option>`s exist in the DOM, so it can't
+             find a match and silently falls back to the first option. -->
+        <option [value]="option.id" [selected]="option.id === bed().status">{{ statusLabel(option.id) }}</option>
+      }
+    </select>
+  </div>
+
+  @if (bed().status === 'occupied') {
+    @if (bed().procedure_type) {
+      <div class="BedCard-procedure">{{ bed().procedure_type!.name }}</div>
+    }
+
+    <div class="BedCard-minutes">
+      {{ i18n.t('beds.card.timeRange', { start: occupiedStartTime(), end: occupiedEndTime() }) }}
+      @if (!bed().is_overdue) {
+        <span class="BedCard-remaining">{{ i18n.t('beds.card.remaining', { duration: formatDuration(bed().remaining_minutes ?? 0) }) }}</span>
+      } @else {
+        <span class="BedCard-overdue-flag">{{ i18n.t('beds.card.overdueBy', { duration: formatDuration(bed().overdue_minutes) }) }}</span>
+      }
+    </div>
+
+    <div class="BedCard-progress-track">
+      <div class="BedCard-progress-fill" [class.is-overdue]="bed().is_overdue" [style.width.%]="progressPercent()"></div>
+    </div>
+
+    @if (bed().procedure_notes) {
+      <div class="BedCard-notes">{{ bed().procedure_notes }}</div>
+    }
+  }
+
+  <div class="BedCard-secondary-actions">
+    @if (bed().status !== 'occupied') {
+      <button type="button" class="BedCard-secondary-action App-button App-button-secondary App-button-sm App-button-block" (click)="assignProcedure.emit()">
+        {{ i18n.t('beds.card.assignProcedure') }}
+      </button>
+    } @else {
+      <button type="button" class="BedCard-secondary-action App-button App-button-secondary App-button-sm App-button-block" (click)="adjustDuration.emit()">
+        {{ i18n.t('beds.card.adjustTime') }}
+      </button>
+    }
+  </div>
+</div>

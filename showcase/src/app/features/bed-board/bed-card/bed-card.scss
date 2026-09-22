@@ -1,0 +1,207 @@
+.BedCard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: white;
+  // Cool-neutral rather than plain gray, plus a soft double-layer shadow
+  // instead of a flat single-pixel line — the "elevated card on a light
+  // surface" look a flat border alone can't give, without going as heavy
+  // as Material's own multi-layer elevation shadows.
+  border: 1px solid #e1e4e9;
+  border-radius: 12px;
+  // Rounds the overdue accent stripe below to match the card's own
+  // corners instead of poking past them as a square edge.
+  overflow: hidden;
+  padding: 1rem;
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 1px 3px rgba(15, 23, 42, 0.05);
+  transition:
+    box-shadow 0.15s ease,
+    border-color 0.15s ease;
+
+  &:hover {
+    border-color: #d3d7dd;
+    box-shadow:
+      0 2px 4px rgba(15, 23, 42, 0.05),
+      0 4px 10px rgba(15, 23, 42, 0.07);
+  }
+
+  // A single left accent stripe carries the "needs attention" signal
+  // instead of tinting the whole card pink and re-coloring its border —
+  // one clear cue rather than three overlapping ones, and it can't shift
+  // the card's own padding/width the way changing border-left's
+  // thickness would (this is an absolutely-positioned overlay, not part
+  // of the box model).
+  &::before {
+    content: '';
+    position: absolute;
+    inset-block: 0;
+    left: 0;
+    width: 4px;
+    background: transparent;
+  }
+
+  &.is-overdue::before {
+    background: var(--status-overdue);
+  }
+
+  &-title {
+    margin: 0 0 0.25rem;
+    font-size: 1rem;
+  }
+
+  &-ward {
+    color: #666;
+    font-size: 0.8rem;
+    margin-bottom: 0.75rem;
+  }
+
+  // The status dropdown is the primary "what state is this bed in, and how
+  // do I change it" control — solid RAG-colored pill, full width, right up
+  // near the title so it reads at a glance without hunting near the bottom
+  // action buttons the way the old 3-button row did.
+  &-status-field {
+    // Extra breathing room below (not just the field's own size) — this is
+    // used mostly on phones, where a cramped gap to whatever's below makes
+    // it easy to miss-tap the wrong control right after changing status.
+    margin-bottom: 1.25rem;
+  }
+
+  &-status-select {
+    appearance: none;
+    width: 100%;
+    // 52px, not the 44px baseline `.App-button` uses — this is the primary
+    // control on a card that's mostly operated on a phone, so it gets the
+    // largest touch target on the card rather than the minimum.
+    min-height: 52px;
+    padding: 0.6rem 2.5rem 0.6rem 1rem;
+    border: none;
+    border-radius: 999px;
+    font-family: inherit;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: white;
+    cursor: pointer;
+    background-repeat: no-repeat;
+    background-position: right 0.9rem center;
+    background-size: 16px;
+    // Chevron is baked in as white — every status color below is a solid,
+    // dark-enough background for it to stay legible.
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+
+    &:focus-visible {
+      outline: 2px solid #1a1a1a;
+      outline-offset: 2px;
+    }
+
+    // The colored/white-text styling above is for the select's own closed
+    // box only — without this, browsers (especially mobile) carry that
+    // same white-on-color styling into the dropdown's option list when
+    // it's open, making the other choices unreadable (white text on a
+    // white/light system background). Options always get plain, legible
+    // colors regardless of which status color the closed select is showing.
+    option {
+      color: #1a1a1a;
+      background-color: white;
+      font-weight: 400;
+      font-size: 1rem;
+      // Options are rendered by the OS on mobile, so this mostly helps
+      // desktop — the real "more space" fix for phones is the select's
+      // own 52px touch target above and the OS's native picker UI. Chromium
+      // and Firefox both honor block spacing on <option> even though it's
+      // a native popup, not a styleable custom element.
+      padding-block: 0.9rem;
+      padding-inline: 1rem;
+      line-height: 1.4;
+    }
+  }
+
+  // RAG(B) status color, shared by name with `beds.status.*` — red
+  // (occupied), blue (preparing for a specific patient/procedure), amber
+  // (cleaning/turnover), green (free). Kept as its own solid color per
+  // status rather than the tenant brand color, so which state a bed is in
+  // is legible at a glance regardless of tenant. Colors are muted
+  // (docs/design/status-color-refresh-plan.md) rather than fully
+  // saturated — same RAG meaning, easier on the eye across a shift spent
+  // looking at a grid of these.
+  &-status-select-ready {
+    background-color: var(--status-ready);
+  }
+
+  &-status-select-preparing {
+    background-color: var(--status-preparing);
+  }
+
+  &-status-select-cleaning {
+    background-color: var(--status-cleaning);
+  }
+
+  &-status-select-occupied {
+    background-color: var(--status-occupied);
+  }
+
+  &-procedure {
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+  }
+
+  &-minutes {
+    color: #666;
+    font-size: 0.8rem;
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  &-remaining {
+    // Neutral slate rather than the previous arbitrary purple — this is
+    // an informational accent (time remaining), not a status color, so
+    // it shouldn't compete with or be confused for one of the four RAG
+    // status hues above.
+    color: #46586b;
+    font-weight: 600;
+  }
+
+  &-overdue-flag {
+    color: var(--status-overdue);
+    font-weight: 700;
+    font-size: 0.8rem;
+  }
+
+  &-progress-track {
+    height: 4px;
+    background: #eee;
+    border-radius: 999px;
+    margin: 0.4rem 0 0.6rem;
+    overflow: hidden;
+  }
+
+  &-progress-fill {
+    height: 100%;
+    background: #46586b;
+    border-radius: 999px;
+
+    &.is-overdue {
+      background: var(--status-overdue);
+    }
+  }
+
+  &-notes {
+    color: #666;
+    font-size: 0.78rem;
+    margin-bottom: 0.5rem;
+    font-style: italic;
+  }
+
+  &-secondary-actions {
+    // Pushes this row to the bottom of the card regardless of how much
+    // variable content — procedure name, notes, overdue flag — sits
+    // above, so it aligns across cards of differing content instead of
+    // floating mid-card on the shorter ones.
+    margin-top: auto;
+    padding-top: 0.75rem;
+  }
+}

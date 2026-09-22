@@ -1,0 +1,59 @@
+<div class="UsersList">
+  <header class="UsersList-header">
+    <h2 class="UsersList-title">Users</h2>
+  </header>
+
+  @if (actionError()) {
+    <p class="UsersList-error">{{ actionError() }}</p>
+  }
+
+  @if (store.loadError()) {
+    <p class="UsersList-error">Couldn't load users — check the API is reachable.</p>
+  } @else if (store.isLoading() && store.users().length === 0) {
+    <p class="UsersList-loading">Loading users…</p>
+  } @else if (store.users().length === 0) {
+    <p class="UsersList-empty">No users yet.</p>
+  } @else {
+    <div class="UsersList-table-wrapper">
+      <table class="UsersList-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Role</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (user of store.users(); track user.id) {
+            <tr>
+              <td>{{ user.name }}</td>
+              <td>{{ user.email }}</td>
+              <td>
+                <span class="UsersList-role-badge" [class.is-admin]="user.role === 'admin'">
+                  {{ user.role === 'admin' ? 'Admin' : 'User' }}
+                </span>
+              </td>
+              <td class="UsersList-actions">
+                @if (user.id === ownId) {
+                  <span class="UsersList-self-hint" title="You can't change your own role">— that's you</span>
+                } @else {
+                  <button
+                    type="button"
+                    class="App-button App-button-sm"
+                    [class.App-button-danger]="user.role === 'admin'"
+                    [class.App-button-secondary]="user.role !== 'admin'"
+                    [disabled]="pendingId() === user.id"
+                    (click)="onToggleRole(user)"
+                  >
+                    {{ pendingId() === user.id ? 'Updating…' : user.role === 'admin' ? 'Remove admin' : 'Make admin' }}
+                  </button>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

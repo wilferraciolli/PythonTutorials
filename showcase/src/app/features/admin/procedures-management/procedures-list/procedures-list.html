@@ -1,0 +1,59 @@
+<div class="ProceduresList">
+  <header class="ProceduresList-header">
+    <h2 class="ProceduresList-title">Procedure types</h2>
+    <a class="ProceduresList-add-button App-button App-button-primary App-button-sm" routerLink="/admin/procedures/new">+ Add procedure</a>
+  </header>
+
+  @if (actionError()) {
+    <p class="ProceduresList-error">{{ actionError() }}</p>
+  }
+
+  @if (store.loadError()) {
+    <p class="ProceduresList-error">Couldn't load procedures — check the API is reachable.</p>
+  } @else if (store.isLoading() && store.procedures().length === 0) {
+    <p class="ProceduresList-loading">Loading procedures…</p>
+  } @else if (store.procedures().length === 0) {
+    <p class="ProceduresList-empty">No procedure types yet.</p>
+  } @else {
+    <div class="ProceduresList-table-wrapper">
+      <table class="ProceduresList-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Category</th>
+            <th>Typical</th>
+            <th>Min/Max</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (procedure of store.procedures(); track procedure.id) {
+            <tr [class.is-inactive]="!procedure.is_active">
+              <td>{{ procedure.name }}</td>
+              <td>{{ procedure.category }}</td>
+              <td>{{ procedure.typical_duration_minutes }}m</td>
+              <td>{{ procedure.min_duration_minutes }}m / {{ procedure.max_duration_minutes }}m</td>
+              <td>
+                <span class="ProceduresList-status-badge" [class.is-active]="procedure.is_active">
+                  {{ procedure.is_active ? 'Active' : 'Inactive' }}
+                </span>
+              </td>
+              <td class="ProceduresList-actions">
+                <a class="App-button App-button-secondary App-button-sm" [routerLink]="['/admin/procedures', procedure.id, 'edit']">Edit</a>
+                <button
+                  type="button"
+                  class="App-button App-button-danger App-button-sm"
+                  [disabled]="pendingId() === procedure.id"
+                  (click)="onDelete(procedure)"
+                >
+                  {{ pendingId() === procedure.id ? 'Deactivating…' : 'Deactivate' }}
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

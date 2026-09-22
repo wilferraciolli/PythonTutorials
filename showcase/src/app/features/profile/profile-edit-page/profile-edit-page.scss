@@ -1,0 +1,75 @@
+.ProfileEditPage {
+  padding: 1.5rem;
+  max-width: 420px;
+  margin: 0 auto;
+
+  &-title {
+    margin: 0 0 1rem;
+    font-size: 1.25rem;
+  }
+
+  &-loading {
+    color: #666;
+  }
+
+  &-error {
+    color: #d33;
+  }
+
+  &-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  &-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.85rem;
+
+    input,
+    select {
+      padding: 0.4rem 0.6rem;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-family: inherit;
+      background: white;
+    }
+
+    &-error {
+      color: #d33;
+      font-size: 0.75rem;
+    }
+  }
+
+  &-language {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid #eee;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  &-hint {
+    color: #666;
+    font-size: 0.75rem;
+  }
+
+  &-timezone-readonly {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    font-size: 0.85rem;
+    color: #333;
+  }
+
+  &-actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 1rem;
+  }
+}

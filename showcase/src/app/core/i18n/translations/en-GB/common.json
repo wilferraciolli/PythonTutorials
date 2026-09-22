@@ -1,0 +1,40 @@
+{
+  "app": {
+    "title": "Resource Management",
+    "tagline": "Hospital Resource Management System"
+  },
+  "buttons": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "close": "Close",
+    "back": "Back",
+    "signIn": "Sign in",
+    "signOut": "Sign out",
+    "saving": "Saving…",
+    "create": "Create",
+    "update": "Update"
+  },
+  "labels": {
+    "name": "Name",
+    "email": "Email",
+    "phone": "Phone",
+    "status": "Status",
+    "ward": "Ward",
+    "bed": "Bed",
+    "date": "Date",
+    "time": "Time",
+    "description": "Description",
+    "actions": "Actions",
+    "language": "Language",
+    "allWards": "All wards",
+    "optionalSuffix": " (optional)"
+  },
+  "messages": {
+    "loading": "Loading…",
+    "error": "Something went wrong",
+    "loadError": "Couldn't load data — check the API is reachable."
+  }
+}

@@ -1,0 +1,37 @@
+<header class="NavBar">
+  <a class="NavBar-brand" routerLink="/">{{ i18n.t('common.app.title') }}</a>
+
+  @if (auth.isSignedIn()) {
+    <nav class="NavBar-links">
+      <a class="NavBar-link" routerLink="/board" routerLinkActive="is-active">{{ i18n.t('navigation.navbar.beds') }}</a>
+      <a class="NavBar-link" routerLink="/insights" routerLinkActive="is-active">{{ i18n.t('navigation.navbar.insights') }}</a>
+      @if (currentUser.isAdmin()) {
+        <a class="NavBar-link" routerLink="/admin" routerLinkActive="is-active">{{ i18n.t('navigation.navbar.admin') }}</a>
+      }
+    </nav>
+  }
+
+  <div class="NavBar-actions">
+    <div class="NavBar-lang" role="group" [attr.aria-label]="i18n.t('common.labels.language')">
+      <span class="material-symbols-outlined NavBar-lang-icon" aria-hidden="true">language</span>
+      @for (locale of i18n.supportedLocales(); track locale.code) {
+        <button
+          type="button"
+          class="NavBar-lang-option"
+          [class.is-active]="i18n.locale() === locale.code"
+          [attr.aria-pressed]="i18n.locale() === locale.code"
+          [attr.title]="locale.name"
+          (click)="setLocale(locale.code)"
+        >
+          {{ shortCode(locale.code) }}
+        </button>
+      }
+    </div>
+
+    @if (auth.isSignedIn()) {
+      <app-profile-menu />
+    } @else {
+      <button type="button" class="NavBar-sign-in App-button App-button-primary App-button-sm" (click)="signIn()">{{ i18n.t('common.buttons.signIn') }}</button>
+    }
+  </div>
+</header>

@@ -1,0 +1,32 @@
+// Shared spacing scale. `@use 'spacing';` from any stylesheet (src/styles
+// is on the Sass include path). 4px base unit — `spacing.space(2)` is 8px,
+// `spacing.space(4)` is 16px, and so on — keeps paddings/gaps/margins on a
+// consistent grid instead of ad hoc pixel values. Ported from insurly-ui's
+// src/styles/_spacing.scss — see docs/frontend-conventions.md.
+@use 'sass:math';
+@use 'sass:meta';
+
+$unit: 4px;
+
+// Accepts a unitless multiplier (steps of $unit) or a raw length, so an
+// off-scale value can still be passed through the same call site.
+@function space($n) {
+  @if meta.type-of($n) != 'number' {
+    @error '`space()` expects a unitless multiplier or a length, got #{meta.type-of($n)}.';
+  }
+  @if math.is-unitless($n) {
+    @return $n * $unit;
+  }
+  @return $n;
+}
+
+// Named responsive padding steps. Pair with `breakpoints.up(md)` /
+// `breakpoints.up(lg)` to step a container's padding up as the viewport
+// grows — mobile is the base value, tablet and desktop layer on top of it.
+$padding-mobile: 10px;
+$padding-tablet: 15px;
+$padding-desktop: 20px;
+
+// A generous, one-off spacing value for gaps/margins that want more room
+// than the padding scale above (e.g. a wide gap between nav items).
+$spacing-large: 30px;

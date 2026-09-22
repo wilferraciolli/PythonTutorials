@@ -1,0 +1,67 @@
+<div class="DoctorsList">
+  <header class="DoctorsList-header">
+    <h2 class="DoctorsList-title">Doctors</h2>
+    <a class="DoctorsList-add-button App-button App-button-primary App-button-sm" routerLink="/admin/doctors/new">+ Add doctor</a>
+  </header>
+
+  <div class="DoctorsList-filters">
+    <label class="App-visually-hidden" for="doctors-search">Search by name or email</label>
+    <input
+      id="doctors-search"
+      type="search"
+      class="DoctorsList-search"
+      placeholder="Search by name or email"
+      [value]="store.filters().search"
+      (input)="onSearchChange($any($event.target).value)"
+    />
+
+    <label class="App-visually-hidden" for="doctors-ward-filter">Filter by ward</label>
+    <select id="doctors-ward-filter" class="DoctorsList-filter" (change)="onWardFilterChange($any($event.target).value)">
+      <option value="">All wards</option>
+      @for (wardId of wardIds(); track wardId) {
+        <option [value]="wardId">{{ wardLabel(wardId) }}</option>
+      }
+    </select>
+
+    <label class="App-visually-hidden" for="doctors-specialization-filter">Filter by specialization</label>
+    <select id="doctors-specialization-filter" class="DoctorsList-filter" (change)="onSpecializationFilterChange($any($event.target).value)">
+      <option value="">All specializations</option>
+      @for (option of store.specializationOptions(); track option.id) {
+        <option [value]="option.id">{{ option.value }}</option>
+      }
+    </select>
+
+    <label class="App-visually-hidden" for="doctors-active-filter">Filter by active status</label>
+    <select id="doctors-active-filter" class="DoctorsList-filter" (change)="onActiveFilterChange($any($event.target).value)">
+      <option value="">Active + inactive</option>
+      <option value="true">Active only</option>
+      <option value="false">Inactive only</option>
+    </select>
+  </div>
+
+  @if (actionError()) {
+    <p class="DoctorsList-error">{{ actionError() }}</p>
+  }
+
+  @if (store.loadError()) {
+    <p class="DoctorsList-error">Couldn't load doctors — check the API is reachable.</p>
+  } @else if (store.isLoading() && store.doctors().length === 0) {
+    <p class="DoctorsList-loading">Loading doctors…</p>
+  } @else if (store.doctors().length === 0) {
+    <p class="DoctorsList-empty">No doctors match these filters.</p>
+  } @else {
+    <ag-grid-angular
+      class="ag-theme-quartz DoctorsList-grid"
+      [theme]="'legacy'"
+      domLayout="autoHeight"
+      [rowData]="rowData()"
+      [columnDefs]="columnDefs"
+      [defaultColDef]="defaultColDef"
+      [context]="gridContext"
+      [animateRows]="true"
+      [suppressCellFocus]="true"
+      [rowHeight]="52"
+    />
+    <p class="DoctorsList-count">{{ store.doctors().length }} of {{ store.totalCount() }} doctors</p>
+  }
+</div>

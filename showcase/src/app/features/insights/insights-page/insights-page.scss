@@ -1,0 +1,270 @@
+// `.App-page` (styles.scss) sets max-width/centering/gutter.
+@use 'breakpoints' as bp;
+
+.InsightsPage {
+  &-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+  }
+
+  &-title {
+    margin: 0;
+    font-size: 1.25rem;
+    margin-inline-end: auto;
+  }
+
+  &-filters {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  &-filter {
+    padding: 0.4rem 0.6rem;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    background: white;
+  }
+
+  &-filter-separator {
+    color: #666;
+    font-size: 0.8rem;
+  }
+
+  &-error {
+    color: #d33;
+  }
+
+  &-cards {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+
+    // 700px doesn't match a named breakpoint (sm/md/lg) — passed as a raw
+    // length to `bp.up()` rather than forcing it onto the nearest one.
+    @include bp.up(700px) {
+      grid-template-columns: repeat(6, 1fr);
+    }
+  }
+
+  &-card {
+    background: white;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    padding: 0.9rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.2rem;
+
+    &.is-warning {
+      border-color: #d33;
+      background: #fff5f5;
+    }
+  }
+
+  &-card-value {
+    font-size: 1.4rem;
+    font-weight: 700;
+  }
+
+  &-card-label {
+    font-size: 0.75rem;
+    color: #666;
+    text-align: center;
+  }
+
+  &-availability-bar {
+    display: flex;
+    height: 28px;
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 2rem;
+  }
+
+  &-availability-segment {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    color: white;
+    white-space: nowrap;
+    overflow: hidden;
+
+    &.is-ready {
+      background: #4caf50;
+    }
+
+    &.is-preparing {
+      background: #ff9800;
+    }
+
+    &.is-cleaning {
+      background: #7e57c2;
+    }
+
+    &.is-occupied {
+      background: #00bcd4;
+    }
+  }
+
+  &-section {
+    margin-bottom: 2rem;
+  }
+
+  &-section-title {
+    font-size: 1rem;
+    margin-bottom: 0.75rem;
+  }
+
+  &-empty {
+    color: #666;
+    font-size: 0.85rem;
+  }
+
+  &-ward-chart {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  &-ward-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  &-ward-name {
+    flex: 0 0 100px;
+    font-size: 0.8rem;
+    color: #333;
+  }
+
+  &-ward-bar {
+    flex: 1;
+    display: flex;
+    height: 20px;
+    border-radius: 4px;
+    overflow: hidden;
+    background: #eee;
+  }
+
+  &-ward-segment {
+    &.is-underutilized {
+      background: #42a5f5;
+    }
+
+    &.is-on-track {
+      background: #4caf50;
+    }
+
+    &.is-overrun {
+      background: #f44336;
+    }
+  }
+
+  &-ward-count {
+    flex: 0 0 60px;
+    font-size: 0.75rem;
+    color: #666;
+    text-align: right;
+  }
+
+  &-legend {
+    display: flex;
+    gap: 1rem;
+    margin-top: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  &-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.78rem;
+    color: #666;
+  }
+
+  &-legend-swatch {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+
+    &.is-underutilized {
+      background: #42a5f5;
+    }
+
+    &.is-on-track {
+      background: #4caf50;
+    }
+
+    &.is-overrun {
+      background: #f44336;
+    }
+  }
+
+  &-histogram {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.75rem;
+    height: 160px;
+    padding-top: 1rem;
+    overflow-x: auto;
+  }
+
+  &-histogram-bar {
+    flex: 1;
+    min-width: 60px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    height: 100%;
+    gap: 0.3rem;
+  }
+
+  &-histogram-fill {
+    width: 100%;
+    max-width: 40px;
+    border-radius: 4px 4px 0 0;
+    min-height: 2px;
+
+    &.is-very-underutilized {
+      background: #1565c0;
+    }
+
+    &.is-underutilized {
+      background: #42a5f5;
+    }
+
+    &.is-on-track {
+      background: #4caf50;
+    }
+
+    &.is-overrun {
+      background: #ff9800;
+    }
+
+    &.is-very-overrun {
+      background: #f44336;
+    }
+  }
+
+  &-histogram-value {
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+
+  &-histogram-label {
+    font-size: 0.68rem;
+    color: #666;
+    text-align: center;
+  }
+}

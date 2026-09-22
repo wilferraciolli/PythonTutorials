@@ -1,0 +1,136 @@
+<div class="InsightsPage App-page">
+  <header class="InsightsPage-header">
+    <h2 class="InsightsPage-title">Insights &amp; Analytics</h2>
+    <div class="InsightsPage-filters">
+      <label class="App-visually-hidden" for="insights-ward-filter">Filter by ward</label>
+      <select id="insights-ward-filter" class="InsightsPage-filter" (change)="onWardFilterChange($any($event.target).value)">
+        <option value="">All wards</option>
+        @for (wardId of wardIds(); track wardId) {
+          <option [value]="wardId">{{ wardLabel(wardId) }}</option>
+        }
+      </select>
+      <label class="App-visually-hidden" for="insights-date-from">From date</label>
+      <input id="insights-date-from" type="date" class="InsightsPage-filter" (change)="onDateFromChange($any($event.target).value)" />
+      <span class="InsightsPage-filter-separator" aria-hidden="true">to</span>
+      <label class="App-visually-hidden" for="insights-date-to">To date</label>
+      <input id="insights-date-to" type="date" class="InsightsPage-filter" (change)="onDateToChange($any($event.target).value)" />
+    </div>
+  </header>
+
+  @if (store.loadError()) {
+    <p class="InsightsPage-error">Couldn't load insights — check the API is reachable.</p>
+  } @else {
+    @if (store.overview(); as overview) {
+      <div class="InsightsPage-cards">
+        <div class="InsightsPage-card">
+          <span class="InsightsPage-card-value">{{ overview.total_beds }}</span>
+          <span class="InsightsPage-card-label">Total beds</span>
+        </div>
+        <div class="InsightsPage-card">
+          <span class="InsightsPage-card-value">{{ overview.occupancy_rate }}%</span>
+          <span class="InsightsPage-card-label">Occupancy rate</span>
+        </div>
+        <div class="InsightsPage-card">
+          <span class="InsightsPage-card-value">{{ overview.availability_rate }}%</span>
+          <span class="InsightsPage-card-label">Availability rate</span>
+        </div>
+        <div class="InsightsPage-card">
+          <span class="InsightsPage-card-value">{{ overview.avg_occupancy_duration ?? '—' }}</span>
+          <span class="InsightsPage-card-label">Avg duration (min)</span>
+        </div>
+        <div class="InsightsPage-card">
+          <span class="InsightsPage-card-value">{{ overview.avg_duration_variance ?? '—' }}%</span>
+          <span class="InsightsPage-card-label">Avg variance</span>
+        </div>
+        <div class="InsightsPage-card" [class.is-warning]="overview.overdue_beds > 0">
+          <span class="InsightsPage-card-value">{{ overview.overdue_beds }}</span>
+          <span class="InsightsPage-card-label">Overdue beds</span>
+        </div>
+      </div>
+
+      <div class="InsightsPage-availability-bar">
+        <div class="InsightsPage-availability-segment is-ready" [style.width.%]="(overview.ready_beds / overview.total_beds) * 100">
+          @if (overview.ready_beds) {
+            <span>{{ overview.ready_beds }} ready</span>
+          }
+        </div>
+        <div class="InsightsPage-availability-segment is-preparing" [style.width.%]="(overview.preparing_beds / overview.total_beds) * 100">
+          @if (overview.preparing_beds) {
+            <span>{{ overview.preparing_beds }} preparing</span>
+          }
+        </div>
+        <div class="InsightsPage-availability-segment is-cleaning" [style.width.%]="(overview.cleaning_beds / overview.total_beds) * 100">
+          @if (overview.cleaning_beds) {
+            <span>{{ overview.cleaning_beds }} cleaning</span>
+          }
+        </div>
+        <div class="InsightsPage-availability-segment is-occupied" [style.width.%]="(overview.occupied_beds / overview.total_beds) * 100">
+          @if (overview.occupied_beds) {
+            <span>{{ overview.occupied_beds }} occupied</span>
+          }
+        </div>
+      </div>
+    }
+
+    <section class="InsightsPage-section">
+      <h3 class="InsightsPage-section-title">Occupancy duration variance by ward</h3>
+      @if (store.durationAnalysis().length === 0) {
+        <p class="InsightsPage-empty">No completed occupancies yet.</p>
+      } @else {
+        <div class="InsightsPage-ward-chart">
+          @for (entry of store.durationAnalysis(); track entry.ward_id) {
+            <div class="InsightsPage-ward-row">
+              <span class="InsightsPage-ward-name">{{ entry.ward_name }}</span>
+              <div class="InsightsPage-ward-bar">
+                <div
+                  class="InsightsPage-ward-segment is-underutilized"
+                  [style.width.%]="wardSegmentWidth(entry, entry.underutilized)"
+                  [title]="entry.underutilized + ' underutilized'"
+                ></div>
+                <div
+                  class="InsightsPage-ward-segment is-on-track"
+                  [style.width.%]="wardSegmentWidth(entry, entry.on_track)"
+                  [title]="entry.on_track + ' on track'"
+                ></div>
+                <div
+                  class="InsightsPage-ward-segment is-overrun"
+                  [style.width.%]="wardSegmentWidth(entry, entry.overrun)"
+                  [title]="entry.overrun + ' overrun'"
+                ></div>
+              </div>
+              <span class="InsightsPage-ward-count">{{ entry.total_occupancies }} total</span>
+            </div>
+          }
+        </div>
+        <div class="InsightsPage-legend">
+          <span class="InsightsPage-legend-item">
+            <span class="InsightsPage-legend-swatch is-underutilized"></span> Underutilized
+          </span>
+          <span class="InsightsPage-legend-item">
+            <span class="InsightsPage-legend-swatch is-on-track"></span> On track
+          </span>
+          <span class="InsightsPage-legend-item">
+            <span class="InsightsPage-legend-swatch is-overrun"></span> Overrun
+          </span>
+        </div>
+      }
+    </section>
+
+    <section class="InsightsPage-section">
+      <h3 class="InsightsPage-section-title">Duration variance distribution</h3>
+      <div class="InsightsPage-histogram">
+        @for (bucket of varianceBuckets; track bucket.key) {
+          <div class="InsightsPage-histogram-bar">
+            <div
+              class="InsightsPage-histogram-fill"
+              [class]="'is-' + bucket.key.replace('_', '-')"
+              [style.height.%]="(store.varianceDistribution()[bucket.key].percent / maxBucketPercent()) * 100"
+            ></div>
+            <span class="InsightsPage-histogram-value">{{ store.varianceDistribution()[bucket.key].count }}</span>
+            <span class="InsightsPage-histogram-label">{{ bucket.label }}</span>
+          </div>
+        }
+      </div>
+    </section>
+  }
+</div>
