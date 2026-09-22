@@ -18,10 +18,13 @@ describe('Home', () => {
     expect(fixture.componentInstance).toBeTruthy();
   });
 
-  it('shows a sign-in CTA when signed out', () => {
+  // AuthStore starts with no session and `init()` only runs via
+  // provideAppInitializer, so an un-bootstrapped store is signed out —
+  // which is exactly the state this page has to render a sign-in CTA for.
+  it('shows a sign-in button when signed out', () => {
     const fixture = TestBed.createComponent(Home);
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('.Home-cta')?.textContent).toContain('Sign in');
+    expect(compiled.querySelector('button')?.textContent).toContain('Sign in');
   });
 });

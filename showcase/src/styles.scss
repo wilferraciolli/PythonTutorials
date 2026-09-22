@@ -1,10 +1,7 @@
-// Angular Material theming — only pulled in for MatDialog (see
-// users-list's confirm dialog); the rest of the app's chrome stays
-// hand-rolled CSS against the --tenant-* tokens below, not Material
-// components. `mat.theme()` defines the --mat-sys-* CSS variables Material
-// components read; the closest predefined M3 palette (magenta) is nudged
-// to the exact El Greco brand hex afterward so a MatDialog's primary
-// button matches the rest of the UI instead of Material's own magenta.
+// Angular Material theming. `mat.theme()` defines the --mat-sys-* CSS
+// variables Material components read; components in this app reference
+// those same tokens (see home.scss) rather than hardcoding hex values, so
+// changing the palette here restyles the whole app.
 @use '@angular/material' as mat;
 
 html {
@@ -12,7 +9,7 @@ html {
   @include mat.theme(
     (
       color: (
-        primary: mat.$magenta-palette,
+        primary: mat.$azure-palette,
         tertiary: mat.$blue-palette,
       ),
       typography: Roboto,
@@ -21,249 +18,23 @@ html {
   );
 }
 
-// Tenant brand palette — see docs/features/tenant-branding-customization.md.
-// These are the reference customer's (El Greco Medical Centre) values,
-// hardcoded here as the app's default theme. The doc's Phase 2/3 (fetch
-// per-tenant from GET /organization, admin edit UI) isn't built yet — until
-// then this file is the single place the brand palette lives; component
-// SCSS should reference these custom properties rather than hardcoding
-// brand-colored hex values, so wiring up the dynamic version later is a
-// non-breaking swap (just start overwriting these at runtime instead of
-// only here).
 :root {
-  --tenant-primary: #ec1e79;
-  --tenant-primary-dark: #c21763;
-  --tenant-accent: #f472b0;
-  --tenant-background-accent: #e8e6f0;
-
-  // Bed/room status colors — see docs/design/status-color-refresh-plan.md.
-  // Muted (70-85% saturation) instead of fully-saturated alarm tones, but
-  // kept dark enough to hold >=4.5:1 contrast for the white text/chevron
-  // in bed-card's solid-fill status pill. `--status-overdue` is a deepened
-  // variant of `--status-occupied`, not a new hue, so "occupied" and
-  // "occupied + overdue" read as the same status intensifying, not two
-  // different statuses. `--color-danger` is a separate token (form
-  // errors, delete/deactivate) — a bed being occupied isn't an error, so
-  // it intentionally doesn't share a hex with `--status-occupied` even
-  // though both sit in the red family.
-  --status-ready: #3f7a5c;
-  --status-preparing: #4568a3;
-  --status-cleaning: #96631f;
-  --status-occupied: #b1493f;
-  --status-overdue: #8f382f;
-  --color-danger: #b3261e;
-
-  // Mobile-first layout constants — see docs/frontend-conventions.md's
-  // "Layout: mobile-first, max width, centered" section. This app is
-  // designed to be used on a phone at a hospital bedside as much as at a
-  // desktop; content stays centered and capped rather than stretching
-  // edge-to-edge on a wide monitor. `.AppShell` (app.scss) applies this to
-  // the nav bar too, not just page content, so the whole app frame — not
-  // just what's below the header — reads as one consistent width.
-  --app-page-max-width: 1120px;
+  // Single shared page gutter, so the footer and the page content below it
+  // line up without each picking its own number.
   --app-gutter: 24px;
-
-  // Retune Material's system tokens to the exact tenant brand color
-  // (mat.$magenta-palette above gets Material's dialogs/buttons close,
-  // this makes them match precisely).
-  --mat-sys-primary: var(--tenant-primary);
-  --mat-sys-on-primary: white;
-  --mat-sys-primary-container: var(--tenant-background-accent);
-  --mat-sys-on-primary-container: var(--tenant-primary-dark);
 }
 
 body {
   color-scheme: light;
   margin: 0;
   height: 100%;
-  font-family:
-    system-ui,
-    -apple-system,
-    'Segoe UI',
-    Roboto,
-    sans-serif;
-  color: #1a1a1a;
-  background: #fafafa;
+  font-family: Roboto, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color: var(--mat-sys-on-surface);
+  background: var(--mat-sys-surface);
 }
 
 *,
 *::before,
 *::after {
   box-sizing: border-box;
-}
-
-// Google's Material Symbols icon font (used standalone, alongside the
-// handful of Material components below) via the CDN link in index.html.
-.material-symbols-outlined {
-  font-variation-settings:
-    'FILL' 0,
-    'wght' 400,
-    'GRAD' 0,
-    'opsz' 24;
-  font-size: 1.2rem;
-  line-height: 1;
-  user-select: none;
-}
-
-// Shared page-layout helpers — ported from insurly-ui's `.App-…` classes
-// (src/styles.scss there). Apply `.App-page` to a route's top-level
-// container (alongside its own component class) instead of that
-// component redefining its own `max-width`/`margin: 0 auto`/`padding` —
-// one shared constant instead of a different ad hoc number per page.
-.App {
-  &-page {
-    max-width: var(--app-page-max-width);
-    margin: 0 auto;
-    padding: var(--app-gutter);
-  }
-
-  &-spacer {
-    flex: 1 1 auto;
-  }
-}
-
-// Shared button system — one base class + modifiers instead of every
-// component hand-rolling its own <button>/<a> from scratch. Before this,
-// doctor-form/ward-form/procedure-form/profile-edit-page, the four admin
-// list pages, bed-card, both bed-board dialogs, nav-bar, and home each
-// defined their own slightly-different primary/secondary button
-// independently — 5+ different border-radius values, inconsistent hover
-// states (some had none), and no visual distinction for destructive
-// actions anywhere. Sizes follow docs/design/look-and-feel.md's documented
-// button scale (36/44/48px); works on both <button> and <a>.
-.App-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.4rem;
-  box-sizing: border-box;
-  min-height: 44px;
-  padding: 0 16px;
-  border-radius: 8px;
-  border: 1px solid transparent;
-  font-family: inherit;
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 1.2;
-  text-decoration: none;
-  white-space: nowrap;
-  cursor: pointer;
-  transition:
-    background-color 0.15s ease,
-    border-color 0.15s ease,
-    color 0.15s ease,
-    opacity 0.15s ease;
-
-  &:focus-visible {
-    outline: 2px solid var(--tenant-primary);
-    outline-offset: 2px;
-  }
-
-  &:disabled,
-  &.is-disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    pointer-events: none;
-  }
-
-  &-sm {
-    min-height: 36px;
-    padding: 0 12px;
-    font-size: 12px;
-  }
-
-  &-lg {
-    min-height: 48px;
-    padding: 0 24px;
-    font-size: 16px;
-  }
-
-  &-pill {
-    border-radius: 999px;
-  }
-
-  &-block {
-    display: flex;
-    width: 100%;
-  }
-
-  // Square icon-only trigger (e.g. profile menu) — a circular hit target
-  // instead of a button sized by its (invisible) text content.
-  &-icon {
-    min-height: 40px;
-    min-width: 40px;
-    padding: 0;
-    border-radius: 50%;
-  }
-}
-
-// Variants — color only; compose with a sizing modifier above, e.g.
-// class="App-button App-button-primary App-button-sm".
-.App-button-primary {
-  background: var(--tenant-primary);
-  border-color: var(--tenant-primary);
-  color: white;
-
-  &:hover:not(:disabled):not(.is-disabled) {
-    background: var(--tenant-primary-dark);
-    border-color: var(--tenant-primary-dark);
-  }
-}
-
-.App-button-secondary {
-  background: white;
-  border-color: #ccc;
-  color: #333;
-
-  &:hover:not(:disabled):not(.is-disabled) {
-    background: #f0f0f0;
-  }
-}
-
-.App-button-ghost {
-  background: transparent;
-  border-color: transparent;
-  color: #666;
-
-  &:hover:not(:disabled):not(.is-disabled) {
-    background: rgba(0, 0, 0, 0.05);
-  }
-}
-
-// For destructive/consequential actions (delete, deactivate, remove admin)
-// — every hand-rolled delete button used to share the exact same neutral
-// gray-bordered style as "Edit" right next to it.
-.App-button-danger {
-  background: white;
-  border-color: #eab8b8;
-  color: var(--color-danger);
-
-  &:hover:not(:disabled):not(.is-disabled) {
-    background: #fdecea;
-    border-color: var(--color-danger);
-  }
-}
-
-// Required-field marker — forms used to mark the exception ("(optional)")
-// and leave required fields with no visible cue at all until a user
-// tabbed through and triggered a validation error. Pair with
-// `aria-required="true"` on the field itself.
-.App-required {
-  color: var(--color-danger);
-  margin-inline-start: 0.15rem;
-}
-
-// Screen-reader-only text — for a label that needs to exist for
-// assistive tech (e.g. a field whose sighted label is contextual/implicit)
-// without taking up visual space.
-.App-visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
 }

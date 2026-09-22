@@ -48,14 +48,16 @@ export const AuthStore = signalStore(
         });
       },
 
-      // The `resource-management-api` JWT template's token (Clerk Dashboard
-      // -> Configure -> JWT Templates), not the default session token —
-      // that default carries no custom claims (name/email) and no `aud`
-      // scoping it to this API. The backend (auth.py) verifies `aud`
-      // matches, and reads `name`/`email` from claims on first sign-in
-      // (routers/me.py) — both require going through this named template.
+      // A named JWT template's token (Clerk Dashboard -> Configure -> JWT
+      // Templates), not the default session token — that default carries no
+      // custom claims (name/email) and no `aud` scoping it to this API. The
+      // backend verifies `aud` matches CLERK_AUDIENCE (auth.py) and reads
+      // `name`/`email` from claims on first sign-in (routers/me.py) — both
+      // require going through the named template, so the template's name in
+      // Clerk must equal the API's CLERK_AUDIENCE (`wiltech-dev-api`).
       async getToken(): Promise<string | null> {
-        return (await clerk?.session?.getToken({ template: 'resource-management-api' })) ?? null;
+        const template = environment.clerkJwtTemplate;
+        return (await clerk?.session?.getToken({ template })) ?? null;
       },
 
       /**

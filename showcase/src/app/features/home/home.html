@@ -1,13 +1,18 @@
-<div class="Home App-page">
-  <h1 class="Home-title">Resource Management</h1>
-  <p class="Home-lead">
-    Ward bed tracking, procedure assignment, and utilisation insights for the team — this page is
-    public, everything past it needs a sign-in.
-  </p>
+<main class="Home">
+  <mat-card class="Home-card" appearance="outlined">
+    <mat-card-content class="Home-content">
+      <h1 class="Home-title">FastAPI on Cloudflare D1</h1>
+      <p class="Home-lead">
+        A Python FastAPI service running as a Cloudflare Worker against a D1 database. Sign in with
+        Clerk to get a session token for the API.
+      </p>
 
-  @if (auth.isSignedIn()) {
-    <a class="Home-cta App-button App-button-primary App-button-lg" routerLink="/board">Go to the bed board</a>
-  } @else {
-    <button type="button" class="Home-cta App-button App-button-primary App-button-lg" (click)="signIn()">Sign in</button>
-  }
-</div>
+      @if (auth.isSignedIn()) {
+        <p class="Home-identity">Signed in as {{ signedInAs() }}</p>
+        <button matButton="outlined" type="button" (click)="signOut()">Sign out</button>
+      } @else {
+        <button matButton="filled" type="button" (click)="signIn()">Sign in</button>
+      }
+    </mat-card-content>
+  </mat-card>
+</main>

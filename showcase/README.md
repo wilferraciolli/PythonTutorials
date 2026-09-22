@@ -1,59 +1,55 @@
 # Showcase
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.2.9.
+Angular front end for the `Tutorials/fastapi-cloudflare-d1` API — a Python FastAPI
+service running as a Cloudflare Worker against a D1 database.
 
-## Development server
+Right now it is a single public home page: some text and a Clerk sign-in button.
+Everything else (guarded routes, screens per endpoint) gets added on top of that.
 
-To start a local development server, run:
+## Running it
 
 ```bash
-ng serve
+npm install
+npm start          # ng serve -> http://localhost:4200/
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+The API it talks to is configured in `src/environments/environment.ts`
+(`http://localhost:8001` in dev — the port that project's README and
+`docker-compose.yml` use).
 
-## Code scaffolding
+## Auth
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+Clerk, via `@clerk/clerk-js` in headless mode (`src/app/core/auth/auth.store.ts`).
+Three things have to line up or a token will be rejected by the API:
+
+| Piece | Where it lives | Value |
+| --- | --- | --- |
+| Clerk instance | `environment.clerkPublishableKey` | `one-python-4861.clerk.accounts.dev` |
+| JWKS the API verifies against | `fastapi-cloudflare-d1/wrangler.jsonc` | same instance's `/.well-known/jwks.json` |
+| JWT template name = API audience | `environment.clerkJwtTemplate` / `CLERK_AUDIENCE` | `wiltech-dev-api` |
+
+The publishable key is base64 of the instance's frontend API domain, so it is
+derivable from the JWKS URL — it is *publishable* and belongs in the bundle.
+
+A JWT template named `wiltech-dev-api` must exist in that Clerk instance
+(Dashboard -> Configure -> JWT Templates) with `name` and `email` claims; the
+default session token carries neither, and no `aud` for the API to check.
+
+Sign-in is a full-page redirect to Clerk's hosted Account Portal — the npm
+build of `clerk-js` ships without embedded UI components, so `mountSignIn()`
+is not available and `redirectToSignIn()` is the entry point.
+
+## Tests
 
 ```bash
-ng generate component component-name
-```
-
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
-
-```bash
-ng generate --help
+npm test           # vitest via ng test
 ```
 
 ## Building
 
-To build the project run:
-
 ```bash
-ng build
+npm run build      # -> dist/
 ```
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+`public/_redirects` sends all paths to `index.html` so client-side routing
+survives a refresh on Cloudflare Pages.

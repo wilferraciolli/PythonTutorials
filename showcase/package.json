@@ -23,8 +23,6 @@
     "@clerk/clerk-js": "^6.31.1",
     "@ngrx/signals": "^22.0.1",
     "@wiliamferraciolli/ngx-api-client": "^0.1.5",
-    "ag-grid-angular": "^36.1.0",
-    "ag-grid-community": "^36.1.0",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"
   },

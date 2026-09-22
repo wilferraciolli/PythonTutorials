@@ -1,24 +1,17 @@
-// The whole app — nav bar included, not just page content — shares the
-// same shared --app-page-max-width/centering as `.App-page` (styles.scss),
-// so the header and the content below it read as one consistent frame
-// instead of a full-bleed nav bar over centered content. On a phone this
-// is a no-op (nothing to cap); on a wide monitor it keeps the app from
-// stretching edge-to-edge without shrinking it down to phone width.
+// One column, full height, so the home page's card can sit centred in
+// whatever space is left over the footer.
 .AppShell {
-  max-width: var(--app-page-max-width);
-  margin: 0 auto;
-  min-height: 100vh;
-  background: #fff;
   display: flex;
   flex-direction: column;
+  min-height: 100vh;
 }
 
 // Discrete build-version marker — useful for confirming which deploy is
-// live without cluttering the nav bar every route already shares.
+// live without giving an otherwise chrome-less app a header just for it.
 .AppShell-footer {
   margin-top: auto;
   padding: 12px var(--app-gutter);
   font-size: 0.75rem;
-  color: #999;
+  color: var(--mat-sys-outline);
   text-align: right;
 }

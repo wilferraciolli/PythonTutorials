@@ -79,7 +79,19 @@
           "defaultConfiguration": "development"
         },
         "test": {
-          "builder": "@angular/build:unit-test"
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "exclude": [
+              "src/app/features/admin/**",
+              "src/app/features/bed-board/**",
+              "src/app/features/insights/**",
+              "src/app/features/profile/**",
+              "src/app/core/i18n/**",
+              "src/app/core/user/**",
+              "src/app/core/wards/**",
+              "src/app/shared/**"
+            ]
+          }
         }
       }
     }

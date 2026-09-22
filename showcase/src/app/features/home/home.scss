@@ -1,27 +1,41 @@
-// `.App-page` (styles.scss) sets max-width/centering/horizontal gutter —
-// this component only adds its own vertical hero spacing on top.
+// Centred hero — the card is the whole page, so it gets the leftover
+// vertical space rather than sitting under a header that doesn't exist.
 .Home {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--app-gutter);
+}
+
+.Home-card {
+  width: 100%;
+  max-width: 34rem;
+}
+
+.Home-content {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 1rem;
-  padding-block: 4rem;
+  padding-block: 2rem;
   text-align: center;
+}
 
-  &-title {
-    margin: 0;
-    font-size: 1.75rem;
-  }
+.Home-title {
+  margin: 0;
+  font: var(--mat-sys-headline-small);
+}
 
-  &-lead {
-    margin: 0;
-    max-width: 60ch;
-    color: #555;
-  }
+.Home-lead {
+  margin: 0;
+  max-width: 44ch;
+  font: var(--mat-sys-body-medium);
+  color: var(--mat-sys-on-surface-variant);
+}
 
-  // `.App-button App-button-primary App-button-lg` (styles.scss) provides
-  // sizing/color/hover — this just adds a little breathing room above it.
-  &-cta {
-    margin-top: 0.5rem;
-  }
+.Home-identity {
+  margin: 0;
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
 }

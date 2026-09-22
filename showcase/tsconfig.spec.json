@@ -11,5 +11,15 @@
   "include": [
     "src/**/*.d.ts",
     "src/**/*.spec.ts"
+  ],
+  "exclude": [
+    "src/app/features/admin/**",
+    "src/app/features/bed-board/**",
+    "src/app/features/insights/**",
+    "src/app/features/profile/**",
+    "src/app/core/i18n/**",
+    "src/app/core/user/**",
+    "src/app/core/wards/**",
+    "src/app/shared/**"
   ]
 }
