@@ -46,6 +46,7 @@ class UserUpdate(BaseModel):
 
 class User(LinkedResource):
     id: str
+    external_user_id: Optional[str] = None
     name: str
     email: str
     roleIds: list[UserRole]

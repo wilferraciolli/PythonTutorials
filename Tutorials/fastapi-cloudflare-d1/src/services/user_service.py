@@ -78,6 +78,7 @@ class UserService:
     def to_user(self, row: Dict[str, Any]) -> User:
         return User(
             id=row["id"],
+            external_user_id=row.get("external_user_id"),
             name=row["name"],
             email=row["email"],
             roleIds=row["roleIds"],
@@ -95,6 +96,10 @@ class UserService:
     def build_metadata(self) -> dict[str, Any]:
         return {
             "id": {
+                "readOnly": True,
+                "hidden": True,
+            },
+            "external_user_id": {
                 "readOnly": True,
                 "hidden": True,
             },

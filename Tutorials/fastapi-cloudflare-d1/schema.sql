@@ -1,5 +1,6 @@
 CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
+    external_user_id TEXT UNIQUE,
     name TEXT NOT NULL,
     email TEXT NOT NULL UNIQUE,
     created_date TEXT NOT NULL

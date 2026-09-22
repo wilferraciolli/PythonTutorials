@@ -22,11 +22,12 @@ class UserRepository:
         email: str,
         role_ids: list[UserRole],
         created_date: str,
+        external_user_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         role_ids = self.normalise_role_ids(role_ids)
         await self.db.execute(
-            "INSERT INTO users (id, name, email, created_date) VALUES (?, ?, ?, ?)",
-            (user_id, name, email, created_date),
+            "INSERT INTO users (id, external_user_id, name, email, created_date) VALUES (?, ?, ?, ?, ?)",
+            (user_id, external_user_id, name, email, created_date),
         )
 
         for role_id in role_ids:
@@ -50,6 +51,18 @@ class UserRepository:
             return None
 
         user["roleIds"] = await self.get_role_ids(user_id)
+        return user
+
+    async def get_by_external_id(self, external_user_id: str) -> Optional[Dict[str, Any]]:
+        user = await self.db.fetch_one(
+            "SELECT * FROM users WHERE external_user_id = ?",
+            (external_user_id,),
+        )
+
+        if not user:
+            return None
+
+        user["roleIds"] = await self.get_role_ids(user["id"])
         return user
 
     async def get_all(self) -> List[Dict[str, Any]]:
