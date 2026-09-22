@@ -1,4 +1,4 @@
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, effect, inject, input, signal } from '@angular/core';
 import { FormField, FormRoot, form, required, schema } from '@angular/forms/signals';
 import { MatButtonModule } from '@angular/material/button';
@@ -7,9 +7,10 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { Router, RouterLink } from '@angular/router';
+import { ApiClientService, LinkService } from '@wiliamferraciolli/ngx-api-client';
 
-import { Tag, createTag, deleteTag, fetchTags } from '../../../core/api/tags-api';
-import { Todo, TodoPayload, TodosStore } from '../todos.store';
+import { Tag } from '../../../core/api/tags-api';
+import { TodoPayload, TodosStore } from '../todos.store';
 
 interface TodoFormModel {
   title: string;
@@ -59,7 +60,8 @@ export class TodoForm {
   readonly id = input<string>();
 
   protected readonly store = inject(TodosStore);
-  private readonly http = inject(HttpClient);
+  protected readonly links = inject(LinkService);
+  private readonly api = inject(ApiClientService);
   private readonly router = inject(Router);
 
   protected readonly isEditMode = computed(() => this.id() !== undefined);
@@ -93,9 +95,17 @@ export class TodoForm {
     },
   });
 
-  protected readonly tags = signal<Tag[]>([]);
+  // Reactively bound to the current todo's own `tags` link — resolves to
+  // undefined (unfetched) until the todo is found, and re-resolves if a
+  // different :id is navigated to. Follows the link rather than
+  // reconstructing `/tags?resource_id=…` client-side.
+  private readonly tagsResource = this.api.collectionResource<'tags', Tag>('tags', () => {
+    const link = this.existing()?.links['tags'];
+    return link ? this.api.resolve(link) : undefined;
+  });
+  protected readonly tags = this.tagsResource.value;
+  protected readonly tagsLoading = this.tagsResource.isLoading;
   protected readonly newTag = signal('');
-  protected readonly tagsLoading = signal(false);
   protected readonly tagError = signal<string | null>(null);
 
   constructor() {
@@ -111,31 +121,22 @@ export class TodoForm {
         complete_by: toDatetimeLocalValue(todo.complete_by),
         state: todo.state,
       });
-      void this.loadTags(todo);
     });
-  }
-
-  private async loadTags(todo: Todo): Promise<void> {
-    const href = todo.links['tags']?.href;
-    if (!href) return;
-    this.tagsLoading.set(true);
-    try {
-      this.tags.set(await fetchTags(this.http, href));
-    } finally {
-      this.tagsLoading.set(false);
-    }
   }
 
   protected async addTag(): Promise<void> {
     const todo = this.existing();
-    const href = todo?.links['addTag']?.href;
     const tagText = this.newTag().trim();
-    if (!todo || !href || !tagText) return;
+    if (!todo || !tagText) return;
 
     this.tagError.set(null);
     try {
-      const tag = await createTag(this.http, href, { resource_id: todo.id, tag: tagText });
-      this.tags.update((list) => [...list, tag]);
+      const url = this.api.requireLink(todo.links['addTag'], `Not permitted to tag todo ${todo.id}`);
+      await this.api.post<'tag', Tag, { resource_id: string; tag: string }>('tag', url, {
+        resource_id: todo.id,
+        tag: tagText,
+      });
+      this.tagsResource.reload();
       this.newTag.set('');
     } catch (err) {
       this.tagError.set(this.extractErrorMessage(err));
@@ -145,8 +146,9 @@ export class TodoForm {
   protected async removeTag(tag: Tag): Promise<void> {
     this.tagError.set(null);
     try {
-      await deleteTag(this.http, tag);
-      this.tags.update((list) => list.filter((t) => t.id !== tag.id));
+      const url = this.api.requireLink(tag.links['delete'], `Not permitted to delete tag ${tag.id}`);
+      await this.api.delete(url);
+      this.tagsResource.reload();
     } catch (err) {
       this.tagError.set(this.extractErrorMessage(err));
     }

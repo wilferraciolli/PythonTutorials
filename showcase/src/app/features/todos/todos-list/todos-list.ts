@@ -8,6 +8,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatTableModule } from '@angular/material/table';
 import { RouterLink } from '@angular/router';
+import { LinkService } from '@wiliamferraciolli/ngx-api-client';
 import { firstValueFrom } from 'rxjs';
 
 import { ConfirmDialog } from '../../../shared/confirm-dialog/confirm-dialog';
@@ -31,6 +32,7 @@ import { Todo, TodoState, TodosStore } from '../todos.store';
 })
 export class TodosList {
   protected readonly store = inject(TodosStore);
+  protected readonly links = inject(LinkService);
   private readonly dialog = inject(MatDialog);
 
   protected readonly displayedColumns = ['title', 'state', 'complete_by', 'actions'];
@@ -40,7 +42,7 @@ export class TodosList {
   }
 
   protected canToggleClosed(todo: Todo): boolean {
-    return todo.links['update'] !== undefined;
+    return this.links.hasLink(todo.links['update']);
   }
 
   // Follows the todo's own `update` link with just `state` flipped —

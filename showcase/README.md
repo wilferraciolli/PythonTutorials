@@ -39,6 +39,18 @@ Sign-in is a full-page redirect to Clerk's hosted Account Portal — the npm
 build of `clerk-js` ships without embedded UI components, so `mountSignIn()`
 is not available and `redirectToSignIn()` is the entry point.
 
+## Claude Code setup
+
+If you're working on this UI with Claude Code, install the `frontend-design`
+plugin for design guidance when building or reshaping screens:
+
+```
+/plugin install frontend-design@claude-plugins-official
+```
+
+Plugin installs are local to the machine (not synced via your account), so
+this needs to be run again on each new machine.
+
 ## Tests
 
 ```bash

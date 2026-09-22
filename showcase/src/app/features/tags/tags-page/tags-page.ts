@@ -6,6 +6,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatTableModule } from '@angular/material/table';
+import { LinkService } from '@wiliamferraciolli/ngx-api-client';
 import { firstValueFrom } from 'rxjs';
 
 import { ConfirmDialog } from '../../../shared/confirm-dialog/confirm-dialog';
@@ -33,6 +34,7 @@ import { TagsStore } from '../tags.store';
 })
 export class TagsPage {
   protected readonly store = inject(TagsStore);
+  protected readonly links = inject(LinkService);
   private readonly dialog = inject(MatDialog);
 
   protected readonly displayedColumns = ['tag', 'resource_id', 'created_date', 'actions'];
@@ -42,7 +44,7 @@ export class TagsPage {
   }
 
   protected canDelete(tag: Tag): boolean {
-    return tag.links['delete'] !== undefined;
+    return this.links.hasLink(tag.links['delete']);
   }
 
   protected async deleteTag(tag: Tag): Promise<void> {

@@ -1,8 +1,7 @@
-import { Component, effect, inject } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 
 import { AuthStore } from './core/auth/auth.store';
-import { CurrentUserStore } from './core/user/current-user.store';
 import { environment } from '../environments/environment';
 import { NavBar } from './shared/nav-bar/nav-bar';
 
@@ -14,19 +13,11 @@ import { NavBar } from './shared/nav-bar/nav-bar';
 })
 export class App {
   protected readonly auth = inject(AuthStore);
-  private readonly currentUser = inject(CurrentUserStore);
   protected readonly version = environment.version;
 
-  constructor() {
-    // Loads /me as soon as Clerk confirms a session, and clears it on
-    // sign-out — every route needs the role/links (nav bar, guards), not
-    // just one that happens to visit a specific page first.
-    effect(() => {
-      if (this.auth.isSignedIn()) {
-        void this.currentUser.ensureLoaded();
-      } else {
-        this.currentUser.reset();
-      }
-    });
-  }
+  // No CurrentUserStore wiring here — it's a thin ApiClientService.resource()
+  // wrapper now (see current-user.store.ts): its URL reads auth.isSignedIn()
+  // itself, so it fetches/clears on sign-in/out on its own, the moment
+  // anything (NavBar, TodosStore, ProfilePage) injects it. Nothing to
+  // trigger eagerly from here.
 }

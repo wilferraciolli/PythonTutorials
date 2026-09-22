@@ -11,8 +11,8 @@
     <mat-label>State</mat-label>
     <select matNativeControl (change)="setStateFilter($any($event.target).value)">
       <option value="">All</option>
-      @for (option of store.stateOptions(); track option.id) {
-        <option [value]="option.id">{{ option.value }}</option>
+      @for (option of store.stateOptions(); track option.value) {
+        <option [value]="option.value">{{ option.viewValue }}</option>
       }
     </select>
   </mat-form-field>
@@ -56,12 +56,12 @@
               <mat-icon aria-hidden="true">{{ todo.state === 'CLOSED' ? 'replay' : 'check_circle' }}</mat-icon>
             </button>
           }
-          @if (todo.links['update']) {
+          @if (links.hasLink(todo.links['update'])) {
             <a matIconButton [routerLink]="['/todos', todo.id, 'edit']" aria-label="Edit" title="Edit">
               <mat-icon aria-hidden="true">edit</mat-icon>
             </a>
           }
-          @if (todo.links['delete']) {
+          @if (links.hasLink(todo.links['delete'])) {
             <button matIconButton type="button" aria-label="Delete" title="Delete" (click)="deleteTodo(todo)">
               <mat-icon aria-hidden="true">delete</mat-icon>
             </button>

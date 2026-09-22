@@ -31,8 +31,8 @@
       <mat-form-field appearance="outline">
         <mat-label>State</mat-label>
         <select matNativeControl [formField]="todoForm.state">
-          @for (option of store.stateOptions(); track option.id) {
-            <option [value]="option.id">{{ option.value }}</option>
+          @for (option of store.stateOptions(); track option.value) {
+            <option [value]="option.value">{{ option.viewValue }}</option>
           }
         </select>
       </mat-form-field>
@@ -60,7 +60,7 @@
             @for (tag of tags(); track tag.id) {
               <mat-chip (removed)="removeTag(tag)">
                 {{ tag.tag }}
-                @if (tag.links['delete']) {
+                @if (links.hasLink(tag.links['delete'])) {
                   <button matChipRemove aria-label="Remove tag">
                     <mat-icon aria-hidden="true">cancel</mat-icon>
                   </button>
@@ -70,7 +70,7 @@
           </mat-chip-set>
         }
 
-        @if (todo.links['addTag']) {
+        @if (links.hasLink(todo.links['addTag'])) {
           <div class="TodoForm-tags-add">
             <mat-form-field appearance="outline" subscriptSizing="dynamic">
               <mat-label>Add a tag</mat-label>
