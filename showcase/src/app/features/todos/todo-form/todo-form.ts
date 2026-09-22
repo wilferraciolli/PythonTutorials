@@ -122,6 +122,21 @@ export class TodoForm {
         state: todo.state,
       });
     });
+
+    // Create mode's counterpart — seeds the form from the API's own
+    // create-template response (fetched via the `todoTemplate` link; see
+    // TodosStore.template) instead of hardcoding defaults here.
+    effect(() => {
+      if (this.isEditMode()) return;
+      const template = this.store.template();
+      if (!template) return;
+      this.model.set({
+        title: template.title,
+        description: template.description ?? '',
+        complete_by: template.complete_by ? toDatetimeLocalValue(template.complete_by) : '',
+        state: template.state,
+      });
+    });
   }
 
   protected async addTag(): Promise<void> {

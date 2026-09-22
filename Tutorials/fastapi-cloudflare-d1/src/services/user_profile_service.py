@@ -31,12 +31,14 @@ class UserProfileService:
         )
 
     def build_user_profile_links(self, user_id: str) -> dict[str, Link]:
+        # No standalone `createTodo` link here: the create URL is never
+        # POSTed to blind. Clients GET `todoTemplate` (its field metadata
+        # says what's mandatory) and derive the create URL from that link.
         return {
             "self": Link(href=f"/users/{user_id}/profile", method="GET"),
             "user": Link(href=f"/users/{user_id}", method="GET"),
-            "todos": Link(href="/todos", method="GET"),
-            "createTodo": Link(href="/todos", method="POST"),
-            "todoTemplate": Link(href="/todos/template", method="GET"),
+            "todos": Link(href=f"/users/{user_id}/todos", method="GET"),
+            "todoTemplate": Link(href=f"/users/{user_id}/todos/template", method="GET"),
             "tags": Link(href="/tags", method="GET"),
             "createTag": Link(href="/tags", method="POST"),
             "tagTemplate": Link(href="/tags/template", method="GET"),

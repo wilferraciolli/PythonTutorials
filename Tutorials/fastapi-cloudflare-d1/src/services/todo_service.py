@@ -243,10 +243,17 @@ class TodoService:
         }
 
     def _meta_links(self, user_id: str, *, can_create: bool = True) -> Dict[str, Link]:
-        """Collection-level Todo links, calculated per request."""
+        """
+        Collection-level Todo links, calculated per request.
+
+        There is no standalone `createTodo` link: the create URL is never
+        POSTed to blind. Clients get it by first GETting `todoTemplate`
+        (its field metadata says what's mandatory) and deriving the create
+        URL from that template link.
+        """
         if not can_create:
             return {}
 
         return {
-            "createTodo": Link(href=f"/users/{user_id}/todos", method="POST"),
+            "todoTemplate": Link(href=f"/users/{user_id}/todos/template", method="GET"),
         }

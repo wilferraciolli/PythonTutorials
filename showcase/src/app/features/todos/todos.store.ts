@@ -1,6 +1,12 @@
 import { httpResource } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { ApiClientService, CollectionEnvelope, ILink, MetadataService } from '@wiliamferraciolli/ngx-api-client';
+import {
+  ApiClientService,
+  CollectionEnvelope,
+  ILink,
+  LinkService,
+  MetadataService,
+} from '@wiliamferraciolli/ngx-api-client';
 
 import { CurrentUserStore } from '../../core/user/current-user.store';
 
@@ -32,6 +38,7 @@ type TodosEnvelope = CollectionEnvelope<'todos', Todo>;
 @Injectable()
 export class TodosStore {
   private readonly api = inject(ApiClientService);
+  private readonly links = inject(LinkService);
   private readonly metadata = inject(MetadataService);
   private readonly currentUser = inject(CurrentUserStore);
 
@@ -39,7 +46,7 @@ export class TodosStore {
 
   // A raw httpResource, not ApiClientService.collectionResource() — this
   // list also needs `_metadata` (stateOptions below) and `_metaLinks`
-  // (createTodo), which that convenience wrapper only exposes `_data`
+  // (todoTemplate), which that convenience wrapper only exposes `_data`
   // from. The URL is never built by hand: it's the `myTodos` link /me
   // hands out (current-user.store.ts), resolved via ApiClientService
   // against API_ORIGIN. No link yet (still loading /me) means no request.
@@ -63,13 +70,33 @@ export class TodosStore {
     this.metadata.resolveMetadataIdValues(this.listResource.value()?._metadata?.['state']?.values ?? []),
   );
 
+  // The "new todo" screen's own resource, fetched via the collection's
+  // `todoTemplate` link — gives the create form real server-side defaults
+  // (e.g. `complete_by` defaulting to now) instead of the UI guessing them.
+  private readonly templateResource = this.api.resource<'todo', TodoPayload>('todo', () => {
+    const link = this.listResource.value()?._metaLinks?.['todoTemplate'];
+    return link ? this.api.resolve(link) : undefined;
+  });
+
+  readonly template = this.templateResource.value;
+  readonly templateLoading = this.templateResource.isLoading;
+
   async createTodo(payload: TodoPayload): Promise<Todo> {
-    // The collection's own `createTodo` link (from the last response),
-    // falling back to `myTodos` if the list hasn't loaded yet — same URL
-    // either way today, but this is the one HATEOAS says to POST to.
-    const link = this.listResource.value()?._metaLinks?.['createTodo'] ?? this.currentUser.myTodosLink();
-    const url = this.api.requireLink(link, 'No todos collection link available yet — try again.');
-    const todo = await this.api.post<'todo', Todo, TodoPayload>('todo', url, payload);
+    // The create URL is never hand-built or read off a separate meta link
+    // — it's derived from the same `todoTemplate` link the form used to
+    // load its defaults, via LinkService.getCreateUrlFromTemplateUrl()
+    // (strips the trailing "/template" segment).
+    const templateLink = this.listResource.value()?._metaLinks?.['todoTemplate'];
+    const templateUrl = this.api.requireLink(
+      templateLink,
+      'No todo template link available yet — try again.',
+    );
+    const createUrl = this.links.getCreateUrlFromTemplateUrl({ href: templateUrl });
+    if (!createUrl) {
+      throw new Error('Could not derive the create-todo URL from the template link.');
+    }
+
+    const todo = await this.api.post<'todo', Todo, TodoPayload>('todo', createUrl, payload);
     this.listResource.reload();
     return todo;
   }
