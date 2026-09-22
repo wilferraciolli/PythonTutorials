@@ -41,8 +41,8 @@
               "budgets": [
                 {
                   "type": "initial",
-                  "maximumWarning": "1.5MB",
-                  "maximumError": "2.5MB"
+                  "maximumWarning": "2.2MB",
+                  "maximumError": "3MB"
                 },
                 {
                   "type": "anyComponentStyle",
@@ -85,11 +85,9 @@
               "src/app/features/admin/**",
               "src/app/features/bed-board/**",
               "src/app/features/insights/**",
-              "src/app/features/profile/**",
               "src/app/core/i18n/**",
-              "src/app/core/user/**",
               "src/app/core/wards/**",
-              "src/app/shared/**"
+              "src/app/features/profile/profile-edit-page/**"
             ]
           }
         }

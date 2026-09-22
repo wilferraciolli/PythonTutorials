@@ -1,42 +1,30 @@
 <div class="ProfilePage">
-  @if (currentUser.loading() && !currentUser.profile()) {
-    <p class="ProfilePage-loading">{{ i18n.t('profile.profile.loadingProfile') }}</p>
-  } @else if (currentUser.profile(); as profile) {
-    <div class="ProfilePage-card">
-      <div class="ProfilePage-avatar">{{ profile.name.charAt(0) }}</div>
-      <h1 class="ProfilePage-name">{{ profile.name }}</h1>
-      <p class="ProfilePage-job-title">{{ profile.job_title || i18n.t('profile.profile.noJobTitle') }}</p>
+  <mat-card appearance="outlined">
+    <mat-card-header>
+      <mat-card-title>Profile</mat-card-title>
+    </mat-card-header>
 
-      <div class="ProfilePage-row">
-        <span class="ProfilePage-row-label">{{ i18n.t('common.labels.email') }}</span>
-        <span>{{ profile.email }}</span>
-      </div>
-      <div class="ProfilePage-row">
-        <span class="ProfilePage-row-label">{{ i18n.t('common.labels.phone') }}</span>
-        <span>{{ profile.phone || '—' }}</span>
-      </div>
-      @if (profile.ward_id) {
+    @if (currentUser.me(); as me) {
+      <mat-card-content class="ProfilePage-content">
         <div class="ProfilePage-row">
-          <span class="ProfilePage-row-label">{{ i18n.t('profile.profile.ward') }}</span>
-          <span>{{ wardLabel(profile.ward_id) }}</span>
+          <span class="ProfilePage-label">Name</span>
+          <span>{{ me.name }}</span>
         </div>
-      }
-      <div class="ProfilePage-row">
-        <span class="ProfilePage-row-label">{{ i18n.t('profile.profile.role') }}</span>
-        <span class="ProfilePage-role-badge" [class.is-admin]="profile.role === 'admin'">
-          {{ profile.role === 'admin' ? i18n.t('profile.profile.roleAdmin') : i18n.t('profile.profile.roleUser') }}
-        </span>
-      </div>
-
-      @if (profile.role === 'admin') {
-        <div class="ProfilePage-admin-links">
-          <a routerLink="/admin/wards">{{ i18n.t('profile.profile.manageWards') }}</a>
-          <a routerLink="/admin/doctors">{{ i18n.t('profile.profile.manageDoctors') }}</a>
-          <a routerLink="/admin/users">{{ i18n.t('profile.profile.manageUsers') }}</a>
+        <div class="ProfilePage-row">
+          <span class="ProfilePage-label">Email</span>
+          <span>{{ me.email ?? '—' }}</span>
         </div>
-      }
-
-      <a class="ProfilePage-edit-button App-button App-button-primary App-button-block" routerLink="/profile/edit">{{ i18n.t('profile.profile.editProfile') }}</a>
-    </div>
-  }
+        <div class="ProfilePage-row">
+          <span class="ProfilePage-label">Roles</span>
+          <mat-chip-set>
+            @for (role of me.roleIds; track role) {
+              <mat-chip>{{ role }}</mat-chip>
+            }
+          </mat-chip-set>
+        </div>
+      </mat-card-content>
+    } @else {
+      <mat-card-content>Loading…</mat-card-content>
+    }
+  </mat-card>
 </div>

@@ -1,0 +1,40 @@
+.TodosList {
+  &-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+  }
+
+  &-title {
+    margin: 0;
+    font: var(--mat-sys-headline-small);
+  }
+
+  &-filter {
+    width: 12rem;
+    margin-bottom: 1rem;
+  }
+
+  &-error,
+  &-loading,
+  &-empty {
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  &-table {
+    width: 100%;
+  }
+
+  &-actions {
+    display: flex;
+    gap: 0.25rem;
+    justify-content: flex-end;
+  }
+
+  &-chip-closed {
+    opacity: 0.6;
+  }
+}

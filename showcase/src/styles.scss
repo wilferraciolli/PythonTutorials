@@ -19,8 +19,12 @@ html {
 }
 
 :root {
-  // Single shared page gutter, so the footer and the page content below it
-  // line up without each picking its own number.
+  // Shared page-layout constants — see `.App-page` below and
+  // docs/frontend-conventions.md's "Layout: mobile-first, max width,
+  // centered" section. Content never stretches edge-to-edge on a wide
+  // monitor; the footer and page content line up on the same gutter
+  // instead of each picking its own number.
+  --app-page-max-width: 900px;
   --app-gutter: 24px;
 }
 
@@ -37,4 +41,19 @@ body {
 *::before,
 *::after {
   box-sizing: border-box;
+}
+
+// Shared page-layout helpers. Apply `.App-page` to a route's top-level
+// container alongside its own component class (`<div class="TodosList
+// App-page">`) instead of that component defining its own
+// `max-width`/`margin: 0 auto`/`padding` — one shared constant beats a
+// different ad hoc pixel value per page.
+.App-page {
+  max-width: var(--app-page-max-width);
+  margin: 0 auto;
+  padding: var(--app-gutter);
+}
+
+.App-spacer {
+  flex: 1 1 auto;
 }

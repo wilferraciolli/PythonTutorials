@@ -1,41 +1,60 @@
-// Centred hero — the card is the whole page, so it gets the leftover
-// vertical space rather than sitting under a header that doesn't exist.
+// Centred hero — the cards are the whole page, so they get the leftover
+// vertical space rather than sitting under a header that doesn't exist
+// (the app-wide nav bar already covers that).
 .Home {
   flex: 1 1 auto;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--app-gutter);
-}
-
-.Home-card {
-  width: 100%;
-  max-width: 34rem;
-}
-
-.Home-content {
-  display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1rem;
-  padding-block: 2rem;
-  text-align: center;
-}
+  justify-content: center;
+  gap: 1.5rem;
+  padding: var(--app-gutter);
 
-.Home-title {
-  margin: 0;
-  font: var(--mat-sys-headline-small);
-}
+  &-card {
+    width: 100%;
+    max-width: 34rem;
+  }
 
-.Home-lead {
-  margin: 0;
-  max-width: 44ch;
-  font: var(--mat-sys-body-medium);
-  color: var(--mat-sys-on-surface-variant);
-}
+  &-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    padding-block: 2rem;
+    text-align: center;
+  }
 
-.Home-identity {
-  margin: 0;
-  font: var(--mat-sys-body-small);
-  color: var(--mat-sys-on-surface-variant);
+  &-content-todos {
+    padding-block: 1.5rem;
+  }
+
+  &-title {
+    margin: 0;
+    font: var(--mat-sys-headline-small);
+  }
+
+  &-lead {
+    margin: 0;
+    max-width: 44ch;
+    font: var(--mat-sys-body-medium);
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  &-identity {
+    margin: 0;
+    font: var(--mat-sys-body-small);
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  &-todos-icon {
+    color: var(--mat-sys-primary);
+    font-size: 2rem;
+    width: 2rem;
+    height: 2rem;
+  }
+
+  &-todos-title {
+    margin: 0;
+    font: var(--mat-sys-title-medium);
+  }
 }

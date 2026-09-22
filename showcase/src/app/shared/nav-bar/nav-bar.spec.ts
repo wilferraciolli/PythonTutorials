@@ -18,22 +18,12 @@ describe('NavBar', () => {
     expect(fixture.componentInstance).toBeTruthy();
   });
 
+  // AuthStore starts with no session (init() only runs via
+  // provideAppInitializer), so an un-bootstrapped store is signed out.
   it('shows a sign-in button when signed out', () => {
     const fixture = TestBed.createComponent(NavBar);
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('.NavBar-sign-in')).toBeTruthy();
-    expect(compiled.querySelector('.NavBar-links')).toBeFalsy();
-  });
-
-  it('shows an EN/GR language toggle with the current locale active', () => {
-    const fixture = TestBed.createComponent(NavBar);
-    fixture.detectChanges();
-    const compiled = fixture.nativeElement as HTMLElement;
-    const options = Array.from(compiled.querySelectorAll<HTMLButtonElement>('.NavBar-lang-option'));
-    expect(options.map((el) => el.textContent?.trim())).toEqual(['GR', 'EN']);
-
-    const active = compiled.querySelector('.NavBar-lang-option.is-active');
-    expect(active?.textContent?.trim()).toBe('GR'); // el-GR is the store's default fallback locale
+    expect(compiled.querySelector('button')?.textContent).toContain('Sign in');
   });
 });

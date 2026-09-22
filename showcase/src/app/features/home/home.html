@@ -15,4 +15,15 @@
       }
     </mat-card-content>
   </mat-card>
+
+  @if (auth.isSignedIn()) {
+    <mat-card class="Home-card" appearance="outlined">
+      <mat-card-content class="Home-content Home-content-todos">
+        <mat-icon class="Home-todos-icon" aria-hidden="true">checklist</mat-icon>
+        <h2 class="Home-todos-title">Your todos</h2>
+        <p class="Home-lead">Create, update, and tag your todos against the API.</p>
+        <a matButton="filled" routerLink="/todos">Go to todos</a>
+      </mat-card-content>
+    </mat-card>
+  }
 </main>

@@ -1,24 +1,18 @@
 import { Component, inject } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { MatCardModule } from '@angular/material/card';
+import { MatChipsModule } from '@angular/material/chips';
 
-import { I18nStore } from '../../../core/i18n/i18n.store';
 import { CurrentUserStore } from '../../../core/user/current-user.store';
-import { wardLabel } from '../../../core/i18n/labels';
 
+// Read-only — /me's fields (name/email/roleIds) are all marked `readOnly`
+// in the API's own metadata (me_service.py); there is no PATCH /me to edit
+// them against.
 @Component({
   selector: 'app-profile-page',
-  imports: [RouterLink],
+  imports: [MatCardModule, MatChipsModule],
   templateUrl: './profile-page.html',
   styleUrl: './profile-page.scss',
 })
 export class ProfilePage {
   protected readonly currentUser = inject(CurrentUserStore);
-  protected readonly i18n = inject(I18nStore);
-  protected readonly wardLabel = wardLabel;
-
-  constructor() {
-    // Deduped against any in-flight load (see CurrentUserStore) — safe to
-    // call even though App already triggers this on sign-in.
-    void this.currentUser.ensureLoaded();
-  }
 }

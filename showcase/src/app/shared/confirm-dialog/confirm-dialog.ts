@@ -8,16 +8,15 @@ export interface ConfirmDialogData {
   confirmLabel?: string;
   cancelLabel?: string;
   // 'danger' renders the confirm button in the warn palette — for
-  // destructive/hard-to-undo actions (delete, deactivate). Defaults to the
-  // brand primary color.
+  // destructive/hard-to-undo actions (delete). Defaults to primary.
   tone?: 'primary' | 'danger';
 }
 
 // Generic yes/no confirmation — replaces the browser's native confirm()
-// wherever a destructive/consequential action needs a deliberate step
-// (see users-list's role-change action). Open with:
+// wherever a destructive action needs a deliberate step (see
+// todos-list.ts's delete action). Open with:
 //   inject(MatDialog).open(ConfirmDialog, { data: { title, message } })
-//   .afterClosed() // emits true (confirmed) or false/undefined (cancelled)
+//     .afterClosed() // emits true (confirmed) or false/undefined (cancelled)
 @Component({
   selector: 'app-confirm-dialog',
   imports: [MatButtonModule, MatDialogModule],

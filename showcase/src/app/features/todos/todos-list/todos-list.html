@@ -1,0 +1,76 @@
+<div class="TodosList App-page">
+  <div class="TodosList-header">
+    <h1 class="TodosList-title">My todos</h1>
+    <a matButton="filled" routerLink="/todos/new">
+      <mat-icon aria-hidden="true">add</mat-icon>
+      New todo
+    </a>
+  </div>
+
+  <mat-form-field class="TodosList-filter" appearance="outline" subscriptSizing="dynamic">
+    <mat-label>State</mat-label>
+    <select matNativeControl (change)="setStateFilter($any($event.target).value)">
+      <option value="">All</option>
+      @for (option of store.stateOptions(); track option.id) {
+        <option [value]="option.id">{{ option.value }}</option>
+      }
+    </select>
+  </mat-form-field>
+
+  @if (store.loadError()) {
+    <p class="TodosList-error">Couldn't load your todos — check the API is reachable.</p>
+  } @else if (store.isLoading() && store.todos().length === 0) {
+    <p class="TodosList-loading">Loading…</p>
+  } @else if (store.todos().length === 0) {
+    <p class="TodosList-empty">No todos yet — create your first one above.</p>
+  } @else {
+    <table mat-table [dataSource]="store.todos()" class="TodosList-table">
+      <ng-container matColumnDef="title">
+        <th mat-header-cell *matHeaderCellDef>Title</th>
+        <td mat-cell *matCellDef="let todo">{{ todo.title }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="state">
+        <th mat-header-cell *matHeaderCellDef>State</th>
+        <td mat-cell *matCellDef="let todo">
+          <mat-chip [class.TodosList-chip-closed]="todo.state === 'CLOSED'">{{ todo.state }}</mat-chip>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="complete_by">
+        <th mat-header-cell *matHeaderCellDef>Due</th>
+        <td mat-cell *matCellDef="let todo">{{ todo.complete_by | date: 'medium' }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef></th>
+        <td mat-cell *matCellDef="let todo" class="TodosList-actions">
+          @if (canToggleClosed(todo)) {
+            <button
+              matIconButton
+              type="button"
+              [attr.aria-label]="todo.state === 'CLOSED' ? 'Reopen' : 'Mark complete'"
+              [title]="todo.state === 'CLOSED' ? 'Reopen' : 'Mark complete'"
+              (click)="toggleClosed(todo)"
+            >
+              <mat-icon aria-hidden="true">{{ todo.state === 'CLOSED' ? 'replay' : 'check_circle' }}</mat-icon>
+            </button>
+          }
+          @if (todo.links['update']) {
+            <a matIconButton [routerLink]="['/todos', todo.id, 'edit']" aria-label="Edit" title="Edit">
+              <mat-icon aria-hidden="true">edit</mat-icon>
+            </a>
+          }
+          @if (todo.links['delete']) {
+            <button matIconButton type="button" aria-label="Delete" title="Delete" (click)="deleteTodo(todo)">
+              <mat-icon aria-hidden="true">delete</mat-icon>
+            </button>
+          }
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+    </table>
+  }
+</div>

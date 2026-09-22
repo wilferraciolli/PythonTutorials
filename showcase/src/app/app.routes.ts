@@ -1,12 +1,30 @@
 import { Routes } from '@angular/router';
 
-// Single public route for now. The app is a front door for the FastAPI/D1
-// API: sign in with Clerk, get a token. Guarded areas get added here (with
-// `canActivate: [authGuard]`) as the API grows endpoints worth a screen.
+import { authGuard } from './core/auth/auth.guard';
+
+// The app is a front door for the FastAPI/D1 API: sign in with Clerk, get
+// a token, follow the links /me hands back. Home stays public so there's
+// always something to render and something to smoke-test Clerk against;
+// everything past it needs a session.
 export const routes: Routes = [
   {
     path: '',
     loadComponent: () => import('./features/home/home').then((m) => m.Home),
+  },
+  {
+    path: 'profile',
+    canActivate: [authGuard],
+    loadChildren: () => import('./features/profile/profile.routes').then((m) => m.profileRoutes),
+  },
+  {
+    path: 'todos',
+    canActivate: [authGuard],
+    loadChildren: () => import('./features/todos/todos.routes').then((m) => m.todosRoutes),
+  },
+  {
+    path: 'tags',
+    canActivate: [authGuard],
+    loadChildren: () => import('./features/tags/tags.routes').then((m) => m.tagsRoutes),
   },
   { path: '**', redirectTo: '' },
 ];

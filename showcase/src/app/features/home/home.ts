@@ -1,6 +1,8 @@
 import { Component, computed, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
+import { MatIconModule } from '@angular/material/icon';
+import { RouterLink } from '@angular/router';
 
 import { AuthStore } from '../../core/auth/auth.store';
 
@@ -10,7 +12,7 @@ import { AuthStore } from '../../core/auth/auth.store';
 // auth.store.ts, auth.interceptor.ts).
 @Component({
   selector: 'app-home',
-  imports: [MatButtonModule, MatCardModule],
+  imports: [RouterLink, MatButtonModule, MatCardModule, MatIconModule],
   templateUrl: './home.html',
   styleUrl: './home.scss',
 })

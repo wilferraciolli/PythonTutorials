@@ -1,0 +1,22 @@
+.TagsPage {
+  &-title {
+    margin: 0 0 1rem;
+    font: var(--mat-sys-headline-small);
+  }
+
+  &-search {
+    width: 20rem;
+    max-width: 100%;
+    margin-bottom: 1rem;
+  }
+
+  &-error,
+  &-loading,
+  &-empty {
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  &-table {
+    width: 100%;
+  }
+}

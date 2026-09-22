@@ -2,18 +2,18 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 
-import { ProfilePage } from './profile-page';
+import { TagsPage } from './tags-page';
 
-describe('ProfilePage', () => {
+describe('TagsPage', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [ProfilePage],
+      imports: [TagsPage],
       providers: [provideHttpClient(), provideHttpClientTesting()],
     }).compileComponents();
   });
 
   it('creates', () => {
-    const fixture = TestBed.createComponent(ProfilePage);
+    const fixture = TestBed.createComponent(TagsPage);
     expect(fixture.componentInstance).toBeTruthy();
   });
 });

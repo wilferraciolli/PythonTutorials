@@ -1,26 +1,29 @@
-<div class="ProfileMenu">
-  <button
-    type="button"
-    class="ProfileMenu-trigger App-button App-button-ghost App-button-icon"
-    (click)="toggle()"
-    [attr.aria-expanded]="isOpen()"
-    aria-haspopup="menu"
-    [attr.aria-label]="i18n.t('navigation.profileMenu.accountMenu')"
-    [attr.title]="i18n.t('navigation.profileMenu.accountMenu')"
-  >
-    <span class="material-symbols-outlined" aria-hidden="true">account_circle</span>
-  </button>
+<button
+  matIconButton
+  type="button"
+  [matMenuTriggerFor]="menu"
+  aria-label="Account menu"
+  aria-haspopup="menu"
+  title="Account menu"
+>
+  <mat-icon aria-hidden="true">account_circle</mat-icon>
+</button>
 
-  @if (isOpen()) {
-    <div class="ProfileMenu-backdrop" (click)="close()"></div>
-    <div class="ProfileMenu-dropdown" role="menu">
-      <a class="ProfileMenu-item" routerLink="/board" (click)="close()">{{ i18n.t('navigation.navbar.beds') }}</a>
-      <a class="ProfileMenu-item" routerLink="/profile" (click)="close()">{{ i18n.t('navigation.profileMenu.viewProfile') }}</a>
-      <a class="ProfileMenu-item" routerLink="/insights" (click)="close()">{{ i18n.t('navigation.profileMenu.insights') }}</a>
-      @if (currentUser.isAdmin()) {
-        <a class="ProfileMenu-item" routerLink="/admin" (click)="close()">{{ i18n.t('navigation.profileMenu.adminDashboard') }}</a>
-      }
-      <button type="button" class="ProfileMenu-item ProfileMenu-item-danger" (click)="signOut()">{{ i18n.t('common.buttons.signOut') }}</button>
-    </div>
-  }
-</div>
+<mat-menu #menu="matMenu">
+  <a mat-menu-item routerLink="/profile">
+    <mat-icon aria-hidden="true">person</mat-icon>
+    <span>Profile</span>
+  </a>
+  <a mat-menu-item routerLink="/todos">
+    <mat-icon aria-hidden="true">checklist</mat-icon>
+    <span>My todos</span>
+  </a>
+  <a mat-menu-item routerLink="/tags">
+    <mat-icon aria-hidden="true">label</mat-icon>
+    <span>Tags</span>
+  </a>
+  <button mat-menu-item type="button" (click)="signOut()">
+    <mat-icon aria-hidden="true">logout</mat-icon>
+    <span>Sign out</span>
+  </button>
+</mat-menu>
