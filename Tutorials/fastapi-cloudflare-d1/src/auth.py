@@ -114,6 +114,7 @@ async def get_authenticated_user(
     except (InvalidTokenError, ValueError, TypeError) as exc:
         raise _unauthorized() from exc
     except httpx.HTTPError as exc:
+        print(f"WARNING: could not reach Clerk JWKS at {jwks_url!r}: {exc!r}")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Authentication service unavailable",

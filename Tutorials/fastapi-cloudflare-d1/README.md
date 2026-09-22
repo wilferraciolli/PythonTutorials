@@ -62,7 +62,7 @@ fastapi-cloudflare-d1/
 | Tool | Why | Install |
 |---|---|---|
 | Node.js + npm | Runs `wrangler` (the Cloudflare CLI) | https://nodejs.org (LTS) |
-| `uv` | Python package/venv manager used by this project | PowerShell: `powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 \| iex"` |
+| `uv` | Python package/venv manager used by this project | PowerShell: `powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 \| iex"` <br> Git Bash / Linux / macOS: `curl -LsSf https://astral.sh/uv/install.sh \| sh` |
 | Docker | Optional local SQLite container workflow | https://www.docker.com/products/docker-desktop/ |
 | A free Cloudflare account | Optional: hosts the Worker + D1 database | https://dash.cloudflare.com/sign-up |
 
@@ -73,6 +73,9 @@ fastapi-cloudflare-d1/
 > `schannel: ... CRYPT_E_NO_REVOCATION_CHECK`, add `--ssl-no-revoke` to the
 > curl command. Both are local-network quirks, not problems with the deployed
 > API — other machines/browsers work fine.
+
+> After installing `uv`, restart your terminal (or `source ~/.bashrc` in Git
+> Bash) so the updated `PATH` picks up `~/.local/bin` where it installs.
 
 ## Database modes
 
