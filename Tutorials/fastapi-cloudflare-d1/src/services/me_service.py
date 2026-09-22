@@ -52,6 +52,7 @@ class MeService:
             roleIds=user_row["roleIds"],
             links={
                 "self": Link(href="/me", method="GET"),
+                "myTodos": Link(href=f"/users/{user_row['id']}/todos", method="GET"),
             },
         )
 
