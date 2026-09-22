@@ -19,6 +19,7 @@ class TodoRepository:
     async def create(
         self,
         todo_id: str,
+        user_id: str,
         title: str,
         description: Optional[str],
         complete_by: str,
@@ -27,51 +28,63 @@ class TodoRepository:
     ) -> Dict[str, Any]:
         """Insert a new TODO and return the full row."""
         await self.db.execute(
-            "INSERT INTO todos (id, title, description, complete_by, state, created_date) "
-            "VALUES (?, ?, ?, ?, ?, ?)",
-            (todo_id, title, description, complete_by, state.value, created_date),
+            "INSERT INTO todos (id, user_id, title, description, complete_by, state, created_date) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (todo_id, user_id, title, description, complete_by, state.value, created_date),
         )
 
-        created = await self.get_by_id(todo_id)
+        created = await self.get_by_id(todo_id, user_id)
         if created is None:
             raise RuntimeError(f"created todo was not found: {todo_id}")
         return created
 
-    async def get_by_id(self, todo_id: str) -> Optional[Dict[str, Any]]:
-        """Fetch a single TODO row by id, or None if not found."""
-        return await self.db.fetch_one("SELECT * FROM todos WHERE id = ?", (todo_id,))
+    async def get_by_id(self, todo_id: str, user_id: str) -> Optional[Dict[str, Any]]:
+        """Fetch a single TODO row by id, scoped to its owning user, or None if not found."""
+        return await self.db.fetch_one(
+            "SELECT * FROM todos WHERE id = ? AND user_id = ?",
+            (todo_id, user_id),
+        )
 
-    async def get_all(self, state: Optional[TodoState] = None) -> List[Dict[str, Any]]:
-        """Fetch all TODO rows, optionally filtered by state."""
+    async def get_all(self, user_id: str, state: Optional[TodoState] = None) -> List[Dict[str, Any]]:
+        """Fetch all TODO rows for a user, optionally filtered by state."""
         if state:
             return await self.db.fetch_all(
-                "SELECT * FROM todos WHERE state = ? ORDER BY id",
-                (state.value,),
+                "SELECT * FROM todos WHERE user_id = ? AND state = ? ORDER BY id",
+                (user_id, state.value),
             )
 
-        return await self.db.fetch_all("SELECT * FROM todos ORDER BY id")
+        return await self.db.fetch_all(
+            "SELECT * FROM todos WHERE user_id = ? ORDER BY id",
+            (user_id,),
+        )
 
-    async def update(self, todo_id: str, **fields: Any) -> Optional[Dict[str, Any]]:
+    async def update(self, todo_id: str, user_id: str, **fields: Any) -> Optional[Dict[str, Any]]:
         """Update only the provided fields on a TODO, then return the fresh row."""
         updatable = {k: v for k, v in fields.items() if v is not None}
         if not updatable:
-            return await self.get_by_id(todo_id)
+            return await self.get_by_id(todo_id, user_id)
 
         # TodoState -> raw string value for storage
         if "state" in updatable and isinstance(updatable["state"], TodoState):
             updatable["state"] = updatable["state"].value
 
         set_clause = ", ".join(f"{key} = ?" for key in updatable)
-        values = list(updatable.values()) + [todo_id]
+        values = list(updatable.values()) + [todo_id, user_id]
 
-        await self.db.execute(f"UPDATE todos SET {set_clause} WHERE id = ?", tuple(values))
-        return await self.get_by_id(todo_id)
+        await self.db.execute(
+            f"UPDATE todos SET {set_clause} WHERE id = ? AND user_id = ?",
+            tuple(values),
+        )
+        return await self.get_by_id(todo_id, user_id)
 
-    async def delete(self, todo_id: str) -> bool:
+    async def delete(self, todo_id: str, user_id: str) -> bool:
         """Delete a TODO. Returns True if a row existed and was removed."""
-        existing = await self.get_by_id(todo_id)
+        existing = await self.get_by_id(todo_id, user_id)
         if not existing:
             return False
 
-        await self.db.execute("DELETE FROM todos WHERE id = ?", (todo_id,))
+        await self.db.execute(
+            "DELETE FROM todos WHERE id = ? AND user_id = ?",
+            (todo_id, user_id),
+        )
         return True

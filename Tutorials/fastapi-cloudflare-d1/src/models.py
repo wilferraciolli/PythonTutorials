@@ -95,6 +95,7 @@ class TodoUpdate(BaseModel):
 class Todo(LinkedResource):
     """Complete TODO object returned by API"""
     id: str
+    user_id: str
     title: str
     description: Optional[str] = None
     complete_by: datetime

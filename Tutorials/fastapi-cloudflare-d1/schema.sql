@@ -14,12 +14,15 @@ CREATE TABLE IF NOT EXISTS user_roles (
 
 CREATE TABLE IF NOT EXISTS todos (
     id                      TEXT PRIMARY KEY,
+    user_id                 TEXT NOT NULL,
     title                   TEXT NOT NULL,
     description             TEXT,
     complete_by             TEXT NOT NULL,
     state                   TEXT NOT NULL DEFAULT 'NEW',
     created_date            TEXT NOT NULL
 );
+
+CREATE INDEX IF NOT EXISTS idx_todos_user_id ON todos(user_id);
 
 CREATE TABLE IF NOT EXISTS tags (
     id                      TEXT PRIMARY KEY,

@@ -146,7 +146,7 @@ Server runs at `http://127.0.0.1:8787`. Try it:
 ```powershell
 curl.exe http://127.0.0.1:8787/health
 curl.exe http://127.0.0.1:8787/docs        # Swagger UI in a browser
-curl.exe http://127.0.0.1:8787/todos
+curl.exe http://127.0.0.1:8787/users/<user-id>/todos
 ```
 
 To create a todo (PowerShell quoting is finicky with inline JSON, so use a
@@ -154,7 +154,7 @@ temp file):
 ```powershell
 '{"title":"Test","description":"Local test","complete_by":"2026-12-31T23:59:59"}' |
   Out-File -Encoding utf8 -NoNewline body.json
-curl.exe -X POST http://127.0.0.1:8787/todos -H "Content-Type: application/json" --data-binary "@body.json"
+curl.exe -X POST http://127.0.0.1:8787/users/<user-id>/todos -H "Content-Type: application/json" --data-binary "@body.json"
 Remove-Item body.json
 ```
 
@@ -228,13 +228,13 @@ curl.exe --ssl-no-revoke https://fastapi-todo-d1.<your-subdomain>.workers.dev/do
 | Method | Path | Description |
 |---|---|---|
 | GET | `/health` | Health check |
-| GET | `/todos` | List all todos |
-| GET | `/todos/template` | Create-template payload for todos |
-| GET | `/todos/{id}` | Get one todo |
-| POST | `/todos` | Create a todo (`title`, optional `description`, `complete_by`) |
-| PUT | `/todos/{id}` | Full update of a todo |
-| PATCH | `/todos/{id}/state/{state}` | Update only the state (`NEW`, `ACTIVE`, `CLOSED`) |
-| DELETE | `/todos/{id}` | Delete a todo (returns `204 No Content`) |
+| GET | `/users/{user_id}/todos` | List all todos for a user |
+| GET | `/users/{user_id}/todos/template` | Create-template payload for todos |
+| GET | `/users/{user_id}/todos/{id}` | Get one todo |
+| POST | `/users/{user_id}/todos` | Create a todo (`title`, optional `description`, `complete_by`) |
+| PUT | `/users/{user_id}/todos/{id}` | Full update of a todo |
+| PATCH | `/users/{user_id}/todos/{id}/state/{state}` | Update only the state (`NEW`, `ACTIVE`, `CLOSED`) |
+| DELETE | `/users/{user_id}/todos/{id}` | Delete a todo (returns `204 No Content`) |
 | GET | `/tags` | List/search tags, optionally by `resource_id` or `term` |
 | GET | `/tags/template` | Create-template payload for tags |
 | POST | `/tags` | Create a tag for a resource |

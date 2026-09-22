@@ -1,21 +1,22 @@
 @baseUrl = http://127.0.0.1:8001
+@userId = replace-with-user-uuid
 @todoId = replace-with-todo-uuid
 @token = paste-clerk-jwt-here
 
 ### Todo template
-GET {{baseUrl}}/todos/template
+GET {{baseUrl}}/users/{{userId}}/todos/template
 Authorization: Bearer {{token}}
 
 ### List todos
-GET {{baseUrl}}/todos
+GET {{baseUrl}}/users/{{userId}}/todos
 Authorization: Bearer {{token}}
 
 ### List todos by state
-GET {{baseUrl}}/todos?state=NEW
+GET {{baseUrl}}/users/{{userId}}/todos?state=NEW
 Authorization: Bearer {{token}}
 
 ### Create todo
-POST {{baseUrl}}/todos
+POST {{baseUrl}}/users/{{userId}}/todos
 Content-Type: application/json
 Authorization: Bearer {{token}}
 
@@ -27,11 +28,11 @@ Authorization: Bearer {{token}}
 }
 
 ### Get todo by id
-GET {{baseUrl}}/todos/{{todoId}}
+GET {{baseUrl}}/users/{{userId}}/todos/{{todoId}}
 Authorization: Bearer {{token}}
 
 ### Full update todo
-PUT {{baseUrl}}/todos/{{todoId}}
+PUT {{baseUrl}}/users/{{userId}}/todos/{{todoId}}
 Content-Type: application/json
 Authorization: Bearer {{token}}
 
@@ -43,9 +44,9 @@ Authorization: Bearer {{token}}
 }
 
 ### Patch todo state
-PATCH {{baseUrl}}/todos/{{todoId}}/state/CLOSED
+PATCH {{baseUrl}}/users/{{userId}}/todos/{{todoId}}/state/CLOSED
 Authorization: Bearer {{token}}
 
 ### Delete todo
-DELETE {{baseUrl}}/todos/{{todoId}}
+DELETE {{baseUrl}}/users/{{userId}}/todos/{{todoId}}
 Authorization: Bearer {{token}}

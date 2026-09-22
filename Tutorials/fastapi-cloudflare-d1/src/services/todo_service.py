@@ -19,7 +19,7 @@ class TodoService:
         self.repository = repository
         self.tag_service = tag_service
 
-    def build_template_response(self) -> Dict[str, Any]:
+    def build_template_response(self, user_id: str) -> Dict[str, Any]:
         """
         Build a create-template response.
 
@@ -39,12 +39,13 @@ class TodoService:
             "todo",
             template,
             self._template_metadata(),
-            self._meta_links(),
+            self._meta_links(user_id),
         )
 
-    async def create_todo(self, todo_create: TodoCreate) -> Todo:
+    async def create_todo(self, user_id: str, todo_create: TodoCreate) -> Todo:
         row = await self.repository.create(
             todo_id=str(uuid4()),
+            user_id=user_id,
             title=todo_create.title,
             description=todo_create.description,
             complete_by=todo_create.complete_by.isoformat(),
@@ -55,8 +56,8 @@ class TodoService:
         await self._sync_auto_tags(todo)
         return todo
 
-    async def get_todo(self, todo_id: str) -> Optional[Todo]:
-        row = await self.repository.get_by_id(todo_id)
+    async def get_todo(self, user_id: str, todo_id: str) -> Optional[Todo]:
+        row = await self.repository.get_by_id(todo_id, user_id)
         if not row:
             return None
 
@@ -69,16 +70,16 @@ class TodoService:
 
         return todo
 
-    async def get_all_todos(self, state: Optional[TodoState] = None) -> List[Todo]:
-        rows = await self.repository.get_all(state=state)
+    async def get_all_todos(self, user_id: str, state: Optional[TodoState] = None) -> List[Todo]:
+        rows = await self.repository.get_all(user_id, state=state)
         return [self._row_to_todo(row) for row in rows]
 
-    async def update_todo(self, todo_id: str, todo_update: TodoUpdate) -> Optional[Todo]:
+    async def update_todo(self, user_id: str, todo_id: str, todo_update: TodoUpdate) -> Optional[Todo]:
         update_data = todo_update.model_dump(exclude_unset=True)
         if "complete_by" in update_data and update_data["complete_by"] is not None:
             update_data["complete_by"] = todo_update.complete_by.isoformat()
 
-        row = await self.repository.update(todo_id, **update_data)
+        row = await self.repository.update(todo_id, user_id, **update_data)
         if not row:
             return None
 
@@ -86,8 +87,8 @@ class TodoService:
         await self._sync_auto_tags(todo)
         return todo
 
-    async def update_todo_state(self, todo_id: str, new_state: TodoState) -> Optional[Todo]:
-        row = await self.repository.update(todo_id, state=new_state)
+    async def update_todo_state(self, user_id: str, todo_id: str, new_state: TodoState) -> Optional[Todo]:
+        row = await self.repository.update(todo_id, user_id, state=new_state)
         if not row:
             return None
 
@@ -95,8 +96,8 @@ class TodoService:
         await self._sync_auto_tags(todo)
         return todo
 
-    async def delete_todo(self, todo_id: str) -> bool:
-        deleted = await self.repository.delete(todo_id)
+    async def delete_todo(self, user_id: str, todo_id: str) -> bool:
+        deleted = await self.repository.delete(todo_id, user_id)
         if deleted:
             await self.tag_service.delete_all_tags_for_resource(todo_id)
         return deleted
@@ -105,6 +106,7 @@ class TodoService:
         self,
         data_name: str,
         data: Any,
+        user_id: str,
         messages: Optional[List[Dict[str, str]]] = None,
     ) -> Dict[str, Any]:
         """
@@ -119,7 +121,7 @@ class TodoService:
             data_name,
             data,
             self._metadata(todo),
-            self._meta_links(),
+            self._meta_links(user_id),
             messages,
         )
 
@@ -141,6 +143,7 @@ class TodoService:
         todo_id = row["id"]
         todo = Todo(
             id=todo_id,
+            user_id=row["user_id"],
             title=row["title"],
             description=row.get("description") if hasattr(row, "get") else row["description"],
             complete_by=datetime.fromisoformat(row["complete_by"]),
@@ -166,14 +169,14 @@ class TodoService:
         Once auth exists, these values should come from the current user.
         """
         links = {
-            "self": Link(href=f"/todos/{todo.id}", method="GET"),
+            "self": Link(href=f"/users/{todo.user_id}/todos/{todo.id}", method="GET"),
         }
 
         if can_update:
-            links["update"] = Link(href=f"/todos/{todo.id}", method="PUT")
+            links["update"] = Link(href=f"/users/{todo.user_id}/todos/{todo.id}", method="PUT")
 
         if can_delete:
-            links["delete"] = Link(href=f"/todos/{todo.id}", method="DELETE")
+            links["delete"] = Link(href=f"/users/{todo.user_id}/todos/{todo.id}", method="DELETE")
 
         if can_add_tag:
             links["addTag"] = Link(href="/tags", method="POST")
@@ -199,6 +202,10 @@ class TodoService:
 
         return {
             "id": {
+                "readOnly": True,
+                "hidden": True,
+            },
+            "user_id": {
                 "readOnly": True,
                 "hidden": True,
             },
@@ -235,11 +242,11 @@ class TodoService:
             },
         }
 
-    def _meta_links(self, *, can_create: bool = True) -> Dict[str, Link]:
+    def _meta_links(self, user_id: str, *, can_create: bool = True) -> Dict[str, Link]:
         """Collection-level Todo links, calculated per request."""
         if not can_create:
             return {}
 
         return {
-            "createTodo": Link(href="/todos", method="POST"),
+            "createTodo": Link(href=f"/users/{user_id}/todos", method="POST"),
         }

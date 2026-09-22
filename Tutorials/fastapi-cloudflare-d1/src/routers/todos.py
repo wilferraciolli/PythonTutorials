@@ -9,7 +9,7 @@ from repositories.todo_repository import TodoRepository
 from services.tag_service import TagService
 from services.todo_service import TodoService
 
-router = APIRouter(prefix="/todos", tags=["todos"])
+router = APIRouter(prefix="/users/{user_id}/todos", tags=["todos"])
 
 
 def get_todo_service(request: Request) -> TodoService:
@@ -25,66 +25,84 @@ def get_todo_service(request: Request) -> TodoService:
 
 
 @router.get("/template", status_code=200)
-async def get_todo_template(service: TodoService = Depends(get_todo_service)) -> Dict[str, Any]:
+async def get_todo_template(
+    user_id: str,
+    service: TodoService = Depends(get_todo_service),
+) -> Dict[str, Any]:
     """Get a TODO template"""
-    return service.build_template_response()
+    return service.build_template_response(user_id)
 
 
 @router.post("", status_code=201)
-async def create_todo(todo: TodoCreate, service: TodoService = Depends(get_todo_service)) -> Dict[str, Any]:
+async def create_todo(
+    user_id: str,
+    todo: TodoCreate,
+    service: TodoService = Depends(get_todo_service),
+) -> Dict[str, Any]:
     """Create a new TODO"""
-    created = await service.create_todo(todo)
-    return service.build_response("todo", created)
+    created = await service.create_todo(user_id, todo)
+    return service.build_response("todo", created, user_id)
 
 
 @router.get("")
 async def get_all_todos(
+    user_id: str,
     state: Optional[TodoState] = None,
     service: TodoService = Depends(get_todo_service),
 ) -> Dict[str, Any]:
-    """Get all TODOs, optionally filtered by state"""
-    todos = await service.get_all_todos(state=state)
-    return service.build_response("todos", todos)
+    """Get all TODOs for a user, optionally filtered by state"""
+    todos = await service.get_all_todos(user_id, state=state)
+    return service.build_response("todos", todos, user_id)
 
 
 @router.get("/{todo_id}")
-async def get_todo(todo_id: str, service: TodoService = Depends(get_todo_service)) -> Dict[str, Any]:
+async def get_todo(
+    user_id: str,
+    todo_id: str,
+    service: TodoService = Depends(get_todo_service),
+) -> Dict[str, Any]:
     """Get a single TODO by ID"""
-    todo = await service.get_todo(todo_id)
+    todo = await service.get_todo(user_id, todo_id)
     if not todo:
         raise HTTPException(status_code=404, detail=f"TODO {todo_id} not found")
-    return service.build_response("todo", todo)
+    return service.build_response("todo", todo, user_id)
 
 
 @router.put("/{todo_id}")
 async def update_todo(
+    user_id: str,
     todo_id: str,
     todo_update: TodoUpdate,
     service: TodoService = Depends(get_todo_service),
 ) -> Dict[str, Any]:
     """Update a TODO (partial update - only send fields you want to change)"""
-    todo = await service.update_todo(todo_id, todo_update)
+    todo = await service.update_todo(user_id, todo_id, todo_update)
     if not todo:
         raise HTTPException(status_code=404, detail=f"TODO {todo_id} not found")
-    return service.build_response("todo", todo)
+    return service.build_response("todo", todo, user_id)
 
 
 @router.patch("/{todo_id}/state/{new_state}")
 async def update_todo_state(
+    user_id: str,
     todo_id: str,
     new_state: TodoState,
     service: TodoService = Depends(get_todo_service),
 ) -> Dict[str, Any]:
     """Update only the state of a TODO"""
-    todo = await service.update_todo_state(todo_id, new_state)
+    todo = await service.update_todo_state(user_id, todo_id, new_state)
     if not todo:
         raise HTTPException(status_code=404, detail=f"TODO {todo_id} not found")
-    return service.build_response("todo", todo)
+    return service.build_response("todo", todo, user_id)
 
 
 @router.delete("/{todo_id}", status_code=204)
-async def delete_todo(todo_id: str, service: TodoService = Depends(get_todo_service)) -> None:
+async def delete_todo(
+    user_id: str,
+    todo_id: str,
+    service: TodoService = Depends(get_todo_service),
+) -> None:
     """Delete a TODO"""
-    success = await service.delete_todo(todo_id)
+    success = await service.delete_todo(user_id, todo_id)
     if not success:
         raise HTTPException(status_code=404, detail=f"TODO {todo_id} not found")
