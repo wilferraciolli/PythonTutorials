@@ -202,7 +202,10 @@ class GroupService:
             "self": Link(href=base, method="GET"),
             "members": Link(href=f"{base}/members", method="GET"),
             "followers": Link(href=f"{base}/followers", method="GET"),
+            "posts": Link(href=f"{base}/posts", method="GET"),
         }
+        if p.can_post(caller, access):
+            links["createPost"] = Link(href=f"{base}/posts", method="POST")
         if p.can_join(caller, access):
             links["join"] = Link(href=f"{base}/members/me", method="PUT")
         if p.can_leave(caller, access):

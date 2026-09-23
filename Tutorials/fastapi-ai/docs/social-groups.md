@@ -4,8 +4,9 @@ Users create **groups** (public or private), post to them, and other people like
 posts and reply to comments. Users can **be a member** of a group or just **follow** it, and each
 user has a **timeline** built from the groups they can see.
 
-> **Status:** revision 5. **Step 1 built** (groups, members, owner, followers, role re-sync;
-> `tests/test_groups.py`). Steps 2-6 not yet. Items marked **(decision)** can still be changed.
+> **Status:** revision 5. **Steps 1-3 built**: groups, members, owner, followers, role re-sync;
+> posts and post comments (separate APIs), News seed; likes, `post_stats` and the admin area
+> (`GET /api/admin`). Steps 4-6 (timeline, AI, Angular) not yet. Items marked **(decision)** can still be changed.
 
 ## Roles: two different things
 

@@ -11,14 +11,5 @@
   "include": [
     "src/**/*.d.ts",
     "src/**/*.spec.ts"
-  ],
-  "exclude": [
-    "src/app/features/admin/**",
-    "src/app/features/bed-board/**",
-    "src/app/features/insights/**",
-    "src/app/core/i18n/**",
-    "src/app/core/wards/**",
-    "src/app/core/auth/admin.guard.ts",
-    "src/app/features/profile/profile-edit-page/**"
   ]
 }

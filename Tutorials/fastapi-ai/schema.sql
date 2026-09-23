@@ -75,3 +75,117 @@ SELECT
     tags.created_date   AS created_date
 FROM tags
 LEFT JOIN todos ON todos.id = tags.resource_id;
+
+-- Search embeddings for any resource (todos, ...)
+-- Embeddings for any user-owned resource that has free text worth searching by
+-- meaning (todos today; notes, tags, ... later). One row per resource;
+-- `resource_type` says which table `resource_id` points into. `embedding` is a
+-- JSON array of floats (L2-normalised). Chat messages keep their own table
+-- (message_embeddings).
+CREATE TABLE IF NOT EXISTS resource_embeddings (
+    resource_type TEXT NOT NULL,
+    resource_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    model TEXT NOT NULL,
+    embedding TEXT NOT NULL,
+    created_date TEXT NOT NULL,
+    PRIMARY KEY (resource_type, resource_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_resource_embeddings_user_type
+    ON resource_embeddings(user_id, resource_type);
+
+-- Social groups: see docs/social-groups.md.
+-- owner_id is optional: a group carries on when its owner's user is deleted.
+CREATE TABLE IF NOT EXISTS groups (
+    id           TEXT PRIMARY KEY,
+    name         TEXT NOT NULL,
+    description  TEXT,
+    visibility   TEXT NOT NULL DEFAULT 'PUBLIC' CHECK (visibility IN ('PUBLIC', 'PRIVATE')),
+    owner_id     TEXT,
+    created_by   TEXT,
+    created_date TEXT NOT NULL
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_groups_name ON groups(name COLLATE NOCASE);
+
+CREATE TABLE IF NOT EXISTS group_members (
+    group_id    TEXT NOT NULL,
+    user_id     TEXT NOT NULL,
+    joined_date TEXT NOT NULL,
+    PRIMARY KEY (group_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_group_members_user ON group_members(user_id);
+
+-- Independent of membership: people can follow a public group without joining,
+-- and members can unfollow without leaving.
+CREATE TABLE IF NOT EXISTS group_followers (
+    group_id     TEXT NOT NULL,
+    user_id      TEXT NOT NULL,
+    created_date TEXT NOT NULL,
+    PRIMARY KEY (group_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_group_followers_user ON group_followers(user_id);
+
+-- Posts and threaded comments in social groups: see docs/social-groups.md.
+-- author_id NULL means "System" (seeded content). A deleted user's id is kept,
+-- so their old posts show as "[deleted user]" instead of "System".
+-- Deleting a post or comment is a soft delete (deleted_date) so replies keep their parent.
+CREATE TABLE IF NOT EXISTS posts (
+    id           TEXT PRIMARY KEY,
+    group_id     TEXT NOT NULL,
+    author_id    TEXT,
+    title        TEXT NOT NULL,
+    body         TEXT NOT NULL,
+    created_date TEXT NOT NULL,
+    updated_date TEXT NOT NULL,
+    deleted_date TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_posts_group_created ON posts(group_id, created_date);
+CREATE INDEX IF NOT EXISTS idx_posts_created ON posts(created_date);
+
+CREATE TABLE IF NOT EXISTS comments (
+    id                TEXT PRIMARY KEY,
+    post_id           TEXT NOT NULL,
+    parent_comment_id TEXT,
+    author_id         TEXT,
+    body              TEXT NOT NULL,
+    created_date      TEXT NOT NULL,
+    updated_date      TEXT NOT NULL,
+    deleted_date      TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_comments_post ON comments(post_id, created_date);
+
+-- Likes and post popularity: see docs/social-groups.md.
+
+-- One like per user per post or comment (the primary key stops double likes).
+CREATE TABLE IF NOT EXISTS reactions (
+    user_id      TEXT NOT NULL,
+    target_type  TEXT NOT NULL CHECK (target_type IN ('post', 'comment')),
+    target_id    TEXT NOT NULL,
+    created_date TEXT NOT NULL,
+    PRIMARY KEY (user_id, target_type, target_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_reactions_target ON reactions(target_type, target_id);
+
+-- Each post's counts and popularity score, kept up to date by the services
+-- whenever a like or comment changes, so POPULAR doesn't count on every request.
+-- score = comment_count * 2 + like_count (a comment or reply is worth 2, a like 1).
+CREATE TABLE IF NOT EXISTS post_stats (
+    post_id       TEXT PRIMARY KEY,
+    like_count    INTEGER NOT NULL DEFAULT 0,
+    comment_count INTEGER NOT NULL DEFAULT 0,
+    score         INTEGER NOT NULL DEFAULT 0,
+    updated_date  TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_post_stats_score ON post_stats(score);
+
+-- Seed data (the News group and its dummy posts) lives in migrations/010_seed_news_group.sql;
+-- on D1 run it once: npx wrangler d1 execute wiltech-db --remote --file=./migrations/010_seed_news_group.sql
+-- then, as an admin, call POST /api/admin/post-stats/rebuild so the seeded posts get their comment counts.

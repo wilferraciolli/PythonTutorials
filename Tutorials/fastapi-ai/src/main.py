@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from auth import get_authenticated_user
 from errors import register_error_handlers
-from routers import assistant, chats, groups, health, me, tags, todos, user_profile, users
+from routers import admin, assistant, chats, groups, health, me, post_comments, posts, tags, todos, user_profile, users
 
 
 
@@ -48,5 +48,8 @@ app.include_router(assistant.router, prefix="/api", dependencies=[Depends(get_au
 app.include_router(todos.router, prefix="/api", dependencies=[Depends(get_authenticated_user)])
 app.include_router(tags.router, prefix="/api", dependencies=[Depends(get_authenticated_user)])
 app.include_router(groups.router, prefix="/api", dependencies=[Depends(get_authenticated_user)])
+app.include_router(posts.router, prefix="/api", dependencies=[Depends(get_authenticated_user)])
+app.include_router(post_comments.router, prefix="/api", dependencies=[Depends(get_authenticated_user)])
+app.include_router(admin.router, prefix="/api", dependencies=[Depends(get_authenticated_user)])
 
 register_error_handlers(app)

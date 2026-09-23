@@ -61,10 +61,10 @@ async def test_private_group_is_invisible_to_outsiders_but_not_admins(env):
 
     with pytest.raises(NotFoundError):  # 404, not 403: existence isn't leaked
         await service.get_visible(OUTSIDER, group_id)
-    assert [a.group["id"] for a in await service.list_groups(OUTSIDER)] == []
+    assert group_id not in [a.group["id"] for a in await service.list_groups(OUTSIDER)]
 
     assert (await service.get_visible(ADMIN, group_id)).group["id"] == group_id
-    assert [a.group["id"] for a in await service.list_groups(ADMIN)] == [group_id]
+    assert group_id in [a.group["id"] for a in await service.list_groups(ADMIN)]
 
 
 async def test_members_can_add_people_to_a_private_group_and_they_auto_follow(env):

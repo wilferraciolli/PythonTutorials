@@ -1,6 +1,0 @@
-{
-  "confirmations": {
-    "deactivateDoctor": "Deactivate Dr. {{name}}? Their history is preserved.",
-    "deleteWard": "Delete ward \"{{name}}\"? This cannot be undone."
-  }
-}

@@ -293,3 +293,60 @@ class GroupFollower(BaseModel):
     @field_serializer("created_date")
     def serialize_follower_created_date(self, value: datetime) -> str:
         return format_utc_datetime(value)
+
+
+class PostCreate(BaseModel):
+    title: str = Field(min_length=1, max_length=200)
+    body: str = Field(min_length=1, max_length=10000)
+
+
+class PostUpdate(BaseModel):
+    title: Optional[str] = Field(None, min_length=1, max_length=200)
+    body: Optional[str] = Field(None, min_length=1, max_length=10000)
+
+
+class Post(LinkedResource):
+    id: str
+    groupId: str
+    groupName: str
+    authorId: Optional[str] = None
+    authorName: Optional[str] = None  # "System" for seeded posts, "[deleted user]", None when deleted
+    title: str
+    body: str
+    isDeleted: bool = False
+    likeCount: int = 0
+    commentCount: int = 0
+    likedByMe: bool = False
+    created_date: datetime
+    updated_date: datetime
+
+    @field_serializer("created_date", "updated_date")
+    def serialize_post_dates(self, value: datetime) -> str:
+        return format_utc_datetime(value)
+
+
+class CommentCreate(BaseModel):
+    body: str = Field(min_length=1, max_length=5000)
+    parentCommentId: Optional[str] = None  # set to reply to a comment
+
+
+class CommentUpdate(BaseModel):
+    body: str = Field(min_length=1, max_length=5000)
+
+
+class Comment(LinkedResource):
+    id: str
+    postId: str
+    parentCommentId: Optional[str] = None
+    authorId: Optional[str] = None
+    authorName: Optional[str] = None
+    body: str
+    isDeleted: bool = False
+    likeCount: int = 0
+    likedByMe: bool = False
+    created_date: datetime
+    updated_date: datetime
+
+    @field_serializer("created_date", "updated_date")
+    def serialize_comment_dates(self, value: datetime) -> str:
+        return format_utc_datetime(value)

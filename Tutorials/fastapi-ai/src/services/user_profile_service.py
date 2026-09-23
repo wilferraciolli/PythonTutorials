@@ -40,7 +40,7 @@ class UserProfileService:
             name=user["name"],
             email=user.get("email"),
             roleIds=user["roleIds"],
-            links=self.build_user_profile_links(user["id"]),
+            links=self.build_user_profile_links(user["id"], caller),
         )
 
     def can_view_profile(self, caller: Dict[str, Any], target: Dict[str, Any]) -> bool:
@@ -51,11 +51,11 @@ class UserProfileService:
         # or ADMIN only).
         return True
 
-    def build_user_profile_links(self, user_id: str) -> dict[str, Link]:
+    def build_user_profile_links(self, user_id: str, caller: Optional[Dict[str, Any]] = None) -> dict[str, Link]:
         # No standalone `createTodo` link here: the create URL is never
         # POSTed to blind. Clients GET `todoTemplate` (its field metadata
         # says what's mandatory) and derive the create URL from that link.
-        return {
+        links = {
             "self": Link(href=f"{API_PREFIX}/users/{user_id}/profile", method="GET"),
             "user": Link(href=f"{API_PREFIX}/users/{user_id}", method="GET"),
             "users": Link(href=f"{API_PREFIX}/users", method="GET"),
@@ -72,6 +72,10 @@ class UserProfileService:
             "aiChatSearch": Link(href=f"{API_PREFIX}/users/{user_id}/chats/search", method="GET"),
             "aiAssistant": Link(href=f"{API_PREFIX}/users/{user_id}/assistant/ask", method="POST"),
         }
+        # The admin area, only on an admin's own profile.
+        if caller and caller["id"] == user_id and "ADMIN" in (caller.get("roleIds") or []):
+            links["admin"] = Link(href=f"{API_PREFIX}/admin", method="GET")
+        return links
 
     def build_metadata(self) -> dict[str, Any]:
         return {

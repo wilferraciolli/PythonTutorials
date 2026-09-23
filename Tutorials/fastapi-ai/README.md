@@ -333,6 +333,12 @@ above) except `/api/health`, `/docs`, and `/openapi.json`.
 | PUT | `/api/groups/{id}/owner` | Assign a new owner `{"userId"}` (must be a member; owner or admin) |
 | GET | `/api/groups/{id}/members` | Members; `PUT/DELETE /members/me` join or leave, `PUT/DELETE /members/{userId}` add (any member) or remove (owner or admin) |
 | GET | `/api/groups/{id}/followers` | Followers; `PUT/DELETE /followers/me` follow or unfollow |
+| GET / POST | `/api/groups/{id}/posts` | The group's posts, newest first (`?limit=`) / create one (`title` and `body` required; members and admins) |
+| GET / PUT / DELETE | `/api/groups/{id}/posts/{postId}` | Read, edit (author), soft delete (author, group owner or admin). `PUT/DELETE .../like` like or unlike |
+| GET / POST | `/api/groups/{id}/posts/{postId}/comments` | Comments oldest first / add one, or reply with `parentCommentId` |
+| PUT / DELETE | `/api/groups/{id}/posts/{postId}/comments/{commentId}` | Edit (author), soft delete (author, group owner or admin). `PUT/DELETE .../like` like or unlike |
+| GET | `/api/admin` | Admin area (system ADMIN only, linked from an admin's own profile): lists admin tools |
+| POST | `/api/admin/post-stats/rebuild` | Recalculate every post's likes, comments and popularity score (admin only) |
 | POST | `/api/users/{user_id}/assistant/ask` | Ask a question about your own data in plain English (`{"question": "...", "provider": "groq"}`); the model calls read-only tools (todos, chat search) and returns the answer plus the tools it used |
 | GET | `/api/users/{user_id}/chats/{chat_id}` | Get one chat with its full message history |
 | PUT | `/api/users/{user_id}/chats/{chat_id}` | Rename a chat (`{"title": "..."}`, 1–60 characters) |

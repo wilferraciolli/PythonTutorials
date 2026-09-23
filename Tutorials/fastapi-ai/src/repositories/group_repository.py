@@ -86,7 +86,17 @@ class GroupRepository:
         await self.db.execute("UPDATE groups SET owner_id = ? WHERE id = ?", (owner_id, group_id))
 
     async def delete(self, group_id: str) -> None:
-        # Posts, comments, reactions and stats join this list in step 2.
+        in_group_posts = "SELECT id FROM posts WHERE group_id = ?"
+        in_group_comments = f"SELECT id FROM comments WHERE post_id IN ({in_group_posts})"
+        await self.db.execute(
+            f"DELETE FROM reactions WHERE target_type = 'comment' AND target_id IN ({in_group_comments})", (group_id,)
+        )
+        await self.db.execute(
+            f"DELETE FROM reactions WHERE target_type = 'post' AND target_id IN ({in_group_posts})", (group_id,)
+        )
+        await self.db.execute(f"DELETE FROM post_stats WHERE post_id IN ({in_group_posts})", (group_id,))
+        await self.db.execute(f"DELETE FROM comments WHERE post_id IN ({in_group_posts})", (group_id,))
+        await self.db.execute("DELETE FROM posts WHERE group_id = ?", (group_id,))
         await self.db.execute("DELETE FROM group_followers WHERE group_id = ?", (group_id,))
         await self.db.execute("DELETE FROM group_members WHERE group_id = ?", (group_id,))
         await self.db.execute("DELETE FROM groups WHERE id = ?", (group_id,))
@@ -155,3 +165,9 @@ class GroupRepository:
         await self.db.execute("UPDATE groups SET owner_id = NULL WHERE owner_id = ?", (user_id,))
         await self.db.execute("DELETE FROM group_members WHERE user_id = ?", (user_id,))
         await self.db.execute("DELETE FROM group_followers WHERE user_id = ?", (user_id,))
+        # Their likes go too, and the affected posts' scores are recomputed.
+        await self.db.execute("DELETE FROM reactions WHERE user_id = ?", (user_id,))
+        from repositories.post_stats_repository import PostStatsRepository
+        from datetime import datetime, timezone
+
+        await PostStatsRepository(self.db).rebuild_all(datetime.now(timezone.utc).isoformat())
