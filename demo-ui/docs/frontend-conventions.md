@@ -217,7 +217,7 @@ nesting past one level. Example — component class `UserDashboard`, in
   are untouched — this rule is only about class names.
 
 ## Layout: mobile-first, max width, centered
-This app is used from a phone at a hospital bedside as much as from a
+This app is used from a phone as much as from a
 desktop — layout is mobile-first (base styles target the smallest
 viewport, wider-viewport rules layer on top via `bp.up()`, never the
 reverse), and content never stretches edge-to-edge on a wide monitor.
@@ -230,14 +230,12 @@ reverse), and content never stretches edge-to-edge on a wide monitor.
   see `nav-bar.scss`'s `-actions`, though that one predates this and
   still sets `margin-inline-start: auto` directly; either is fine).
 - Apply `.App-page` to a route's top-level container **alongside** its
-  own component class (`<div class="BedBoardShell App-page">`) instead of
+  own component class (`<div class="TodosShell App-page">`) instead of
   that component defining its own `max-width`/`margin: 0 auto`/`padding`.
-  One shared constant beats a different ad hoc pixel value per page — the
-  bed board, admin dashboard, and every admin sub-page all used to hand-roll
-  their own (1000px, 900px, 700px, …) before this existed.
+  One shared constant beats a different ad hoc pixel value per page
+  (pages used to hand-roll their own 1000px, 900px, 700px, … before this existed).
 - Nested routes only need `.App-page` once, on the shared ancestor — e.g.
-  `AdminShell-main` carries it, so none of the 8 routed admin pages
-  underneath (dashboard, wards/doctors/procedures lists and forms) need
+  a feature shell carries it, so the routed pages underneath it don't need
   their own.
 - A page that's intentionally narrower than the app-wide width for its
   own reason (a compact profile card, a reading-width paragraph) keeps

@@ -14,7 +14,7 @@ API client, the profile-links store) but are separate apps.
 
 ```
 npm install
-npm start          # http://localhost:4200
+npm start          # http://localhost:4201 (showcase keeps 4200, so both can run)
 ```
 
 Start `Tutorials/fastapi-ai` on port 8001 (`apiUrl` in

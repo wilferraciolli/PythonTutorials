@@ -29,7 +29,7 @@ export const appConfig: ApplicationConfig = {
     // never race a not-yet-loaded instance — see auth.store.ts.
     provideAppInitializer(() => inject(AuthStore).init()),
     // ApiClientService.resolve()/requireLink() prefix a link's bare href
-    // with this origin — needed because the UI (localhost:4200) and the
+    // with this origin — needed because the UI (localhost:4201) and the
     // API (localhost:8001 in dev) are on different origins. Defaults to
     // '' (same-origin), which is wrong here.
     { provide: API_ORIGIN, useValue: environment.apiUrl },
