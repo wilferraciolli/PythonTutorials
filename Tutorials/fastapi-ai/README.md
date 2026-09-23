@@ -337,6 +337,7 @@ above) except `/api/health`, `/docs`, and `/openapi.json`.
 | GET / PUT / DELETE | `/api/groups/{id}/posts/{postId}` | Read, edit (author), soft delete (author, group owner or admin). `PUT/DELETE .../like` like or unlike |
 | GET / POST | `/api/groups/{id}/posts/{postId}/comments` | Comments oldest first / add one, or reply with `parentCommentId` |
 | PUT / DELETE | `/api/groups/{id}/posts/{postId}/comments/{commentId}` | Edit (author), soft delete (author, group owner or admin). `PUT/DELETE .../like` like or unlike |
+| GET | `/api/timeline/posts` | Your feed from the last year: `?type=ALL` (every post you can see, newest first), `FOLLOWING` (groups you follow, newest first) or `POPULAR` (score: comment = 2, like = 1). `?limit=` default 50 |
 | GET | `/api/admin` | Admin area (system ADMIN only, linked from an admin's own profile): lists admin tools |
 | POST | `/api/admin/post-stats/rebuild` | Recalculate every post's likes, comments and popularity score (admin only) |
 | POST | `/api/users/{user_id}/assistant/ask` | Ask a question about your own data in plain English (`{"question": "...", "provider": "groq"}`); the model calls read-only tools (todos, chat search) and returns the answer plus the tools it used |
