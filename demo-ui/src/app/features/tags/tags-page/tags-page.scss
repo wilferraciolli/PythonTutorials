@@ -1,83 +1,70 @@
+@use 'ui';
+
 .TagsPage {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  // Title and count on the left, search on the right; they wrap on a phone.
   &-header {
     display: flex;
-    align-items: baseline;
-    gap: 0.75rem;
-    margin-bottom: 1.25rem;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
   }
 
   &-title {
-    margin: 0;
-    font: var(--mat-sys-headline-small);
+    @include ui.page-title;
   }
 
   &-count {
-    font: var(--mat-sys-label-medium);
-    color: var(--mat-sys-on-surface-variant);
+    @include ui.supporting-text;
   }
 
-  // One toolbar, not a card-plus-a-separate-search-field: the primary
-  // action (compose) and the secondary one (filter) share a row and wrap
-  // together on narrow viewports instead of stacking as two boxed panels.
-  &-toolbar {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 1.5rem;
-    margin-bottom: 0.75rem;
+  &-search {
+    flex: 1 1 14rem;
+    max-width: 20rem;
   }
 
+  // Adding a tag is the page's one job besides reading, so it gets its own
+  // tonal panel above the list.
   &-compose {
     display: flex;
     align-items: flex-start;
-    gap: 0.75rem;
     flex-wrap: wrap;
+    gap: 12px;
+    padding: 16px;
+    border-radius: var(--mat-sys-corner-large);
+    background: var(--mat-sys-surface-container-low);
 
     mat-form-field {
-      width: 13rem;
+      flex: 1 1 12rem;
+      min-width: 0;
     }
 
     button {
-      margin-top: 4px; // aligns with the input row, not the field labels
+      margin-top: 8px; // lines up with the input, not the floating label
       white-space: nowrap;
     }
   }
 
-  &-search {
-    width: 14rem;
-    max-width: 100%;
-  }
-
   &-error {
-    color: var(--mat-sys-error);
+    @include ui.banner(error);
   }
 
   &-loading {
-    color: var(--mat-sys-on-surface-variant);
-  }
-
-  // A single hairline — the one structural rule on the page — marking
-  // where "compose" ends and "browse" begins. Not decoration.
-  &-divider {
-    height: 1px;
-    background: var(--mat-sys-outline-variant);
-    margin: 1.25rem 0;
+    @include ui.supporting-text;
   }
 
   &-empty {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 3rem 0;
-    color: var(--mat-sys-on-surface-variant);
+    @include ui.empty-state;
 
     mat-icon {
-      font-size: 2rem;
-      width: 2rem;
-      height: 2rem;
-      opacity: 0.5;
+      width: 48px;
+      height: 48px;
+      font-size: 48px;
+      color: var(--mat-sys-primary);
     }
 
     p {
@@ -86,30 +73,35 @@
   }
 
   // A plain row list rather than a table — no header row, no grid lines;
-  // the chip / id / date positions are self-explanatory after one glance.
+  // the chip / resource / date positions are self-explanatory at a glance.
   &-list {
-    list-style: none;
     margin: 0;
     padding: 0;
+    list-style: none;
   }
 
   &-row {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 1rem;
-    padding: 0.625rem 0.25rem;
-    border-bottom: 1px solid var(--mat-sys-outline-variant);
+    gap: 4px 16px;
+    min-height: 56px;
+    padding: 8px 4px;
 
-    &:last-child {
-      border-bottom: none;
+    & + & {
+      border-top: 1px solid var(--mat-sys-outline-variant);
     }
 
+    // A fixed chip column, so the resource names line up down the list.
     // The remove control stays quiet until the row has attention — it
     // reads as "here if you need it" rather than a row of delete buttons.
     mat-chip-set {
+      flex: none;
+      min-width: 9.5rem;
+
       ::ng-deep .mat-mdc-chip-remove {
-        opacity: 0.45;
-        transition: opacity 0.15s ease;
+        opacity: 0.6;
+        transition: opacity var(--app-duration-short) var(--app-ease-standard);
       }
     }
 
@@ -124,18 +116,18 @@
   &-dot {
     width: 8px;
     height: 8px;
-    border-radius: 50%;
+    border-radius: var(--mat-sys-corner-full);
     flex: none;
   }
 
   &-resource {
-    flex: 1 1 auto;
+    flex: 1 1 10rem;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font: var(--mat-sys-body-medium);
-    color: var(--mat-sys-on-surface-variant);
+    font: var(--mat-sys-body-large);
+    letter-spacing: var(--mat-sys-body-large-tracking);
 
     // Falls back to the raw resource_id when the API couldn't resolve a
     // name (an orphaned tag) — monospaced so it visibly reads as an id,
@@ -143,13 +135,14 @@
     &--unresolved {
       font-family: 'Roboto Mono', ui-monospace, monospace;
       font-size: 0.8125rem;
-      opacity: 0.75;
+      color: var(--mat-sys-on-surface-variant);
     }
   }
 
   &-date {
     flex: none;
     font: var(--mat-sys-body-small);
+    letter-spacing: var(--mat-sys-body-small-tracking);
     color: var(--mat-sys-on-surface-variant);
   }
 }

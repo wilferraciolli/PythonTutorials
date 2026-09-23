@@ -27,4 +27,25 @@ describe('Home', () => {
     expect(hrefs).toContain('/todos');
     expect(hrefs).toContain('/workers-ai');
   });
+
+  it('invites a signed-out visitor to sign in, above the destinations', () => {
+    const fixture = TestBed.createComponent(Home);
+    fixture.detectChanges();
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('h1')?.textContent).toContain('FastAPI');
+    expect(compiled.querySelector('.Home-signin')?.textContent).toContain('Sign in');
+  });
+
+  // Home, Tags (not a card) and Admin (admins only) are left out; the two AI
+  // destinations carry the tertiary role.
+  it('shows a card per destination, tinting the AI ones', () => {
+    const fixture = TestBed.createComponent(Home);
+    fixture.detectChanges();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const titles = Array.from(compiled.querySelectorAll('.Home-card-title')).map((t) =>
+      t.textContent?.trim(),
+    );
+    expect(titles).toEqual(['Todos', 'AI chat', 'Ask your data', 'Timeline', 'Groups']);
+    expect(compiled.querySelectorAll('.Home-card.is-tertiary')).toHaveLength(2);
+  });
 });

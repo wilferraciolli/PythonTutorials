@@ -1,43 +1,33 @@
 <button
-  matIconButton
+  class="ProfileMenu-trigger"
   type="button"
   [matMenuTriggerFor]="menu"
   aria-label="Account menu"
   aria-haspopup="menu"
   title="Account menu"
 >
-  <mat-icon aria-hidden="true">account_circle</mat-icon>
+  @if (initial(); as letter) {
+    <span class="ProfileMenu-avatar" aria-hidden="true">{{ letter }}</span>
+  } @else {
+    <mat-icon class="ProfileMenu-avatar-icon">account_circle</mat-icon>
+  }
 </button>
 
-<mat-menu #menu="matMenu">
+<mat-menu #menu="matMenu" xPosition="before">
+  @if (currentUser.me(); as me) {
+    <div class="ProfileMenu-header">
+      <span class="ProfileMenu-name">{{ me.name }}</span>
+      @if (me.email) {
+        <span class="ProfileMenu-email">{{ me.email }}</span>
+      }
+    </div>
+  }
   <a mat-menu-item routerLink="/profile">
-    <mat-icon aria-hidden="true">person</mat-icon>
+    <mat-icon>person</mat-icon>
     <span>Profile</span>
   </a>
-  <a mat-menu-item routerLink="/todos">
-    <mat-icon aria-hidden="true">checklist</mat-icon>
-    <span>My todos</span>
-  </a>
-  <a mat-menu-item routerLink="/tags">
-    <mat-icon aria-hidden="true">label</mat-icon>
-    <span>Tags</span>
-  </a>
-  <a mat-menu-item routerLink="/timeline">
-    <mat-icon aria-hidden="true">dynamic_feed</mat-icon>
-    <span>Timeline</span>
-  </a>
-  <a mat-menu-item routerLink="/groups">
-    <mat-icon aria-hidden="true">groups</mat-icon>
-    <span>Groups</span>
-  </a>
-  @if (currentUser.link('admin')) {
-    <a mat-menu-item routerLink="/admin">
-      <mat-icon aria-hidden="true">admin_panel_settings</mat-icon>
-      <span>Admin</span>
-    </a>
-  }
   <button mat-menu-item type="button" (click)="signOut()">
-    <mat-icon aria-hidden="true">logout</mat-icon>
+    <mat-icon>logout</mat-icon>
     <span>Sign out</span>
   </button>
 </mat-menu>

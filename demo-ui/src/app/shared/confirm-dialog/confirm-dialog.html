@@ -5,7 +5,7 @@
   <button
     matButton="filled"
     type="button"
-    [color]="data.tone === 'danger' ? 'warn' : 'primary'"
+    [class.ConfirmDialog-danger]="data.tone === 'danger'"
     (click)="confirm()"
   >
     {{ data.confirmLabel ?? 'Confirm' }}

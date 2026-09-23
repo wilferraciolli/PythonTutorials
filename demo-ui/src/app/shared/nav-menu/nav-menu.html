@@ -1,0 +1,22 @@
+<nav
+  class="NavMenu"
+  [class.is-rail]="variant() === 'rail'"
+  [class.is-drawer]="variant() === 'drawer'"
+  aria-label="Main"
+>
+  @for (destination of destinations(); track destination.path) {
+    <a
+      class="NavMenu-item"
+      [routerLink]="destination.path"
+      routerLinkActive="is-active"
+      ariaCurrentWhenActive="page"
+      [routerLinkActiveOptions]="{ exact: destination.path === '/' }"
+      (click)="navigated.emit()"
+    >
+      <span class="NavMenu-indicator">
+        <mat-icon class="NavMenu-icon">{{ destination.icon }}</mat-icon>
+      </span>
+      <span class="NavMenu-label">{{ destination.label }}</span>
+    </a>
+  }
+</nav>

@@ -1,45 +1,70 @@
+@use 'ui';
+
 .AdminPage {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 16px;
   max-width: 48rem;
 
   &-title {
-    margin: 0;
-    font: var(--mat-sys-headline-small);
+    @include ui.page-title;
   }
 
+  // Each tool is a row: what it does on the left, the one button that
+  // runs it on the right (under it on a phone).
   &-tools {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    border-radius: var(--mat-sys-corner-large);
+    background: var(--mat-sys-surface-container-low);
+    overflow: hidden;
   }
 
   &-tool {
     display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px 16px;
+    padding: 16px;
+
+    & + & {
+      border-top: 1px solid var(--mat-sys-outline-variant);
+    }
+  }
+
+  &-toolText {
+    flex: 1 1 16rem;
+    min-width: 0;
+    display: flex;
     flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem;
+    gap: 4px;
   }
 
   &-toolName {
-    margin: 0;
+    @include ui.section-title;
+
     font: var(--mat-sys-title-medium);
+    letter-spacing: var(--mat-sys-title-medium-tracking);
   }
 
-  &-toolDescription,
+  &-toolDescription {
+    @include ui.supporting-text;
+  }
+
   &-muted {
-    margin: 0;
-    color: var(--mat-sys-on-surface-variant);
+    @include ui.supporting-text;
+
+    padding: 16px;
   }
 
   &-result {
-    margin: 0;
-    font: var(--mat-sys-body-small);
+    margin: 4px 0 0;
+    font: var(--mat-sys-label-large);
+    color: var(--mat-sys-primary);
   }
 
   &-error {
-    margin: 0;
-    color: var(--mat-sys-error);
+    @include ui.banner(error);
   }
 }

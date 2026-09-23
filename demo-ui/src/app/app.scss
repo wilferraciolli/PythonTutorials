@@ -1,28 +1,117 @@
-// One column, full height, so the home page's card can sit centred in
-// whatever space is left over the footer.
+// Bar on top; below it the navigation rail (medium windows up) beside the
+// routed page. The page column stretches so a page's own empty space sits
+// above the footer, not below it.
 .AppShell {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  min-height: 100dvh;
+
+  &-body {
+    flex: 1 1 auto;
+    display: flex;
+    min-width: 0;
+  }
+
+  // Sticks under the app bar and scrolls on its own if the window is short.
+  &-rail {
+    position: sticky;
+    top: var(--app-bar-height);
+    align-self: flex-start;
+    flex: none;
+    width: var(--app-rail-width);
+    height: calc(100dvh - var(--app-bar-height));
+    overflow-y: auto;
+    background: var(--mat-sys-surface);
+    view-transition-name: app-rail;
+  }
+
+  &-main {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  // Discrete build-version marker — useful for confirming which deploy is
+  // live without giving an otherwise chrome-less app a header just for it.
+  &-footer {
+    margin-top: auto;
+    padding: 12px var(--app-gutter);
+    font: var(--mat-sys-label-small);
+    letter-spacing: var(--mat-sys-label-small-tracking);
+    color: var(--mat-sys-outline);
+    text-align: left;
+  }
+
+  // Modal navigation drawer (compact windows): a scrim over the page and a
+  // surface-container-low panel sliding in from the start edge.
+  &-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    background: color-mix(in srgb, var(--mat-sys-scrim) 32%, transparent);
+  }
+
+  &-drawer {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 21;
+    display: flex;
+    flex-direction: column;
+    width: min(360px, calc(100vw - 56px));
+    overflow-y: auto;
+    background: var(--mat-sys-surface-container-low);
+    color: var(--mat-sys-on-surface);
+    border-radius: 0 var(--mat-sys-corner-large) var(--mat-sys-corner-large) 0;
+    box-shadow: var(--mat-sys-level1);
+    overscroll-behavior: contain;
+  }
+
+  &-drawer-title {
+    margin: 0;
+    padding: 20px 28px 12px;
+    font: var(--mat-sys-title-large);
+    letter-spacing: var(--mat-sys-title-large-tracking);
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  &-scrim-enter {
+    animation: app-scrim-in var(--app-duration-medium) var(--app-ease-standard);
+  }
+
+  &-scrim-leave {
+    animation: app-scrim-out var(--app-duration-short) var(--app-ease-standard) forwards;
+  }
+
+  &-drawer-enter {
+    animation: app-drawer-in var(--app-duration-medium) var(--app-ease-decelerate);
+  }
+
+  &-drawer-leave {
+    animation: app-drawer-out var(--app-duration-short) var(--app-ease-accelerate) forwards;
+  }
 }
 
-// Discrete build-version marker — useful for confirming which deploy is
-// live without giving an otherwise chrome-less app a header just for it.
-// Persists across every route while the API is unreachable — a page-level
-// loadError message only helps if you're already on the page that hit it.
-.AppShell-apiError {
-  margin: 0;
-  padding: 10px var(--app-gutter);
-  font: var(--mat-sys-body-small);
-  color: var(--mat-sys-on-error-container);
-  background: var(--mat-sys-error-container);
-  text-align: center;
+@keyframes app-scrim-in {
+  from {
+    opacity: 0;
+  }
 }
 
-.AppShell-footer {
-  margin-top: auto;
-  padding: 12px var(--app-gutter);
-  font-size: 0.75rem;
-  color: var(--mat-sys-outline);
-  text-align: right;
+@keyframes app-scrim-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes app-drawer-in {
+  from {
+    transform: translateX(-100%);
+  }
+}
+
+@keyframes app-drawer-out {
+  to {
+    transform: translateX(-100%);
+  }
 }

@@ -1,5 +1,40 @@
 <div class="AppShell">
-  <app-nav-bar />
-  <router-outlet />
-  <footer class="AppShell-footer">v{{ version }}</footer>
+  <app-nav-bar [showMenuButton]="showMenuButton()" (menuRequested)="openMenu()" />
+
+  <div class="AppShell-body">
+    @if (showRail()) {
+      <aside class="AppShell-rail">
+        <app-nav-menu variant="rail" />
+      </aside>
+    }
+
+    <div class="AppShell-main">
+      <router-outlet />
+      <footer class="AppShell-footer">v{{ version }}</footer>
+    </div>
+  </div>
+
+  @if (showMenuButton() && menuOpen()) {
+    <div
+      class="AppShell-scrim"
+      aria-hidden="true"
+      animate.enter="AppShell-scrim-enter"
+      animate.leave="AppShell-scrim-leave"
+      (click)="closeMenu()"
+    ></div>
+    <aside
+      class="AppShell-drawer"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Navigation"
+      cdkTrapFocus
+      [cdkTrapFocusAutoCapture]="true"
+      animate.enter="AppShell-drawer-enter"
+      animate.leave="AppShell-drawer-leave"
+      (keydown.escape)="closeMenu()"
+    >
+      <p class="AppShell-drawer-title">Showcase</p>
+      <app-nav-menu variant="drawer" (navigated)="closeMenu()" />
+    </aside>
+  }
 </div>

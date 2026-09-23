@@ -1,7 +1,6 @@
 import { httpResource } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
 import { ApiClientService, SingleEnvelope } from '@wiliamferraciolli/ngx-api-client';
 
 import { describeApiError } from '../../../core/api/api-error';
@@ -21,7 +20,7 @@ type AdminEnvelope = SingleEnvelope<'admin', { tools: AdminTool[] }>;
 // API shows up here without UI changes.
 @Component({
   selector: 'app-admin-page',
-  imports: [MatButtonModule, MatCardModule],
+  imports: [MatButtonModule],
   templateUrl: './admin-page.html',
   styleUrl: './admin-page.scss',
 })

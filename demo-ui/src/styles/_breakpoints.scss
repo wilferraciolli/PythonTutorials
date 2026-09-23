@@ -1,13 +1,15 @@
-// Shared breakpoint scale. `sm` is the phone cutoff most components stack
-// at; `md` and up is tablet/desktop. Ported from insurly-ui's
-// src/styles/_breakpoints.scss — see docs/frontend-conventions.md.
+// Shared breakpoint scale — Material 3's window size classes: compact is
+// everything below `sm` (phones; navigation is a modal drawer), medium
+// starts at `sm` (tablets; a navigation rail), expanded at `md`, large at
+// `lg`. Ported from insurly-ui's src/styles/_breakpoints.scss — see
+// docs/frontend-conventions.md.
 @use 'sass:map';
 @use 'sass:meta';
 
 $breakpoints: (
-  sm: 560px,
-  md: 768px,
-  lg: 1024px,
+  sm: 600px,
+  md: 840px,
+  lg: 1200px,
 );
 
 // Accepts a key of $breakpoints or a raw length.

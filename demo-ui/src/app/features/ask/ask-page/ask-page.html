@@ -24,7 +24,10 @@
           <p class="AskPage-answer">{{ result.answer }}</p>
           @if (result.toolCalls.length) {
             <details class="AskPage-how">
-              <summary>How I found this ({{ result.toolCalls.length }})</summary>
+              <summary>
+                <mat-icon>expand_more</mat-icon>
+                How I found this ({{ result.toolCalls.length }})
+              </summary>
               <ul class="AskPage-tools">
                 @for (call of result.toolCalls; track $index) {
                   <li>
@@ -33,18 +36,18 @@
                   </li>
                 }
               </ul>
-              <p class="AskPage-model">{{ result.provider }} Â· {{ result.model }}</p>
+              <p class="AskPage-model">{{ result.provider }} · {{ result.model }}</p>
             </details>
           }
         } @else {
-          <p class="AskPage-answer AskPage-answer--pending">Thinkingâ€¦</p>
+          <p class="AskPage-answer AskPage-answer--pending" role="status">Thinking…</p>
         }
       </section>
     } @empty {
       <div class="AskPage-suggestions">
         @for (suggestion of suggestions; track suggestion) {
           <button
-            matButton="outlined"
+            class="AskPage-suggestion"
             type="button"
             [disabled]="!store.assistantLink()"
             (click)="submit(suggestion)"
@@ -66,25 +69,31 @@
         [disabled]="store.isPending() || !store.assistantLink()"
       />
     </mat-form-field>
-    <select
-      class="AskPage-provider"
-      aria-label="AI provider"
-      (change)="selectProvider($any($event.target).value)"
-    >
-      <option value="groq" [selected]="store.provider() === 'groq'">Groq</option>
-      <option value="cloudflare" [selected]="store.provider() === 'cloudflare'">
-        Cloudflare AI
-      </option>
-    </select>
+    <mat-form-field class="AskPage-provider" appearance="outline" subscriptSizing="dynamic">
+      <mat-label>Provider</mat-label>
+      <select
+        matNativeControl
+        aria-label="AI provider"
+        (change)="selectProvider($any($event.target).value)"
+      >
+        <option value="groq" [selected]="store.provider() === 'groq'">Groq</option>
+        <option value="cloudflare" [selected]="store.provider() === 'cloudflare'">
+          Cloudflare AI
+        </option>
+      </select>
+    </mat-form-field>
     <button
-      matButton="filled"
+      matIconButton
+      class="AskPage-send"
       type="submit"
+      aria-label="Send question"
+      title="Send"
       [disabled]="store.isPending() || !draft().trim() || !store.assistantLink()"
     >
-      <mat-icon aria-hidden="true">send</mat-icon>
+      <mat-icon>send</mat-icon>
     </button>
     @if (store.entries().length) {
-      <button matButton type="button" (click)="store.clear()">Clear</button>
+      <button matButton class="AskPage-clear" type="button" (click)="store.clear()">Clear</button>
     }
   </form>
 </div>

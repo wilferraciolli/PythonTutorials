@@ -1,57 +1,56 @@
 <div class="TagsPage App-page">
-  <div class="TagsPage-header">
-    <h1 class="TagsPage-title">Tags</h1>
-    @if (!store.isLoading()) {
-      <span class="TagsPage-count">{{ store.tags().length }} tag{{ store.tags().length === 1 ? '' : 's' }}</span>
-    }
-  </div>
-
-  <div class="TagsPage-toolbar">
-    <form [formRoot]="newTagForm" class="TagsPage-compose">
-      <mat-form-field appearance="outline" subscriptSizing="dynamic">
-        <mat-label>Tag</mat-label>
-        <input matInput [formField]="newTagForm.tag" placeholder="urgent" />
-        @if (newTagForm.tag().touched() && newTagForm.tag().invalid()) {
-          <mat-error>Required</mat-error>
-        }
-      </mat-form-field>
-
-      <mat-form-field appearance="outline" subscriptSizing="dynamic">
-        <mat-label>Resource ID</mat-label>
-        <input matInput [formField]="newTagForm.resource_id" placeholder="item to tag" />
-        @if (newTagForm.resource_id().touched() && newTagForm.resource_id().invalid()) {
-          <mat-error>Required</mat-error>
-        }
-      </mat-form-field>
-
-      <button matButton="filled" type="submit" [disabled]="creating()">
-        <mat-icon aria-hidden="true">add</mat-icon>
-        {{ creating() ? 'Adding…' : 'Add tag' }}
-      </button>
-    </form>
+  <header class="TagsPage-header">
+    <div class="TagsPage-heading">
+      <h1 class="TagsPage-title">Tags</h1>
+      @if (!store.isLoading()) {
+        <p class="TagsPage-count">
+          {{ store.tags().length }} tag{{ store.tags().length === 1 ? '' : 's' }}
+        </p>
+      }
+    </div>
 
     <mat-form-field class="TagsPage-search" appearance="outline" subscriptSizing="dynamic">
-      <mat-label>Search</mat-label>
+      <mat-label>Search by tag or resource</mat-label>
       <input matInput [value]="store.search()" (input)="setSearch($any($event.target).value)" />
       <mat-icon matPrefix aria-hidden="true">search</mat-icon>
-      <mat-hint>Tag or resource name</mat-hint>
     </mat-form-field>
-  </div>
+  </header>
+
+  <form [formRoot]="newTagForm" class="TagsPage-compose">
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <mat-label>Tag</mat-label>
+      <input matInput [formField]="newTagForm.tag" placeholder="urgent" />
+      @if (newTagForm.tag().touched() && newTagForm.tag().invalid()) {
+        <mat-error>Required</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <mat-label>Resource ID</mat-label>
+      <input matInput [formField]="newTagForm.resource_id" placeholder="item to tag" />
+      @if (newTagForm.resource_id().touched() && newTagForm.resource_id().invalid()) {
+        <mat-error>Required</mat-error>
+      }
+    </mat-form-field>
+
+    <button matButton="filled" type="submit" [disabled]="creating()">
+      <mat-icon aria-hidden="true">add</mat-icon>
+      {{ creating() ? 'Adding…' : 'Add tag' }}
+    </button>
+  </form>
 
   @if (createError()) {
-    <p class="TagsPage-error">{{ createError() }}</p>
+    <p class="TagsPage-error" role="alert">{{ createError() }}</p>
   }
 
-  <div class="TagsPage-divider"></div>
-
   @if (store.loadErrorMessage(); as errorMessage) {
-    <p class="TagsPage-error">{{ errorMessage }}</p>
+    <p class="TagsPage-error" role="alert">{{ errorMessage }}</p>
   } @else if (store.isLoading() && store.tags().length === 0) {
     <p class="TagsPage-loading">Loading…</p>
   } @else if (store.tags().length === 0) {
     <div class="TagsPage-empty">
       <mat-icon aria-hidden="true">sell</mat-icon>
-      <p>{{ store.search() ? 'No tags match your search.' : 'No tags yet — add one above.' }}</p>
+      <p>{{ store.search() ? 'No tags match your search.' : 'No tags yet. Add one above.' }}</p>
     </div>
   } @else {
     <ul class="TagsPage-list">
@@ -59,7 +58,11 @@
         <li class="TagsPage-row">
           <mat-chip-set>
             <mat-chip (removed)="deleteTag(tag)">
-              <span matChipAvatar class="TagsPage-dot" [style.background]="tagColor(tag.tag)"></span>
+              <span
+                matChipAvatar
+                class="TagsPage-dot"
+                [style.background]="tagColor(tag.tag)"
+              ></span>
               {{ tag.tag }}
               @if (canDelete(tag)) {
                 <button matChipRemove aria-label="Delete tag">
@@ -73,7 +76,8 @@
             class="TagsPage-resource"
             [class.TagsPage-resource--unresolved]="!tag.resource"
             [title]="tag.resource_id"
-          >{{ tag.resource?.value ?? tag.resource_id }}</span>
+            >{{ tag.resource?.value ?? tag.resource_id }}</span
+          >
           <span class="TagsPage-date">{{ tag.created_date | date: 'mediumDate' }}</span>
         </li>
       }

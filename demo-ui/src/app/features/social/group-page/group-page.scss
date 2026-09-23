@@ -1,13 +1,16 @@
+@use 'ui';
+
 .GroupPage {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 16px;
   max-width: 48rem;
 
+  // A text button with a leading arrow; the negative margin lines the
+  // arrow up with the page edge.
   &-back {
-    color: var(--mat-sys-primary);
-    text-decoration: none;
-    font: var(--mat-sys-label-large);
+    align-self: flex-start;
+    margin-left: -12px;
   }
 
   &-header {
@@ -15,15 +18,19 @@
     justify-content: space-between;
     align-items: flex-start;
     flex-wrap: wrap;
-    gap: 1rem;
+    gap: 16px;
+  }
+
+  &-heading {
+    flex: 1 1 14rem;
+    min-width: 0;
   }
 
   &-title {
     display: flex;
     align-items: center;
-    gap: 0.375rem;
-    margin: 0;
-    font: var(--mat-sys-headline-small);
+    gap: 8px;
+    @include ui.page-title;
   }
 
   &-lock {
@@ -31,69 +38,87 @@
   }
 
   &-description {
-    margin: 0.25rem 0 0;
+    margin: 8px 0 0;
+    max-width: 60ch;
+    font: var(--mat-sys-body-large);
+    letter-spacing: var(--mat-sys-body-large-tracking);
   }
 
   &-meta,
   &-muted {
-    margin: 0.25rem 0 0;
-    font: var(--mat-sys-body-small);
-    color: var(--mat-sys-on-surface-variant);
+    @include ui.supporting-text;
+
+    margin-top: 4px;
   }
 
   &-actions {
     display: flex;
+    align-items: center;
     flex-wrap: wrap;
-    gap: 0.5rem;
+    gap: 8px;
   }
 
+  // The remaining actions live in an overflow menu; delete reads as
+  // destructive there.
   &-danger {
-    color: var(--mat-sys-error);
+    --mat-menu-item-label-text-color: var(--mat-sys-error);
+    --mat-menu-item-icon-color: var(--mat-sys-error);
+  }
+
+  // Composer and editor: short forms that open as a tonal panel in the page.
+  &-panel {
+    padding: 16px;
+    border-radius: var(--mat-sys-corner-large);
+    background: var(--mat-sys-surface-container-low);
   }
 
   &-composerFields {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 12px;
   }
 
   &-tabs {
-    align-self: flex-start;
+    align-self: stretch;
+  }
+
+  &-content {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
   }
 
   &-sectionTitle {
-    margin: 0;
-    font: var(--mat-sys-title-medium);
+    @include ui.section-title;
   }
 
   &-formActions {
     display: flex;
     justify-content: flex-end;
-    gap: 0.5rem;
+    gap: 8px;
   }
 
   &-mediaChoice {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
-    gap: 0.75rem;
+    gap: 12px;
 
     img {
       width: 6rem;
       height: 4.5rem;
       object-fit: cover;
-      border-radius: var(--mat-sys-corner-small, 8px);
+      border-radius: var(--mat-sys-corner-small);
     }
   }
 
   &-posts {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 12px;
   }
 
   &-error {
-    margin: 0;
-    color: var(--mat-sys-error);
+    @include ui.banner(error);
   }
 }

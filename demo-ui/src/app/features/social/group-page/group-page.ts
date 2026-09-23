@@ -1,11 +1,11 @@
 import { httpResource } from '@angular/common/http';
 import { Component, computed, inject, input, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
-import { MatButtonToggleModule } from '@angular/material/button-toggle';
-import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatTabsModule } from '@angular/material/tabs';
 import { Router, RouterLink } from '@angular/router';
 import {
   ApiClientService,
@@ -29,11 +29,11 @@ import { Group, GroupVisibility, MediaSelection, Post } from '../social.models';
   imports: [
     RouterLink,
     MatButtonModule,
-    MatButtonToggleModule,
-    MatCardModule,
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
+    MatMenuModule,
+    MatTabsModule,
     MediaPicker,
     PostCard,
     GroupMembers,

@@ -1,46 +1,51 @@
-// A compact selector bar above the thread — mobile-first: rows wrap and the
-// controls share the row instead of a permanent sidebar taking width.
+@use 'ui';
+
+// A compact selector bar above the thread — mobile-first: the chat picker
+// takes the first row, and the "new chat" controls wrap under it until
+// there is room to sit beside it.
 .ChatList {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 8px;
 
-  &-row,
-  &-edit {
+  &-bar {
     display: flex;
     flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 8px 16px;
+  }
+
+  &-pick,
+  &-edit,
+  &-new {
+    display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 4px;
     min-width: 0;
   }
 
+  &-pick,
   &-edit {
+    flex: 1 1 18rem;
+  }
+
+  &-new {
+    flex: 0 1 auto;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  &-field {
     flex: 1 1 auto;
-    flex-wrap: nowrap;
-  }
-
-  &-control {
     min-width: 0;
-    padding: 0.5rem 0.625rem;
-    border: 1px solid var(--mat-sys-outline);
-    border-radius: var(--mat-sys-corner-small, 6px);
-    background: var(--mat-sys-surface);
-    color: var(--mat-sys-on-surface);
-    font: var(--mat-sys-body-medium);
-  }
-
-  &-select,
-  &-editInput {
-    flex: 1 1 12rem;
   }
 
   &-provider {
-    flex: 0 1 auto;
+    width: 15rem;
+    max-width: 100%;
   }
 
   &-error {
-    margin: 0;
-    font: var(--mat-sys-body-small);
-    color: var(--mat-sys-error);
+    @include ui.banner(error);
   }
 }

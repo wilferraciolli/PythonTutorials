@@ -1,8 +1,13 @@
 <div class="TodoForm App-page">
-  <h1 class="TodoForm-title">{{ isEditMode() ? 'Edit todo' : 'New todo' }}</h1>
+  <header class="TodoForm-header">
+    <a matIconButton class="TodoForm-back" routerLink="/todos" aria-label="Back to todos">
+      <mat-icon>arrow_back</mat-icon>
+    </a>
+    <h1 class="TodoForm-title">{{ isEditMode() ? 'Edit todo' : 'New todo' }}</h1>
+  </header>
 
   @if (notFound()) {
-    <p class="TodoForm-error">Couldn't find that todo.</p>
+    <p class="TodoForm-error" role="alert">Couldn't find that todo.</p>
   } @else if (isEditMode() && !existing()) {
     <p class="TodoForm-loading">Loading…</p>
   } @else {
@@ -38,7 +43,7 @@
       </mat-form-field>
 
       @if (saveError()) {
-        <p class="TodoForm-error">{{ saveError() }}</p>
+        <p class="TodoForm-error" role="alert">{{ saveError() }}</p>
       }
 
       <div class="TodoForm-actions">
@@ -62,7 +67,7 @@
                 {{ tag.tag }}
                 @if (links.hasLink(tag.links['delete'])) {
                   <button matChipRemove aria-label="Remove tag">
-                    <mat-icon aria-hidden="true">cancel</mat-icon>
+                    <mat-icon aria-hidden="true">close</mat-icon>
                   </button>
                 }
               </mat-chip>
@@ -81,12 +86,12 @@
                 (keyup.enter)="addTag()"
               />
             </mat-form-field>
-            <button matButton type="button" (click)="addTag()">Add</button>
+            <button matButton="tonal" type="button" (click)="addTag()">Add</button>
           </div>
         }
 
         @if (tagError()) {
-          <p class="TodoForm-error">{{ tagError() }}</p>
+          <p class="TodoForm-error" role="alert">{{ tagError() }}</p>
         }
       </div>
     }

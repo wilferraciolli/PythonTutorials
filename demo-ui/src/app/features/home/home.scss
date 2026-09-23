@@ -1,46 +1,123 @@
-// Centred hero — the cards are the whole page, so they get the leftover
-// vertical space rather than sitting under a header that doesn't exist
-// (the app-wide nav bar already covers that).
+@use 'ui';
+@use 'breakpoints' as bp;
+
+// Hero, then one tile per destination. The hero is the page's one big
+// gesture: display type, left-aligned, with air above it. The tiles stay
+// quiet — a tonal surface each, a single accent (primary, or tertiary for
+// the AI destinations) in the icon well.
 .Home {
-  flex: 1 1 auto;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1.5rem;
-  padding: var(--app-gutter);
-
-  // Cards stay side by side above ~34rem and stack below it.
-  &-grid {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 1.5rem;
-    width: 100%;
-    max-width: 62rem;
-  }
-
-  &-nav-card {
-    flex: 1 1 16rem;
-  }
-
-  &-content {
+  &-hero {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    gap: 1rem;
-    padding-block: 2rem;
-    text-align: center;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 24px 0 32px;
+
+    @include bp.up(sm) {
+      padding-top: 40px;
+    }
   }
 
-  &-content-nav {
-    padding-block: 1.5rem;
+  &-title {
+    margin: 0;
+    max-width: 20ch;
+    font: var(--mat-sys-headline-large);
+    letter-spacing: var(--mat-sys-headline-large-tracking);
+
+    @include bp.up(sm) {
+      font: var(--mat-sys-display-small);
+      letter-spacing: var(--mat-sys-display-small-tracking);
+    }
   }
 
   &-lead {
     margin: 0;
-    max-width: 44ch;
+    max-width: 52ch;
+    font: var(--mat-sys-body-large);
+    letter-spacing: var(--mat-sys-body-large-tracking);
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  &-signin {
+    margin-top: 8px;
+  }
+
+  &-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr));
+    gap: 16px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  // Compact windows: a row, icon beside the words, so six tiles don't
+  // become a very long scroll. From medium up the tile stands taller with
+  // the icon above.
+  &-card {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-content: center;
+    align-items: center;
+    column-gap: 16px;
+    row-gap: 2px;
+    height: 100%;
+    padding: 16px;
+    border-radius: var(--mat-sys-corner-large);
+    background: var(--mat-sys-surface-container-low);
+    color: var(--mat-sys-on-surface);
+    text-decoration: none;
+    outline: none;
+
+    @include ui.state-layer(var(--mat-sys-on-surface));
+
+    &:focus-visible {
+      outline: 3px solid var(--mat-sys-secondary);
+      outline-offset: 2px;
+    }
+
+    @include bp.up(sm) {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 4px;
+      min-height: 10.5rem;
+      padding: 20px;
+    }
+
+    // A destination the API didn't hand a link for: same shape, no
+    // affordance.
+    &.is-unavailable {
+      background: transparent;
+      box-shadow: inset 0 0 0 1px var(--mat-sys-outline-variant);
+    }
+  }
+
+  &-card-icon {
+    display: grid;
+    place-items: center;
+    grid-row: 1 / span 2;
+    width: 48px;
+    height: 48px;
+    border-radius: var(--mat-sys-corner-medium);
+
+    @include bp.up(sm) {
+      margin-bottom: 12px;
+    }
+    background: var(--mat-sys-primary-container);
+    color: var(--mat-sys-on-primary-container);
+  }
+
+  &-card-title {
+    margin: 0;
+    font: var(--mat-sys-title-large);
+    letter-spacing: var(--mat-sys-title-large-tracking);
+  }
+
+  &-card-lead {
+    margin: 0;
     font: var(--mat-sys-body-medium);
+    letter-spacing: var(--mat-sys-body-medium-tracking);
     color: var(--mat-sys-on-surface-variant);
   }
 
@@ -49,16 +126,14 @@
     font: var(--mat-sys-label-large);
     color: var(--mat-sys-error);
   }
+}
 
-  &-nav-icon {
-    color: var(--mat-sys-primary);
-    font-size: 2rem;
-    width: 2rem;
-    height: 2rem;
-  }
+// AI destinations pick up the tertiary role.
+.Home-card.is-tertiary .Home-card-icon {
+  background: var(--mat-sys-tertiary-container);
+  color: var(--mat-sys-on-tertiary-container);
+}
 
-  &-nav-title {
-    margin: 0;
-    font: var(--mat-sys-title-medium);
-  }
+.Home-card.is-unavailable::before {
+  display: none;
 }

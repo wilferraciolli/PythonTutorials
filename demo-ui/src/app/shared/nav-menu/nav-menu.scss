@@ -1,0 +1,155 @@
+// Material 3 navigation, in two shapes that share one list:
+//   .is-rail   — 56x32 active pill with the label beneath (medium windows up)
+//   .is-drawer — full-width 56px rows, icon beside label (modal drawer)
+// The selected destination gets a secondary-container indicator and a
+// filled icon; the rest sit in on-surface-variant.
+.NavMenu {
+  display: flex;
+  flex-direction: column;
+
+  &.is-rail {
+    gap: 12px;
+    padding: 12px 0 24px;
+  }
+
+  &.is-drawer {
+    padding: 0 12px 12px;
+  }
+
+  &-item {
+    display: flex;
+    text-decoration: none;
+    color: var(--mat-sys-on-surface-variant);
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+
+    &.is-active {
+      color: var(--mat-sys-on-surface);
+    }
+  }
+
+  &-indicator {
+    position: relative;
+    display: grid;
+    place-items: center;
+    transition: background-color var(--app-duration-short) var(--app-ease-standard);
+
+    &::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background: var(--mat-sys-on-surface);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity var(--app-duration-short) var(--app-ease-standard);
+    }
+  }
+
+  &-label {
+    min-width: 0;
+  }
+}
+
+// The state layer sits on the whole row's hit area, so hovering the label
+// lights the indicator too.
+.NavMenu-item:hover .NavMenu-indicator::before {
+  opacity: 0.08;
+}
+
+.NavMenu-item:focus-visible .NavMenu-indicator::before,
+.NavMenu-item:active .NavMenu-indicator::before {
+  opacity: 0.1;
+}
+
+.NavMenu-item:focus-visible .NavMenu-indicator {
+  outline: 3px solid var(--mat-sys-secondary);
+  outline-offset: 2px;
+}
+
+.NavMenu-item.is-active .NavMenu-indicator {
+  background: var(--mat-sys-secondary-container);
+  color: var(--mat-sys-on-secondary-container);
+}
+
+.NavMenu-item.is-active .NavMenu-icon {
+  font-variation-settings:
+    'FILL' 1,
+    'wght' 400,
+    'GRAD' 0,
+    'opsz' 24;
+}
+
+// Rail: icon pill over a label-medium caption (bold when selected).
+.NavMenu.is-rail .NavMenu-item {
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font: var(--mat-sys-label-medium);
+  letter-spacing: var(--mat-sys-label-medium-tracking);
+}
+
+.NavMenu.is-rail .NavMenu-item.is-active {
+  font-weight: 700;
+}
+
+.NavMenu.is-rail .NavMenu-indicator {
+  width: 56px;
+  height: 32px;
+  border-radius: var(--mat-sys-corner-full);
+}
+
+.NavMenu.is-rail .NavMenu-label {
+  text-align: center;
+}
+
+// Drawer: the row itself is the indicator, so the pill background moves
+// from the icon wrapper up to the row.
+.NavMenu.is-drawer .NavMenu-item {
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  height: 56px;
+  padding: 0 16px;
+  border-radius: var(--mat-sys-corner-full);
+  font: var(--mat-sys-label-large);
+  letter-spacing: var(--mat-sys-label-large-tracking);
+  background: transparent;
+  transition: background-color var(--app-duration-short) var(--app-ease-standard);
+}
+
+.NavMenu.is-drawer .NavMenu-item.is-active {
+  background: var(--mat-sys-secondary-container);
+  color: var(--mat-sys-on-secondary-container);
+}
+
+.NavMenu.is-drawer .NavMenu-item:hover {
+  background: color-mix(in srgb, var(--mat-sys-on-surface) 8%, transparent);
+}
+
+.NavMenu.is-drawer .NavMenu-item.is-active:hover {
+  background: color-mix(
+    in srgb,
+    var(--mat-sys-on-secondary-container) 8%,
+    var(--mat-sys-secondary-container)
+  );
+}
+
+.NavMenu.is-drawer .NavMenu-item:focus-visible {
+  outline: 3px solid var(--mat-sys-secondary);
+  outline-offset: 2px;
+}
+
+.NavMenu.is-drawer .NavMenu-indicator,
+.NavMenu.is-drawer .NavMenu-item.is-active .NavMenu-indicator {
+  background: transparent;
+  color: inherit;
+}
+
+.NavMenu.is-drawer .NavMenu-indicator::before {
+  display: none;
+}
+
+.NavMenu.is-drawer .NavMenu-item:focus-visible .NavMenu-indicator {
+  outline: none;
+}

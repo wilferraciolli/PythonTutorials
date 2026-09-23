@@ -1,9 +1,6 @@
 import { httpResource } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
-import { MatIconModule } from '@angular/material/icon';
-import { MatButtonModule } from '@angular/material/button';
-import { RouterLink } from '@angular/router';
 import { ApiClientService, CollectionEnvelope } from '@wiliamferraciolli/ngx-api-client';
 
 import { describeApiError } from '../../../core/api/api-error';
@@ -25,7 +22,7 @@ const TABS: { type: TimelineType; label: string; link: string; empty: string }[]
 // Your feed: the three timeline links from the user profile, one per tab.
 @Component({
   selector: 'app-timeline-page',
-  imports: [RouterLink, MatButtonModule, MatButtonToggleModule, MatIconModule, PostCard],
+  imports: [MatButtonToggleModule, PostCard],
   templateUrl: './timeline-page.html',
   styleUrl: './timeline-page.scss',
 })

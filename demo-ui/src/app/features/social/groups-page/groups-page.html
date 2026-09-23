@@ -1,23 +1,6 @@
 <div class="GroupsPage App-page">
   <header class="GroupsPage-header">
     <h1 class="GroupsPage-title">Groups</h1>
-    <div class="GroupsPage-headerActions">
-      <a matButton routerLink="/timeline">
-        <mat-icon aria-hidden="true">dynamic_feed</mat-icon>
-        Timeline
-      </a>
-      @if (!creating()) {
-        <button
-          matButton="filled"
-          type="button"
-          [disabled]="!available()"
-          (click)="creating.set(true)"
-        >
-          <mat-icon aria-hidden="true">add</mat-icon>
-          New group
-        </button>
-      }
-    </div>
   </header>
 
   @if (!available()) {
@@ -27,53 +10,51 @@
   }
 
   @if (creating()) {
-    <mat-card class="GroupsPage-form" appearance="outlined">
-      <mat-card-content>
-        <form class="GroupsPage-formFields" (submit)="$event.preventDefault(); create()">
-          <h2 class="GroupsPage-formTitle">New group</h2>
-          <mat-form-field appearance="outline" subscriptSizing="dynamic">
-            <mat-label>Name</mat-label>
-            <input
-              matInput
-              required
-              maxlength="80"
-              [value]="name()"
-              (input)="name.set($any($event.target).value)"
-            />
-          </mat-form-field>
-          <mat-form-field appearance="outline" subscriptSizing="dynamic">
-            <mat-label>Description</mat-label>
-            <textarea
-              matInput
-              rows="2"
-              maxlength="500"
-              [value]="description()"
-              (input)="description.set($any($event.target).value)"
-            ></textarea>
-          </mat-form-field>
-          <mat-form-field appearance="outline" subscriptSizing="dynamic">
-            <mat-label>Who can see it</mat-label>
-            <select matNativeControl (change)="setVisibility($any($event.target).value)">
-              <option value="PUBLIC" [selected]="visibility() === 'PUBLIC'">
-                Public: anyone can see and join
-              </option>
-              <option value="PRIVATE" [selected]="visibility() === 'PRIVATE'">
-                Private: members only
-              </option>
-            </select>
-          </mat-form-field>
-          @if (createError(); as message) {
-            <p class="GroupsPage-error" role="alert">{{ message }}</p>
-          }
-          <div class="GroupsPage-formActions">
-            <button matButton type="button" (click)="creating.set(false)">Cancel</button>
-            <button matButton="filled" type="submit" [disabled]="!name().trim() || saving()">
-              Create
-            </button>
-          </div>
-        </form>
-      </mat-card-content>
-    </mat-card>
+    <div class="GroupsPage-form">
+      <form class="GroupsPage-formFields" (submit)="$event.preventDefault(); create()">
+        <h2 class="GroupsPage-formTitle">New group</h2>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Name</mat-label>
+          <input
+            matInput
+            required
+            maxlength="80"
+            [value]="name()"
+            (input)="name.set($any($event.target).value)"
+          />
+        </mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Description</mat-label>
+          <textarea
+            matInput
+            rows="2"
+            maxlength="500"
+            [value]="description()"
+            (input)="description.set($any($event.target).value)"
+          ></textarea>
+        </mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Who can see it</mat-label>
+          <select matNativeControl (change)="setVisibility($any($event.target).value)">
+            <option value="PUBLIC" [selected]="visibility() === 'PUBLIC'">
+              Public: anyone can see and join
+            </option>
+            <option value="PRIVATE" [selected]="visibility() === 'PRIVATE'">
+              Private: members only
+            </option>
+          </select>
+        </mat-form-field>
+        @if (createError(); as message) {
+          <p class="GroupsPage-error" role="alert">{{ message }}</p>
+        }
+        <div class="GroupsPage-formActions">
+          <button matButton type="button" (click)="creating.set(false)">Cancel</button>
+          <button matButton="filled" type="submit" [disabled]="!name().trim() || saving()">
+            Create
+          </button>
+        </div>
+      </form>
+    </div>
   }
 
   <div class="GroupsPage-filters">
@@ -100,26 +81,29 @@
       @for (group of groups(); track group.id) {
         <li>
           <a class="GroupsPage-item" [routerLink]="['/groups', group.id]">
-            <span class="GroupsPage-itemName">
-              {{ group.name }}
-              @if (group.visibility === 'PRIVATE') {
-                <mat-icon class="GroupsPage-lock" aria-label="Private" title="Private"
-                  >lock</mat-icon
-                >
+            <span class="GroupsPage-avatar" aria-hidden="true">{{ group.name.charAt(0) }}</span>
+            <span class="GroupsPage-itemText">
+              <span class="GroupsPage-itemName">
+                {{ group.name }}
+                @if (group.visibility === 'PRIVATE') {
+                  <mat-icon class="GroupsPage-lock" aria-label="Private" title="Private"
+                    >lock</mat-icon
+                  >
+                }
+              </span>
+              @if (group.description) {
+                <span class="GroupsPage-itemDescription">{{ group.description }}</span>
               }
-            </span>
-            @if (group.description) {
-              <span class="GroupsPage-itemDescription">{{ group.description }}</span>
-            }
-            <span class="GroupsPage-itemMeta">
-              {{ group.memberCount }} members · {{ group.followerCount }} followers
-              @if (group.isOwner) {
-                · you own it
-              } @else if (group.isMember) {
-                · member
-              } @else if (group.isFollowing) {
-                · following
-              }
+              <span class="GroupsPage-itemMeta">
+                {{ group.memberCount }} members · {{ group.followerCount }} followers
+                @if (group.isOwner) {
+                  · you own it
+                } @else if (group.isMember) {
+                  · member
+                } @else if (group.isFollowing) {
+                  · following
+                }
+              </span>
             </span>
           </a>
         </li>
@@ -127,5 +111,19 @@
         <li class="GroupsPage-muted">No groups found.</li>
       }
     </ul>
+  }
+
+  @if (!creating()) {
+    <button
+      matFab
+      extended
+      type="button"
+      class="GroupsPage-fab"
+      [disabled]="!available()"
+      (click)="creating.set(true)"
+    >
+      <mat-icon>add</mat-icon>
+      New group
+    </button>
   }
 </div>
