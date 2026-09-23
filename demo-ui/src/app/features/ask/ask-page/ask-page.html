@@ -2,7 +2,8 @@
   <header class="AskPage-header">
     <h1 class="AskPage-title">Ask your data</h1>
     <p class="AskPage-lead">
-      Ask in plain English about your todos and past chats. The answer shows how it was worked out.
+      Ask in plain English about your todos, past chats, and the groups and posts you can see. The
+      answer shows how it was worked out.
     </p>
   </header>
 
@@ -32,11 +33,11 @@
                   </li>
                 }
               </ul>
-              <p class="AskPage-model">{{ result.provider }} · {{ result.model }}</p>
+              <p class="AskPage-model">{{ result.provider }} Â· {{ result.model }}</p>
             </details>
           }
         } @else {
-          <p class="AskPage-answer AskPage-answer--pending">Thinking…</p>
+          <p class="AskPage-answer AskPage-answer--pending">Thinkingâ€¦</p>
         }
       </section>
     } @empty {

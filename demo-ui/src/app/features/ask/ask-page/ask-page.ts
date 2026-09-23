@@ -12,10 +12,14 @@ const SUGGESTIONS = [
   'How many todos are new?',
   'Which todo is due first?',
   'Show me where I asked about Java',
+  'How many posts have I written this month?',
+  'What did people say about the cycle lanes?',
+  'Which of my groups is most active?',
 ];
 
 // "Ask your data": one question box over everything the assistant has tools
-// for (todos, chat history, ...). Answers show which tools were run.
+// for (todos, chat history, and the groups, posts and comments you can see).
+// Answers show which tools were run.
 @Component({
   selector: 'app-ask-page',
   imports: [JsonPipe, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule],

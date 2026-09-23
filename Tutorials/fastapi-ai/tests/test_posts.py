@@ -197,7 +197,7 @@ def test_api_admin_area_is_linked_from_an_admins_profile_only(client):
 
     who["user"] = AuthenticatedUser(id="clerk-z", name="Zed", email="z@x.io", role_ids=["ADMIN"], claims={})
     admin = http.get(profile()["links"]["admin"]["href"]).json()
-    assert [t["id"] for t in admin["_data"]["admin"]["tools"]] == ["rebuildPostStats"]
+    assert [t["id"] for t in admin["_data"]["admin"]["tools"]] == ["rebuildPostStats", "reindexPostSearch"]
 
     rebuilt = http.post(admin["_metaLinks"]["rebuildPostStats"]["href"])
     assert rebuilt.status_code == 200 and rebuilt.json()["_data"]["postStats"]["rebuilt"] == 10

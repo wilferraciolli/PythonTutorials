@@ -4,10 +4,10 @@ Users create **groups** (public or private), post to them, and other people like
 posts and reply to comments. Users can **be a member** of a group or just **follow** it, and each
 user has a **timeline** built from the groups they can see.
 
-> **Status:** revision 6. **Steps 1-4, 6 and 7 built**: groups, members, owner, followers, role re-sync;
+> **Status:** revision 7. **All steps built (1-7)**: groups, members, owner, followers, role re-sync;
 > posts and post comments (separate APIs), News seed; likes, `post_stats` and the admin area
 > (`GET /api/admin`); timeline; Angular pages in `demo-ui` (`/timeline`, `/groups`, `/admin`);
-> post media (Unsplash, Giphy, YouTube). Step 5 (AI) paused. Items marked **(decision)** can still be changed.
+> post media (Unsplash, Giphy, YouTube); AI search and Ask over posts and comments. Items marked **(decision)** can still be changed.
 
 ## Roles: two different things
 
@@ -427,25 +427,53 @@ keystroke. The group page's new-post form has **Add media**, and the post page h
 
 Post titles, bodies and comments are free text, so this follows the README checklist
 ("Adding a new resource to AI search and Ask"): embeddings for meaning and query tools for
-counts.
+counts. Built in step 5.
 
 ```mermaid
 flowchart LR
     Q["'what did people say about the bike lane?'"] --> L{LLM picks tools}
     L --> T1[search_posts<br/>embeddings + keyword]
-    L --> T2[count_posts / list_posts<br/>group, author, dates, popular]
+    L --> T2[count_posts / list_posts / count_comments<br/>group, mine, dates, popular]
     L --> T3[my_groups<br/>owner, member, following]
-    T1 --> V[(resource_embeddings<br/>post, comment)]
-    T2 --> DB[(posts, comments, reactions)]
+    T1 --> V[(resource_embeddings<br/>post, comment<br/>scoped by group id)]
+    T2 --> DB[(posts, comments, post_stats)]
     T3 --> M[(groups, members, followers)]
+    V & DB & M --> F{{visible_group_clause<br/>admin, or public, or owner, or member}}
 ```
 
-The one new thing is **whose data a tool may see**. Todos and chats are private to one user, so
-a tool only needs `user_id`. Posts are shared, so every social tool applies the same
-visibility predicate through `GroupPermissions` (admins see all), never through the model.
-Example questions: "how many posts did I write in each group this month?", "what is my most
-liked post?", "which of my groups is most active?", "posts about cycling in the groups I
-follow".
+**Whose data a tool may see.** Todos and chats are private, so their tools only need the path
+`user_id`. Posts are shared, so the social tools are built per request for the caller (their id
+and system role) and **every query goes through `visible_group_clause`**, the SQL twin of
+`GroupPermissions.can_view` that group lists and the timeline also use. The assistant can only
+count, list or find what the caller could open in the app; an outsider asking about a private
+group by name gets "no group called ... that you can see", so it doesn't even learn the group
+exists. Admins see everything, as in the API.
+
+| Tool | Answers | Source |
+|---|---|---|
+| `count_posts` | "how many posts did I write this month?" | `posts` with filters `group`, `mine`, `created_from/to` |
+| `list_posts` | "what's my most liked post?", "latest posts in News" | Same filters, `sort=newest` or `popular` (`post_stats.score`) |
+| `count_comments` | "how many comments have I made in Cyclists?" | `comments`, same filters |
+| `my_groups` | "which of my groups is most active?" | Groups owned, joined or followed, with member and post counts, last post date |
+| `search_posts` | "what did people say about the bike lanes?" | Embeddings plus keyword, merged with reciprocal rank fusion; a comment match returns its post with `matching_comment` |
+
+**Search index.** Posts (title and body) and comments are embedded into `resource_embeddings`
+as `resource_type` `post` and `comment`. The row's scope column (`user_id`) holds the **group
+id**, so a search only reads vectors from groups the caller can see right now, and the matching
+posts are then re-read through the visibility filter (a vector is never trusted on its own).
+Making a group private hides its posts from search at once; nothing needs re-indexing.
+
+Ranking works at post level with one list per signal. **Meaning:** a post's similarity is the best
+of its own vector and its comments' vectors (the best comment is shown as `matching_comment`).
+**Keyword:** posts whose title or body match, then posts with a matching comment. The two lists
+are merged with reciprocal rank fusion, so a post isn't boosted just for having many comments.
+
+- Creating or editing a post or comment embeds it; deleting removes the vector; deleting a
+  group removes all of its vectors. This is **best effort**: if Workers AI is down the write
+  still succeeds.
+- **Admin > Index posts for AI search** (`POST /api/admin/post-search/reindex`) embeds every
+  live post and comment that has no vector yet. Run it once after deploying, so the seeded
+  News posts become searchable, and any time indexing was missed.
 
 ## Build plan
 
@@ -459,7 +487,7 @@ follow".
    `likedByMe`, stats rebuild endpoint.
 4. **Timeline:** `ALL`, `FOLLOWING`, `POPULAR`, 1-year window, `limit`, tests for private-group
    leakage, the window and the admin bypass.
-5. **AI:** embeddings for posts and comments, tools with visibility scoping, docs.
+5. **AI:** embeddings for posts and comments, tools with visibility scoping, admin reindex, docs.
 6. **Angular:** timeline page with the three tabs, groups list, group page, post page with
    threaded comments, members and follow controls.
 7. **Post media:** one optional Unsplash photo, Giphy GIF or YouTube video per post; server-side

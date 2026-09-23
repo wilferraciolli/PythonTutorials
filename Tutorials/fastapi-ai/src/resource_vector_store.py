@@ -10,6 +10,11 @@ class ResourceVectorStore:
     shared `resource_embeddings` table. Same brute-force cosine as
     DatabaseVectorStore, scoped to one user; a new searchable resource is a
     new `resource_type`, not a new table.
+
+    The `user_id` column is the resource's tenancy scope. For private data
+    (todos) that is the owner. Shared data is scoped by what decides who may
+    see it: posts and comments store their **group id** there, and are
+    queried with `query_scopes` over the groups the caller can see.
     """
 
     def __init__(self, db: Database, resource_type: str) -> None:
@@ -36,6 +41,30 @@ class ResourceVectorStore:
         ]
         scored.sort(key=lambda item: item[1], reverse=True)
         return scored[:limit]
+
+    async def query_scopes(self, scopes: list[str], vector: list[float], limit: int) -> list[tuple[str, float]]:
+        """Like `query`, over several scopes at once (e.g. every group the caller can see)."""
+        if not scopes:
+            return []
+        placeholders = ", ".join("?" for _ in scopes)
+        rows = await self.db.fetch_all(
+            f"SELECT resource_id, embedding FROM resource_embeddings "
+            f"WHERE resource_type = ? AND user_id IN ({placeholders})",
+            (self.resource_type, *scopes),
+        )
+        query_vector = normalise(vector)
+        scored = [
+            (row["resource_id"], sum(a * b for a, b in zip(query_vector, json.loads(row["embedding"]))))
+            for row in rows
+        ]
+        scored.sort(key=lambda item: item[1], reverse=True)
+        return scored[:limit]
+
+    async def all_ids(self) -> set[str]:
+        rows = await self.db.fetch_all(
+            "SELECT resource_id FROM resource_embeddings WHERE resource_type = ?", (self.resource_type,)
+        )
+        return {row["resource_id"] for row in rows}
 
     async def delete(self, resource_id: str) -> None:
         await self.db.execute(

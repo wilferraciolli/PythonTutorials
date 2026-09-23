@@ -14,7 +14,7 @@ router = APIRouter(prefix="/timeline", tags=["timeline"])
 
 
 def get_timeline_service(request: Request) -> TimelineService:
-    return TimelineService(TimelineRepository(get_database(request)), get_post_service(request, media=None))
+    return TimelineService(TimelineRepository(get_database(request)), get_post_service(request, media=None, search=None))
 
 
 @router.get("/posts")

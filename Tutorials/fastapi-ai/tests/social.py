@@ -47,7 +47,8 @@ class Social:
         return row
 
 
-async def make_social(tmp_path, media=None) -> Social:
+async def make_social(tmp_path, media=None, search=None) -> Social:
+    """`search`: a function db -> PostSearchService, to index posts and comments as they're written."""
     db = SQLiteDatabase(str(tmp_path / "social.db"))
     users = UserRepository(db)
     for user_id in ("owner", "member", "outsider", "admin"):
@@ -56,6 +57,6 @@ async def make_social(tmp_path, media=None) -> Social:
 
     stats, reactions = PostStatsRepository(db), ReactionRepository(db)
     groups = GroupService(GroupRepository(db), users)
-    posts = PostService(PostRepository(db), stats, reactions, groups, media)
+    posts = PostService(PostRepository(db), stats, reactions, groups, media, search(db) if search else None)
     comments = PostCommentService(PostCommentRepository(db), stats, reactions, posts)
     return Social(db, users, groups, posts, comments)

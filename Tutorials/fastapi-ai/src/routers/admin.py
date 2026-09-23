@@ -9,7 +9,8 @@ from errors import ForbiddenError
 from group_permissions import Caller
 from models import Link
 from repositories.post_stats_repository import PostStatsRepository
-from routers.deps import get_caller
+from routers.deps import get_caller, get_post_search_service
+from services.post_search_service import PostSearchService
 
 # The admin area: system ADMINs only (the Clerk `roles` claim). The user
 # profile links here (`admin`) only for admins, and GET /admin is the hub
@@ -28,6 +29,7 @@ def admin_links() -> dict[str, Link]:
     return {
         "self": Link(href=f"{API_PREFIX}/admin", method="GET"),
         "rebuildPostStats": Link(href=f"{API_PREFIX}/admin/post-stats/rebuild", method="POST"),
+        "reindexPostSearch": Link(href=f"{API_PREFIX}/admin/post-search/reindex", method="POST"),
     }
 
 
@@ -40,6 +42,14 @@ async def admin_area(caller: Caller = Depends(require_admin)) -> dict[str, Any]:
             "name": "Recalculate post stats",
             "description": "Recount every post's likes and comments and recompute its popularity score.",
         },
+        {
+            "id": "reindexPostSearch",
+            "name": "Index posts for AI search",
+            "description": (
+                "Embed every post and comment that isn't searchable yet (e.g. the seeded News posts, "
+                "or anything written while Workers AI was unavailable)."
+            ),
+        },
     ]
     return envelope(data_name="admin", data={"tools": tools}, metadata={}, meta_links=admin_links())
 
@@ -49,3 +59,14 @@ async def rebuild_post_stats(request: Request, caller: Caller = Depends(require_
     """Recompute every post's likes, comments and score from the source tables."""
     rebuilt = await PostStatsRepository(get_database(request)).rebuild_all(datetime.now(timezone.utc).isoformat())
     return envelope(data_name="postStats", data={"rebuilt": rebuilt}, metadata={}, meta_links=admin_links())
+
+
+@router.post("/post-search/reindex")
+async def reindex_post_search(
+    caller: Caller = Depends(require_admin),
+    search: PostSearchService = Depends(get_post_search_service),
+) -> dict[str, Any]:
+    """Backfill search vectors for posts and comments that have none."""
+    indexed = await search.reindex_missing()
+    # Named after the tool id: the admin page reads a tool's result under its id.
+    return envelope(data_name="reindexPostSearch", data={"indexed": indexed}, metadata={}, meta_links=admin_links())

@@ -160,6 +160,10 @@ Tool design tips:
 - Return `{"error": "..."}` for bad arguments; the model sees it and retries.
 - Keep tools **read-only**. Writes ("mark those closed") need a confirmation step; not built.
 
+## Shared data: posts, comments and groups
+
+Todos and chats belong to one user, so their tools are scoped by the path `user_id` alone. Posts and comments are shared, so the social tools (`count_posts`, `list_posts`, `count_comments`, `my_groups`, `search_posts` in `assistant/social_tools.py`) are built for the caller and every query applies the group visibility rule (`visible_group_clause`). Search vectors for posts and comments are scoped by group id instead of user id. Details and the tool table: [`social-groups.md`](social-groups.md#how-it-plugs-into-ai-search-and-ask).
+
 ## Safety rules the server enforces
 
 ```mermaid

@@ -342,7 +342,8 @@ above) except `/api/health`, `/docs`, and `/openapi.json`.
 | GET | `/api/timeline/posts` | Your feed from the last year: `?type=ALL` (every post you can see, newest first), `FOLLOWING` (groups you follow, newest first) or `POPULAR` (score: comment = 2, like = 1). `?limit=` default 50 |
 | GET | `/api/admin` | Admin area (system ADMIN only, linked from an admin's own profile): lists admin tools |
 | POST | `/api/admin/post-stats/rebuild` | Recalculate every post's likes, comments and popularity score (admin only) |
-| POST | `/api/users/{user_id}/assistant/ask` | Ask a question about your own data in plain English (`{"question": "...", "provider": "groq"}`); the model calls read-only tools (todos, chat search) and returns the answer plus the tools it used |
+| POST | `/api/admin/post-search/reindex` | Embed every post and comment that isn't searchable yet, e.g. the seeded News posts (admin only) |
+| POST | `/api/users/{user_id}/assistant/ask` | Ask a question about your own data in plain English (`{"question": "...", "provider": "groq"}`); the model calls read-only tools (todos, chat search, and posts, comments and groups the caller can see) and returns the answer plus the tools it used |
 | GET | `/api/users/{user_id}/chats/{chat_id}` | Get one chat with its full message history |
 | PUT | `/api/users/{user_id}/chats/{chat_id}` | Rename a chat (`{"title": "..."}`, 1–60 characters) |
 | POST | `/api/users/{user_id}/chats/{chat_id}/messages` | Send a message; calls the chat's provider, stores both messages, returns the updated chat |
@@ -406,6 +407,10 @@ queries, even for a resource that is also embedded.
 4. **Write the description for a new colleague.** It is the only thing that tells the model
    when to use the tool; a tool described as "notes" won't be picked for a question about
    "memos". For relative dates (`last quarter`), say to call `date_range` first.
+5. **Shared resources are scoped by who may see them, not by owner.** Posts and comments
+   belong to groups, so [`social_tools.py`](src/assistant/social_tools.py) is built for the
+   caller and every query applies `visible_group_clause`; their vectors are scoped by group
+   id. Copy that pattern for anything several users can see.
 
 ### Keeping it manageable
 

@@ -9,8 +9,9 @@ from models import MediaRef, PostCreate, PostUpdate
 from repositories.post_repository import PostRepository
 from repositories.post_stats_repository import PostStatsRepository
 from repositories.reaction_repository import ReactionRepository
-from routers.deps import get_caller, get_media_providers
+from routers.deps import get_caller, get_media_providers, get_post_search_service
 from routers.groups import get_group_service
+from services.post_search_service import PostSearchService
 from services.post_service import DEFAULT_LIMIT, PostService
 
 # Nested under the group on purpose: every request re-checks the group's
@@ -20,12 +21,19 @@ router = APIRouter(prefix="/groups/{group_id}/posts", tags=["posts"])
 
 
 def get_post_service(
-    request: Request, media: Optional[MediaProviders] = Depends(get_media_providers)
+    request: Request,
+    media: Optional[MediaProviders] = Depends(get_media_providers),
+    search: Optional[PostSearchService] = Depends(get_post_search_service),
 ) -> PostService:
-    """Comments and the timeline reuse this with media=None: they only read posts."""
+    """The timeline reuses this with media=None, search=None: it only reads posts."""
     db = get_database(request)
     return PostService(
-        PostRepository(db), PostStatsRepository(db), ReactionRepository(db), get_group_service(request), media
+        PostRepository(db),
+        PostStatsRepository(db),
+        ReactionRepository(db),
+        get_group_service(request),
+        media,
+        search,
     )
 
 

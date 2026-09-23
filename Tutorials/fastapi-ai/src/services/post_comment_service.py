@@ -1,3 +1,4 @@
+import logging
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
@@ -11,6 +12,8 @@ from repositories.reaction_repository import ReactionRepository
 from services.post_service import DELETED, PostService, author_name, now_iso
 
 COMMENT_NOT_FOUND = "Comment not found"
+
+logger = logging.getLogger(__name__)
 
 
 class PostCommentService:
@@ -36,6 +39,25 @@ class PostCommentService:
         self.reactions = reactions
         self.post_service = post_service
         self.permissions = permissions or GroupPermissions()
+
+    async def _index(self, comment_id: str, body: str, group_id: str) -> None:
+        """Best effort, like posts: the search index never fails a write."""
+        search = self.post_service.search
+        if not search:
+            return
+        try:
+            await search.index_comment(comment_id, body, group_id)
+        except Exception:
+            logger.exception("failed to index comment %s for search", comment_id)
+
+    async def _unindex(self, comment_id: str) -> None:
+        search = self.post_service.search
+        if not search:
+            return
+        try:
+            await search.remove_comment(comment_id)
+        except Exception:
+            logger.exception("failed to remove comment %s from search", comment_id)
 
     async def _mark_liked(self, caller: Caller, rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         liked = await self.reactions.liked_ids(caller.id, "comment", (row["id"] for row in rows))
@@ -72,6 +94,7 @@ class PostCommentService:
         now = now_iso()
         await self.comments.create(comment_id, post_id, payload.parentCommentId, caller.id, payload.body.strip(), now)
         await self.stats.refresh(post_id, now)
+        await self._index(comment_id, payload.body.strip(), post["group_id"])
         return access, post, await self._comment(caller, post_id, comment_id)
 
     async def update_comment(
@@ -83,6 +106,7 @@ class PostCommentService:
             raise ForbiddenError("Only the author can edit a comment")
 
         await self.comments.update(comment_id, payload.body.strip(), now_iso())
+        await self._index(comment_id, payload.body.strip(), post["group_id"])
         return access, post, await self._comment(caller, post_id, comment_id)
 
     async def delete_comment(self, caller: Caller, group_id: str, post_id: str, comment_id: str) -> None:
@@ -94,6 +118,7 @@ class PostCommentService:
         now = now_iso()
         await self.comments.soft_delete(comment_id, now)
         await self.stats.refresh(post_id, now)
+        await self._unindex(comment_id)
 
     # --- likes (a comment's likes don't change its post's score)
 

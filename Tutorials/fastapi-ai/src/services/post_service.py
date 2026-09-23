@@ -1,5 +1,6 @@
+import logging
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 from uuid import uuid4
 
 from api_response import API_PREFIX, envelope
@@ -11,6 +12,11 @@ from repositories.post_repository import PostRepository
 from repositories.post_stats_repository import PostStatsRepository
 from repositories.reaction_repository import ReactionRepository
 from services.group_service import GroupService
+
+if TYPE_CHECKING:
+    from services.post_search_service import PostSearchService
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_LIMIT = 50
 MAX_LIMIT = 100
@@ -51,6 +57,7 @@ class PostService:
         reactions: ReactionRepository,
         group_service: GroupService,
         media: Optional[MediaLookup] = None,
+        search: Optional["PostSearchService"] = None,
         permissions: Optional[GroupPermissions] = None,
     ) -> None:
         self.posts = posts
@@ -58,7 +65,25 @@ class PostService:
         self.reactions = reactions
         self.group_service = group_service
         self.media = media
+        self.search = search
         self.permissions = permissions or GroupPermissions()
+
+    async def reindex(self, post: Dict[str, Any]) -> None:
+        """Best effort: search indexing never fails a write. Admin reindex picks up anything missed."""
+        if not self.search:
+            return
+        try:
+            await self.search.index_post(post)
+        except Exception:
+            logger.exception("failed to index post %s for search", post.get("id"))
+
+    async def unindex(self, post_id: str) -> None:
+        if not self.search:
+            return
+        try:
+            await self.search.remove_post(post_id)
+        except Exception:
+            logger.exception("failed to remove post %s from search", post_id)
 
     async def get_post(self, caller: Caller, group_id: str, post_id: str):
         """The group access and the post (deleted ones included), or NotFoundError."""
@@ -93,7 +118,9 @@ class PostService:
         if media:
             await self.posts.set_media(post_id, media, now)
         await self.stats.refresh(post_id, now)
-        return await self.get_post(caller, group_id, post_id)
+        access, row = await self.get_post(caller, group_id, post_id)
+        await self.reindex(row)
+        return access, row
 
     async def update_post(self, caller: Caller, group_id: str, post_id: str, payload: PostUpdate):
         await self._own_post(caller, group_id, post_id)
@@ -103,7 +130,9 @@ class PostService:
             title=payload.title.strip() if payload.title is not None else None,
             body=payload.body.strip() if payload.body is not None else None,
         )
-        return await self.get_post(caller, group_id, post_id)
+        access, row = await self.get_post(caller, group_id, post_id)
+        await self.reindex(row)
+        return access, row
 
     async def delete_post(self, caller: Caller, group_id: str, post_id: str) -> None:
         access, post = await self.get_post(caller, group_id, post_id)
@@ -112,6 +141,7 @@ class PostService:
         if not self.permissions.can_delete_content(caller, access, post["author_id"]):
             raise ForbiddenError("Only the author, the group owner or an admin can delete a post")
         await self.posts.soft_delete(post_id, now_iso())
+        await self.unindex(post_id)
 
     # --- media: one per post. Changing it is remove, then add another.
 

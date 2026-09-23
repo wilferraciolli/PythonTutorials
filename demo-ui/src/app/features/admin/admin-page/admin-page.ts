@@ -75,6 +75,16 @@ function summarise(result: Record<string, unknown> | undefined): string {
   if (!result) return '';
   if (typeof result['rebuilt'] === 'number') return `${result['rebuilt']} posts recalculated.`;
   return Object.entries(result)
-    .map(([key, value]) => `${key}: ${value}`)
+    .map(([key, value]) => `${key}: ${describe(value)}`)
     .join(', ');
+}
+
+// Nested counts read as "posts 10, comments 8" rather than [object Object].
+function describe(value: unknown): string {
+  if (value && typeof value === 'object') {
+    return Object.entries(value as Record<string, unknown>)
+      .map(([key, inner]) => `${key} ${String(inner)}`)
+      .join(', ');
+  }
+  return String(value);
 }

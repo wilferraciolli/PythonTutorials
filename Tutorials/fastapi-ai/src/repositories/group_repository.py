@@ -1,6 +1,21 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from database import Database
+
+def visible_group_clause(alias: str, user_id: str, is_admin: bool) -> Tuple[str, List[Any]]:
+    """
+    The SQL twin of GroupPermissions.can_view, for group alias `alias`:
+    admin, or public, or owner, or member. Used by group lists, the timeline
+    and the AI tools, so they all agree on what a caller can see.
+    """
+    if is_admin:
+        return "1 = 1", []
+    return (
+        f"({alias}.visibility = 'PUBLIC' OR {alias}.owner_id = ? "
+        f"OR EXISTS (SELECT 1 FROM group_members vm WHERE vm.group_id = {alias}.id AND vm.user_id = ?))",
+        [user_id, user_id],
+    )
+
 
 _SELECT_GROUP = (
     "SELECT g.*, "
@@ -51,15 +66,9 @@ class GroupRepository:
         following_only: bool = False,
         member_only: bool = False,
     ) -> List[Dict[str, Any]]:
-        where: List[str] = []
-        params: List[Any] = []
+        visible, params = visible_group_clause("g", user_id, is_admin)
+        where: List[str] = [visible]
 
-        if not is_admin:
-            where.append(
-                "(g.visibility = 'PUBLIC' OR g.owner_id = ? "
-                "OR EXISTS (SELECT 1 FROM group_members m WHERE m.group_id = g.id AND m.user_id = ?))"
-            )
-            params += [user_id, user_id]
         if term:
             where.append("(g.name LIKE ? OR g.description LIKE ?)")
             params += [f"%{term}%", f"%{term}%"]
@@ -70,8 +79,9 @@ class GroupRepository:
             where.append("EXISTS (SELECT 1 FROM group_members m WHERE m.group_id = g.id AND m.user_id = ?)")
             params.append(user_id)
 
-        clause = f" WHERE {' AND '.join(where)}" if where else ""
-        return await self.db.fetch_all(f"{_SELECT_GROUP}{clause} ORDER BY g.name COLLATE NOCASE", tuple(params))
+        return await self.db.fetch_all(
+            f"{_SELECT_GROUP} WHERE {' AND '.join(where)} ORDER BY g.name COLLATE NOCASE", tuple(params)
+        )
 
     async def update(self, group_id: str, **fields: Any) -> Optional[Dict[str, Any]]:
         updatable = {key: value for key, value in fields.items() if value is not None}
@@ -96,6 +106,10 @@ class GroupRepository:
         )
         await self.db.execute(f"DELETE FROM post_stats WHERE post_id IN ({in_group_posts})", (group_id,))
         await self.db.execute(f"DELETE FROM comments WHERE post_id IN ({in_group_posts})", (group_id,))
+        # Post and comment search vectors are scoped by group id (resource_vector_store.py).
+        await self.db.execute(
+            "DELETE FROM resource_embeddings WHERE resource_type IN ('post', 'comment') AND user_id = ?", (group_id,)
+        )
         await self.db.execute("DELETE FROM posts WHERE group_id = ?", (group_id,))
         await self.db.execute("DELETE FROM group_followers WHERE group_id = ?", (group_id,))
         await self.db.execute("DELETE FROM group_members WHERE group_id = ?", (group_id,))

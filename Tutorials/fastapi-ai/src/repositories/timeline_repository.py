@@ -1,6 +1,7 @@
 from typing import Any, Dict, List, Set
 
 from database import Database
+from repositories.group_repository import visible_group_clause
 
 _SELECT = (
     "SELECT p.*, u.name AS author_name, g.name AS group_name, "
@@ -33,15 +34,10 @@ class TimelineRepository:
         order_by_score: bool,
         limit: int,
     ) -> List[Dict[str, Any]]:
-        where = ["p.deleted_date IS NULL", "p.created_date >= ?"]
-        params: List[Any] = [since]
+        visible, visible_params = visible_group_clause("g", user_id, is_admin)
+        where = ["p.deleted_date IS NULL", "p.created_date >= ?", visible]
+        params: List[Any] = [since, *visible_params]
 
-        if not is_admin:
-            where.append(
-                "(g.visibility = 'PUBLIC' OR g.owner_id = ? "
-                "OR EXISTS (SELECT 1 FROM group_members m WHERE m.group_id = g.id AND m.user_id = ?))"
-            )
-            params += [user_id, user_id]
         if following_only:
             where.append("EXISTS (SELECT 1 FROM group_followers f WHERE f.group_id = g.id AND f.user_id = ?)")
             params.append(user_id)

@@ -53,6 +53,14 @@ def get_todo_search_service(request: Request):
     return TodoSearchService(TodoRepository(db), ResourceVectorStore(db, "todo"), embed_texts, model)
 
 
+def get_post_search_service(request: Request):
+    """Post and comment search (embeddings via Workers AI, built lazily like the todo search)."""
+    from services.post_search_service import PostSearchService
+
+    embed_texts, model = get_embedder(request)
+    return PostSearchService(get_database(request), embed_texts, model)
+
+
 def get_media_providers(request: Request):
     """Post media lookups with the server's Unsplash key (Unsplash routes answer 503 without it)."""
     from config import get_config

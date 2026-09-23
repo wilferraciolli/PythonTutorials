@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, Request, Response
 
@@ -8,19 +8,25 @@ from models import CommentCreate, CommentUpdate
 from repositories.post_comment_repository import PostCommentRepository
 from repositories.post_stats_repository import PostStatsRepository
 from repositories.reaction_repository import ReactionRepository
-from routers.deps import get_caller
+from routers.deps import get_caller, get_post_search_service
 from routers.posts import get_post_service
 from services.post_comment_service import PostCommentService
+from services.post_search_service import PostSearchService
 
 # Under the post (and the post under its group), so the group's visibility is
 # checked on every comment request too.
 router = APIRouter(prefix="/groups/{group_id}/posts/{post_id}/comments", tags=["post comments"])
 
 
-def get_post_comment_service(request: Request) -> PostCommentService:
+def get_post_comment_service(
+    request: Request, search: Optional[PostSearchService] = Depends(get_post_search_service)
+) -> PostCommentService:
     db = get_database(request)
     return PostCommentService(
-        PostCommentRepository(db), PostStatsRepository(db), ReactionRepository(db), get_post_service(request, media=None)
+        PostCommentRepository(db),
+        PostStatsRepository(db),
+        ReactionRepository(db),
+        get_post_service(request, media=None, search=search),
     )
 
 
