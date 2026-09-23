@@ -237,7 +237,9 @@ async def test_clerk_roles_match_case_insensitively(env):
     _, _, users, _ = env
     me = MeService(users)
     for index, claim in enumerate(["admin", "Admin", " ADMIN "]):
-        clerk = AuthenticatedUser(id=f"clerk-{index}", name="Wil", email="w@x.io", role_ids=[claim], claims={})
+        clerk = AuthenticatedUser(
+            id=f"clerk-{index}", name="Wil", email=f"w{index}@x.io", role_ids=[claim], claims={}
+        )
         assert (await me.get_or_create_current_user(clerk))["roleIds"] == ["ADMIN"]
 
     # and an existing standard user is upgraded on their next request
