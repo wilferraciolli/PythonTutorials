@@ -1,0 +1,32 @@
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATABASE_MODE: sqlite
+      DATABASE_PATH: /data/local.db
+    volumes:
+      - ./src:/app/src
+      - ./migrations:/app/migrations
+      - sqlite-data:/data
+    command:
+      [
+        "uv",
+        "run",
+        "uvicorn",
+        "main:app",
+        "--app-dir",
+        "src",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8000",
+        "--reload",
+      ]
+
+volumes:
+  sqlite-data:

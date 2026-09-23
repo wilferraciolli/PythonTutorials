@@ -229,3 +229,4 @@ __marimo__/
 /.idea/gyp-next.iml
 /.idea/prettier.xml
 /.idea/sqldialects.xml
+/.idea/*
