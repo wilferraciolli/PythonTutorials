@@ -1,2 +1,64 @@
-// mat-menu/mat-icon-button render their own overlay/structure — nothing
-// component-specific to style here yet.
+@use 'ui';
+
+// The account button is an avatar: the user's initial on a
+// primary-container disc, 40px (48px touch target via the padding).
+.ProfileMenu {
+  &-trigger {
+    display: grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    padding: 0;
+    border: 0;
+    border-radius: var(--mat-sys-corner-full);
+    background: transparent;
+    color: var(--mat-sys-on-surface-variant);
+    cursor: pointer;
+
+    @include ui.state-layer(var(--mat-sys-on-surface));
+    @include ui.focus-ring;
+  }
+
+  &-avatar {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: var(--mat-sys-corner-full);
+    background: var(--mat-sys-primary-container);
+    color: var(--mat-sys-on-primary-container);
+    font: var(--mat-sys-title-medium);
+    text-transform: uppercase;
+  }
+
+  &-avatar-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 40px;
+  }
+
+  // Who is signed in, at the top of the menu: not a menu item, so it
+  // doesn't take part in keyboard navigation.
+  &-header {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 12px 16px;
+    margin-bottom: 4px;
+    border-bottom: 1px solid var(--mat-sys-outline-variant);
+    min-width: 12rem;
+  }
+
+  &-name {
+    font: var(--mat-sys-title-small);
+    letter-spacing: var(--mat-sys-title-small-tracking);
+    color: var(--mat-sys-on-surface);
+  }
+
+  &-email {
+    font: var(--mat-sys-body-small);
+    letter-spacing: var(--mat-sys-body-small-tracking);
+    color: var(--mat-sys-on-surface-variant);
+    overflow-wrap: anywhere;
+  }
+}

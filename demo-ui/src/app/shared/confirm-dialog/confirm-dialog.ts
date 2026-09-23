@@ -7,7 +7,7 @@ export interface ConfirmDialogData {
   message: string;
   confirmLabel?: string;
   cancelLabel?: string;
-  // 'danger' renders the confirm button in the warn palette — for
+  // 'danger' renders the confirm button in the error role — for
   // destructive/hard-to-undo actions (delete). Defaults to primary.
   tone?: 'primary' | 'danger';
 }

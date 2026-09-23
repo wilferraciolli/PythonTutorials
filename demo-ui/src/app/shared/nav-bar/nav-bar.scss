@@ -1,16 +1,38 @@
+@use 'ui';
+
+// Small top app bar: 64px, on the page surface, tonal once scrolled.
 .NavBar {
   position: sticky;
   top: 0;
   z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: var(--app-bar-height);
+  padding: 0 16px 0 var(--app-gutter);
+  background: var(--mat-sys-surface);
+  color: var(--mat-sys-on-surface);
+  view-transition-name: app-bar;
+  transition: background-color var(--app-duration-short) var(--app-ease-standard);
 
-  &-brand {
-    color: var(--mat-sys-primary);
-    text-decoration: none;
-    font-weight: 500;
-    font-size: 1.1rem;
+  &.is-scrolled {
+    background: var(--mat-sys-surface-container);
   }
 
-  &-spacer {
-    flex: 1 1 auto;
+  // The drawer button takes the place of the left gutter's first 8px.
+  &-menu {
+    margin-left: -12px;
+  }
+
+  &-brand {
+    color: var(--mat-sys-on-surface);
+    text-decoration: none;
+    font: var(--mat-sys-title-large);
+    letter-spacing: var(--mat-sys-title-large-tracking);
+    padding: 4px 8px;
+    margin-left: -8px;
+    border-radius: var(--mat-sys-corner-small);
+
+    @include ui.focus-ring;
   }
 }

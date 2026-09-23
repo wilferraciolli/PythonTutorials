@@ -6,7 +6,8 @@ import {
 } from '@angular/core';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
-import { provideRouter, withComponentInputBinding } from '@angular/router';
+import { MAT_ICON_DEFAULT_OPTIONS } from '@angular/material/icon';
+import { provideRouter, withComponentInputBinding, withViewTransitions } from '@angular/router';
 import { API_ORIGIN } from '@wiliamferraciolli/ngx-api-client';
 
 import { authInterceptor } from './core/auth/auth.interceptor';
@@ -19,7 +20,11 @@ export const appConfig: ApplicationConfig = {
     provideBrowserGlobalErrorListeners(),
     // withComponentInputBinding: routed components read route/query params
     // as plain `input()`s instead of subscribing to ActivatedRoute.
-    provideRouter(routes, withComponentInputBinding()),
+    // withViewTransitions: route changes cross-fade (M3 "fade through");
+    // see the ::view-transition rules in styles.scss.
+    provideRouter(routes, withComponentInputBinding(), withViewTransitions()),
+    // Every <mat-icon> is a Material Symbols Outlined glyph (index.html).
+    { provide: MAT_ICON_DEFAULT_OPTIONS, useValue: { fontSet: 'material-symbols-outlined' } },
     provideHttpClient(withInterceptors([authInterceptor])),
     // Material's components (the home page's button ripple) need an
     // animations driver; the async variant lazy-loads the animations

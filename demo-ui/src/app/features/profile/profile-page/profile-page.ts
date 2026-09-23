@@ -1,5 +1,4 @@
 import { Component, inject } from '@angular/core';
-import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
 
 import { CurrentUserStore } from '../../../core/user/current-user.store';
@@ -9,7 +8,7 @@ import { CurrentUserStore } from '../../../core/user/current-user.store';
 // them against.
 @Component({
   selector: 'app-profile-page',
-  imports: [MatCardModule, MatChipsModule],
+  imports: [MatChipsModule],
   templateUrl: './profile-page.html',
   styleUrl: './profile-page.scss',
 })

@@ -1,40 +1,129 @@
+@use 'ui';
+
 .TodosList {
-  &-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    flex-wrap: wrap;
-    margin-bottom: 1rem;
-  }
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
 
   &-title {
-    margin: 0;
-    font: var(--mat-sys-headline-small);
+    @include ui.page-title;
   }
 
   &-filter {
-    width: 12rem;
-    margin-bottom: 1rem;
+    max-width: 100%;
   }
 
-  &-error,
-  &-loading,
+  &-error {
+    @include ui.banner(error);
+
+    align-self: stretch;
+  }
+
+  &-loading {
+    @include ui.supporting-text;
+  }
+
   &-empty {
+    @include ui.empty-state;
+
+    align-self: stretch;
+
+    mat-icon {
+      width: 48px;
+      height: 48px;
+      font-size: 48px;
+      color: var(--mat-sys-primary);
+    }
+  }
+
+  &-empty-title {
+    margin: 0;
+    font: var(--mat-sys-title-large);
+    color: var(--mat-sys-on-surface);
+  }
+
+  &-empty-hint {
+    margin: 0;
+    font: var(--mat-sys-body-medium);
+  }
+
+  // One grouped surface, rows divided by a hairline — a list, not a stack of cards.
+  &-items {
+    align-self: stretch;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    // Clearance so the FAB never covers the last row.
+    margin-bottom: 72px;
+    border-radius: var(--mat-sys-corner-large);
+    background: var(--mat-sys-surface-container-low);
+    overflow: hidden;
+  }
+
+  &-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 72px;
+    padding: 8px 8px 8px 4px;
+
+    & + & {
+      border-top: 1px solid var(--mat-sys-outline-variant);
+    }
+
+    // Done: the row recedes and the title is struck through.
+    &.is-closed {
+      color: var(--mat-sys-on-surface-variant);
+    }
+  }
+
+  &-check {
+    flex: none;
     color: var(--mat-sys-on-surface-variant);
   }
 
-  &-table {
-    width: 100%;
+  &-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 4px 8px;
+  }
+
+  &-item-title {
+    font: var(--mat-sys-body-large);
+    letter-spacing: var(--mat-sys-body-large-tracking);
+    overflow-wrap: anywhere;
+  }
+
+  &-item-meta {
+    font: var(--mat-sys-body-medium);
+    letter-spacing: var(--mat-sys-body-medium-tracking);
+    color: var(--mat-sys-on-surface-variant);
+
+    &.is-overdue {
+      color: var(--mat-sys-error);
+    }
   }
 
   &-actions {
+    flex: none;
     display: flex;
-    gap: 0.25rem;
-    justify-content: flex-end;
+    color: var(--mat-sys-on-surface-variant);
   }
 
-  &-chip-closed {
-    opacity: 0.6;
+  &-fab {
+    @include ui.fab-position;
   }
+}
+
+.TodosList-item.is-closed .TodosList-item-title {
+  text-decoration: line-through;
+  text-decoration-color: var(--mat-sys-outline);
+}
+
+.TodosList-item.is-closed .TodosList-check {
+  color: var(--mat-sys-primary);
 }

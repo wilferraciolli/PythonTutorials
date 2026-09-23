@@ -1,3 +1,12 @@
-.ConfirmDialog-message {
-  color: var(--mat-sys-on-surface-variant);
+@use 'ui';
+
+.ConfirmDialog {
+  &-message {
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  // Destructive confirmations use the error role, not the primary one.
+  &-danger {
+    @include ui.danger-button(filled);
+  }
 }

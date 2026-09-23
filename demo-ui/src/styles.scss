@@ -1,21 +1,47 @@
-// Angular Material theming. `mat.theme()` defines the --mat-sys-* CSS
-// variables Material components read; components in this app reference
-// those same tokens (see home.scss) rather than hardcoding hex values, so
-// changing the palette here restyles the whole app.
+// Material 3 theme. `mat.theme()` defines the --mat-sys-* CSS variables
+// (colour roles, type scale, shape scale, elevation, state layers) that
+// Material components read; components in this app reference those same
+// tokens through the mixins in src/styles/_ui.scss instead of hardcoding
+// values, so changing the palette here restyles the whole app.
+//
+// The palettes come from `ng generate @angular/material:theme-color`
+// (src/styles/_theme-colors.scss): a petrol-teal seed (#0A7E8C) for
+// primary, ochre (#8A6D1C) for tertiary. Tertiary is spent on meaning —
+// the AI destinations and "owner"/highlight badges — not decoration.
+// The theme type is `color-scheme`, so every role resolves through
+// `light-dark()` and follows the system setting.
 @use '@angular/material' as mat;
+@use 'breakpoints' as bp;
+@use 'theme-colors' as theme;
 
 html {
-  height: 100%;
   @include mat.theme(
     (
       color: (
-        primary: mat.$azure-palette,
-        tertiary: mat.$blue-palette,
+        primary: theme.$primary-palette,
+        tertiary: theme.$tertiary-palette,
       ),
-      typography: Roboto,
+      // M3 pairs a brand face for display/headline/title with a plain
+      // face for body/label. Roboto Flex is Roboto's variable sibling —
+      // its optical-size axis keeps large headlines crisp.
+      typography: (
+          plain-family: (
+            Roboto,
+            system-ui,
+            sans-serif,
+          ),
+          brand-family: (
+            'Roboto Flex',
+            Roboto,
+            system-ui,
+            sans-serif,
+          ),
+        ),
       density: 0,
     )
   );
+  color-scheme: light dark;
+  -webkit-text-size-adjust: 100%;
 }
 
 :root {
@@ -23,24 +49,77 @@ html {
   // docs/frontend-conventions.md's "Layout: mobile-first, max width,
   // centered" section. Content never stretches edge-to-edge on a wide
   // monitor; the footer and page content line up on the same gutter
-  // instead of each picking its own number.
+  // instead of each picking its own number. M3 margins: 16 on compact
+  // windows, 24 from medium up.
   --app-page-max-width: 900px;
-  --app-gutter: 24px;
-}
+  --app-gutter: 16px;
+  --app-bar-height: 64px;
+  --app-rail-width: 80px;
 
-body {
-  color-scheme: light;
-  margin: 0;
-  height: 100%;
-  font-family: Roboto, system-ui, -apple-system, 'Segoe UI', sans-serif;
-  color: var(--mat-sys-on-surface);
-  background: var(--mat-sys-surface);
+  // M3 motion: emphasized easing for things that move on screen, plus
+  // the two durations most transitions use.
+  --app-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --app-ease-decelerate: cubic-bezier(0.05, 0.7, 0.1, 1);
+  --app-ease-accelerate: cubic-bezier(0.3, 0, 0.8, 0.15);
+  --app-duration-short: 200ms;
+  --app-duration-medium: 300ms;
+
+  @include bp.up(sm) {
+    --app-gutter: 24px;
+  }
 }
 
 *,
 *::before,
 *::after {
   box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  font: var(--mat-sys-body-large);
+  letter-spacing: var(--mat-sys-body-large-tracking);
+  color: var(--mat-sys-on-surface);
+  background: var(--mat-sys-surface);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  color: var(--mat-sys-primary);
+}
+
+// Material Symbols Outlined (loaded in index.html) is the app's icon font:
+// `MAT_ICON_DEFAULT_OPTIONS` in app.config.ts points every <mat-icon> at
+// this class. The FILL axis is how M3 marks a selected state — add
+// `is-filled` to swap outlined for filled, and it animates.
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+  font-variation-settings:
+    'FILL' 0,
+    'wght' 400,
+    'GRAD' 0,
+    'opsz' 24;
+  transition: font-variation-settings var(--app-duration-short) var(--app-ease-standard);
+
+  &.is-filled {
+    font-variation-settings:
+      'FILL' 1,
+      'wght' 400,
+      'GRAD' 0,
+      'opsz' 24;
+  }
 }
 
 // Shared page-layout helpers. Apply `.App-page` to a route's top-level
@@ -56,4 +135,58 @@ body {
 
 .App-spacer {
   flex: 1 1 auto;
+}
+
+// Screen-reader-only text.
+.App-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+// Route changes cross-fade through the M3 "fade through" pattern: the old
+// screen leaves quickly, the new one settles in with a slight scale. The
+// app bar and rail carry their own `view-transition-name`, so only the
+// content region moves.
+@keyframes app-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes app-fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+
+::view-transition-old(root) {
+  animation: 90ms var(--app-ease-accelerate) both app-fade-out;
+}
+
+::view-transition-new(root) {
+  animation: 210ms var(--app-ease-decelerate) 90ms both app-fade-in;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
 }

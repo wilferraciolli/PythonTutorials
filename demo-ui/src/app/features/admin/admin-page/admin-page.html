@@ -6,28 +6,28 @@
   } @else if (loadError(); as message) {
     <p class="AdminPage-error" role="alert">{{ message }}</p>
   } @else {
-    <div class="AdminPage-tools">
+    <ul class="AdminPage-tools">
       @for (tool of tools(); track tool.id) {
-        <mat-card appearance="outlined">
-          <mat-card-content class="AdminPage-tool">
+        <li class="AdminPage-tool">
+          <div class="AdminPage-toolText">
             <h2 class="AdminPage-toolName">{{ tool.name }}</h2>
             <p class="AdminPage-toolDescription">{{ tool.description }}</p>
-            <button
-              matButton="filled"
-              type="button"
-              [disabled]="!hasAction(tool) || running() !== null"
-              (click)="run(tool)"
-            >
-              {{ running() === tool.id ? 'Running…' : 'Run' }}
-            </button>
             @if (results()[tool.id]; as result) {
               <p class="AdminPage-result" role="status">{{ result }}</p>
             }
-          </mat-card-content>
-        </mat-card>
+          </div>
+          <button
+            matButton="tonal"
+            type="button"
+            [disabled]="!hasAction(tool) || running() !== null"
+            (click)="run(tool)"
+          >
+            {{ running() === tool.id ? 'Running…' : 'Run' }}
+          </button>
+        </li>
       } @empty {
-        <p class="AdminPage-muted">Loading…</p>
+        <li class="AdminPage-muted">Loading…</li>
       }
-    </div>
+    </ul>
   }
 </div>

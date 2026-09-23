@@ -1,7 +1,9 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
+import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
 import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
 import { filter, map, startWith } from 'rxjs';
 
@@ -18,7 +20,7 @@ function chatIdFromUrl(url: string): string | null {
 
 @Component({
   selector: 'app-chat-list',
-  imports: [MatButtonModule, MatIconModule],
+  imports: [MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule],
   templateUrl: './chat-list.html',
   styleUrl: './chat-list.scss',
 })

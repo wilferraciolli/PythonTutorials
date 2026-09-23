@@ -1,12 +1,9 @@
 import { Component, inject } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
-import { MatChipsModule } from '@angular/material/chips';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
-import { MatTableModule } from '@angular/material/table';
 import { RouterLink } from '@angular/router';
 import { LinkService } from '@wiliamferraciolli/ngx-api-client';
 import { firstValueFrom } from 'rxjs';
@@ -20,12 +17,9 @@ import { Todo, TodoState, TodosStore } from '../todos.store';
     DatePipe,
     RouterLink,
     MatButtonModule,
-    MatChipsModule,
+    MatButtonToggleModule,
     MatDialogModule,
-    MatFormFieldModule,
     MatIconModule,
-    MatInputModule,
-    MatTableModule,
   ],
   templateUrl: './todos-list.html',
   styleUrl: './todos-list.scss',
@@ -35,10 +29,19 @@ export class TodosList {
   protected readonly links = inject(LinkService);
   private readonly dialog = inject(MatDialog);
 
-  protected readonly displayedColumns = ['title', 'state', 'complete_by', 'actions'];
-
   protected setStateFilter(value: string): void {
     this.store.stateFilter.set(value === '' ? null : (value as TodoState));
+  }
+
+  // The API's own wording for a state ("Active"), falling back to the raw
+  // value until its metadata has loaded.
+  protected stateLabel(state: TodoState): string {
+    return this.store.stateOptions().find((option) => option.value === state)?.viewValue ?? state;
+  }
+
+  // Past its due date and still open.
+  protected isOverdue(todo: Todo): boolean {
+    return todo.state !== 'CLOSED' && new Date(todo.complete_by).getTime() < Date.now();
   }
 
   protected canToggleClosed(todo: Todo): boolean {

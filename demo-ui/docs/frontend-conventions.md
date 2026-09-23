@@ -153,6 +153,52 @@ mounted/embedded sign-in widget on a route — see above.
 - These files hold non-secret config only (base URLs, feature flags) — no
   API keys or credentials, since they ship in the client bundle.
 
+## Design system: Material 3
+The UI follows [Material 3](https://m3.material.io) through Angular Material's
+M3 theme (`mat.theme()` in `src/styles.scss`). Shared building blocks live in
+`src/styles/_ui.scss` (`@use 'ui';`).
+
+- **Tokens, not values.** Colour, type, shape and elevation come from the
+  `--mat-sys-*` variables — no hex codes, no raw pixel radii
+  (`--mat-sys-corner-*`), no ad hoc shadows. Depth is tonal: pick a
+  `surface-container-*` role rather than adding a shadow.
+- **Palette.** Generated from seed colours with
+  `ng generate @angular/material:theme-color` into
+  `src/styles/_theme-colors.scss` (primary petrol-teal, tertiary ochre).
+  Re-run it with different seeds to re-theme; nothing else changes.
+- **Light and dark** follow the system (`color-scheme: light dark`; every role
+  resolves through `light-dark()`). Always use role pairs
+  (`surface-container-low` + `on-surface`, `primary-container` +
+  `on-primary-container`) so both themes read.
+- **Roles carry meaning.** Primary is actions and selection; tertiary marks the
+  AI destinations and ownership badges; error is failures and destructive
+  actions (`ui.banner(error)`, `ui.danger-button`). Don't spend a role on
+  decoration.
+- **Type.** Use the scale — `font: var(--mat-sys-title-large)` — or the
+  `ui.page-title` / `ui.section-title` / `ui.supporting-text` mixins. Roboto
+  Flex is the brand face (display, headline, title); Roboto is body and label.
+  Keep running text to ~65 characters (`max-width: 65ch`).
+- **Layout and navigation** follow the M3 window size classes, which are the
+  `bp` breakpoints (`sm` 600, `md` 840, `lg` 1200): compact windows get a modal
+  navigation drawer opened from the top app bar, medium and up get a navigation
+  rail. `DESTINATIONS` (`shared/destinations.ts`) is the one list both — and the
+  Home tiles — read, so add a destination there. Signed-out visitors get no
+  navigation, just the bar and Home.
+- **Buttons.** One filled button per view. Tonal is the secondary action, text
+  the tertiary. A page's create action is a FAB (`ui.fab-position`); rarely used
+  actions go in an overflow menu (`more_vert`), with destructive ones in the
+  error colour.
+- **Lists** are one grouped `surface-container-low` surface with an
+  `outline-variant` hairline between rows — not a stack of bordered cards.
+  Custom interactive surfaces get `ui.state-layer` and `ui.focus-ring`.
+- **Icons** are Material Symbols Outlined (every `<mat-icon>` defaults to it via
+  `MAT_ICON_DEFAULT_OPTIONS`). Add `is-filled` to show a selected or active
+  state (the FILL axis animates). Use the Symbols name, not the legacy
+  `*_border` / `*_outline` aliases.
+- **Motion** uses the `--app-ease-*` / `--app-duration-*` tokens. Route changes
+  cross-fade (view transitions); the drawer and scrim slide and fade. All of it
+  is switched off under `prefers-reduced-motion`.
+
 ## Component SCSS class naming
 Every class in a component stylesheet is namespaced with the component's
 class name (PascalCase, exactly as it appears in the `.ts`), then a
@@ -257,7 +303,8 @@ That import style — `@use 'breakpoints' as bp;` / `@use 'spacing';` —
 works from any stylesheet once wired. Adjust the specific values below
 per app.
 
-- `breakpoints` (`sm: 560px`, `md: 768px`, `lg: 1024px`) exposes
+- `breakpoints` (`sm: 600px`, `md: 840px`, `lg: 1200px` — the M3 window size
+  classes) exposes
   `bp.up($bp)` (min-width — the one to reach for, since layout is
   mobile-first) and `bp.down($bp)` (max-width, for the rare case a style
   needs to be capped instead of grown). Both accept a scale key or a raw

@@ -1,7 +1,8 @@
 <div class="PostPage App-page">
-  <a class="PostPage-back" [routerLink]="['/groups', groupId()]"
-    >← {{ group()?.name ?? 'Group' }}</a
-  >
+  <a matButton class="PostPage-back" [routerLink]="['/groups', groupId()]">
+    <mat-icon>arrow_back</mat-icon>
+    {{ group()?.name ?? 'Group' }}
+  </a>
 
   @if (loadError(); as message) {
     <p class="PostPage-error" role="alert">{{ message }}</p>
@@ -68,43 +69,67 @@
           "
           (click)="togglePostLike(post)"
         >
-          <mat-icon aria-hidden="true">{{
-            post.likedByMe ? 'favorite' : 'favorite_border'
-          }}</mat-icon>
+          <mat-icon aria-hidden="true" [class.is-filled]="post.likedByMe">favorite</mat-icon>
           {{ post.likeCount }}
         </button>
         <span class="PostPage-count">
-          <mat-icon aria-hidden="true">chat_bubble_outline</mat-icon>
+          <mat-icon aria-hidden="true">chat_bubble</mat-icon>
           {{ post.commentCount }}
         </span>
-        @if (post.links['update'] && !editingPost()) {
-          <button matButton type="button" [disabled]="busy()" (click)="startEditPost(post)">
-            Edit
-          </button>
-        }
-        <!-- Changing media is remove, then add another. -->
-        @if (post.links['addMedia'] && !pickingMedia()) {
-          <button matButton type="button" [disabled]="busy()" (click)="pickingMedia.set(true)">
-            <mat-icon aria-hidden="true">add_photo_alternate</mat-icon>
-            Add media
-          </button>
-        }
-        @if (post.links['removeMedia']) {
-          <button matButton type="button" [disabled]="busy()" (click)="removeMedia(post)">
-            <mat-icon aria-hidden="true">hide_image</mat-icon>
-            Remove media
-          </button>
-        }
-        @if (post.links['delete']) {
+        <span class="App-spacer"></span>
+        @if (
+          post.links['update'] ||
+          post.links['addMedia'] ||
+          post.links['removeMedia'] ||
+          post.links['delete']
+        ) {
           <button
-            matButton
+            matIconButton
             type="button"
-            class="PostPage-danger"
-            [disabled]="busy()"
-            (click)="deletePost(post)"
+            aria-label="More post actions"
+            title="More"
+            [matMenuTriggerFor]="more"
           >
-            Delete
+            <mat-icon>more_vert</mat-icon>
           </button>
+          <mat-menu #more="matMenu" xPosition="before">
+            @if (post.links['update'] && !editingPost()) {
+              <button mat-menu-item type="button" [disabled]="busy()" (click)="startEditPost(post)">
+                <mat-icon>edit</mat-icon>
+                <span>Edit post</span>
+              </button>
+            }
+            <!-- Changing media is remove, then add another. -->
+            @if (post.links['addMedia'] && !pickingMedia()) {
+              <button
+                mat-menu-item
+                type="button"
+                [disabled]="busy()"
+                (click)="pickingMedia.set(true)"
+              >
+                <mat-icon>add_photo_alternate</mat-icon>
+                <span>Add media</span>
+              </button>
+            }
+            @if (post.links['removeMedia']) {
+              <button mat-menu-item type="button" [disabled]="busy()" (click)="removeMedia(post)">
+                <mat-icon>hide_image</mat-icon>
+                <span>Remove media</span>
+              </button>
+            }
+            @if (post.links['delete']) {
+              <button
+                mat-menu-item
+                type="button"
+                class="PostPage-danger-item"
+                [disabled]="busy()"
+                (click)="deletePost(post)"
+              >
+                <mat-icon>delete</mat-icon>
+                <span>Delete post</span>
+              </button>
+            }
+          </mat-menu>
         }
       </div>
     </article>
@@ -184,9 +209,9 @@
                 [attr.aria-pressed]="item.comment.likedByMe"
                 (click)="toggleCommentLike(item.comment)"
               >
-                <mat-icon aria-hidden="true">{{
-                  item.comment.likedByMe ? 'favorite' : 'favorite_border'
-                }}</mat-icon>
+                <mat-icon aria-hidden="true" [class.is-filled]="item.comment.likedByMe"
+                  >favorite</mat-icon
+                >
                 {{ item.comment.likeCount }}
               </button>
               @if (item.comment.links['reply']) {

@@ -26,13 +26,20 @@ works when the API exposes its link.
 
 | Path | Screen |
 |---|---|
-| `/` | Home: cards for todos, AI chat, Ask, timeline, groups (and admin, for admins) |
+| `/` | Home: a tile per destination — todos, AI chat, Ask, timeline, groups (and admin, for admins) |
 | `/profile`, `/todos`, `/tags` | Profile, todos and tags |
 | `/workers-ai` | Chat sessions with Cloudflare Workers AI or Groq |
 | `/ask` | Ask questions about your todos and chats in plain English |
 | `/timeline` | Posts from your groups: all, following, popular |
 | `/groups`, `/groups/:id`, `/groups/:id/posts/:postId` | Groups, members, followers, posts and threaded comments |
 | `/admin` | Admin tools (admins only) |
+
+## Design
+
+Material 3, light and dark (it follows the system setting). Signed-in users
+navigate with a rail on tablets and up and a drawer on phones. The rules —
+tokens, palette, buttons, lists, motion — are in
+[docs/frontend-conventions.md](docs/frontend-conventions.md#design-system-material-3).
 
 ## Post media
 

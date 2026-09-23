@@ -1,21 +1,44 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+}
+
 .ChatEmptyState {
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.75rem;
+  gap: 4px;
+  text-align: center;
   color: var(--mat-sys-on-surface-variant);
 
-  mat-icon {
-    font-size: 2.5rem;
-    width: 2.5rem;
-    height: 2.5rem;
-    opacity: 0.5;
-    color: var(--mat-sys-primary);
+  // AI surfaces carry the tertiary role, same as the Home tiles.
+  &-icon {
+    display: grid;
+    place-items: center;
+    width: 72px;
+    height: 72px;
+    margin-bottom: 12px;
+    border-radius: var(--mat-sys-corner-extra-large);
+    background: var(--mat-sys-tertiary-container);
+    color: var(--mat-sys-on-tertiary-container);
+
+    mat-icon {
+      width: 36px;
+      height: 36px;
+      font-size: 36px;
+    }
   }
 
-  p {
+  &-title {
+    margin: 0;
+    font: var(--mat-sys-title-large);
+    color: var(--mat-sys-on-surface);
+  }
+
+  &-hint {
     margin: 0;
     font: var(--mat-sys-body-medium);
   }

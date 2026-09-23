@@ -14,7 +14,7 @@
                 <span class="GroupMembers-name">{{ user.name }}</span>
                 <span class="GroupMembers-sub">{{ user.email }}</span>
               </span>
-              <button matButton="outlined" type="button" [disabled]="busy()" (click)="add(user)">
+              <button matButton="tonal" type="button" [disabled]="busy()" (click)="add(user)">
                 Add
               </button>
             </li>
@@ -39,6 +39,9 @@
   <ul class="GroupMembers-list">
     @for (member of members(); track member.userId) {
       <li class="GroupMembers-row">
+        <span class="GroupMembers-avatar" aria-hidden="true">{{
+          (member.name ?? '?').charAt(0)
+        }}</span>
         <span class="GroupMembers-person">
           <span class="GroupMembers-name">
             {{ member.name ?? '[deleted user]' }}

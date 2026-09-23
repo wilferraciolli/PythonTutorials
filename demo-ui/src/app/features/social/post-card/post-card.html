@@ -1,4 +1,4 @@
-<mat-card class="PostCard" appearance="outlined">
+<mat-card class="PostCard" appearance="filled">
   <mat-card-content class="PostCard-content">
     <p class="PostCard-meta">
       @if (showGroup()) {
@@ -28,13 +28,11 @@
         "
         (click)="toggleLike()"
       >
-        <mat-icon aria-hidden="true">{{
-          post().likedByMe ? 'favorite' : 'favorite_border'
-        }}</mat-icon>
+        <mat-icon aria-hidden="true" [class.is-filled]="post().likedByMe">favorite</mat-icon>
         {{ post().likeCount }}
       </button>
       <a matButton [routerLink]="['/groups', post().groupId, 'posts', post().id]">
-        <mat-icon aria-hidden="true">chat_bubble_outline</mat-icon>
+        <mat-icon aria-hidden="true">chat_bubble</mat-icon>
         {{ post().commentCount }}
       </a>
     </div>

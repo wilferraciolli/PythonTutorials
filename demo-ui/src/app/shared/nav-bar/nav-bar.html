@@ -1,10 +1,22 @@
-<mat-toolbar class="NavBar">
+<header class="NavBar" [class.is-scrolled]="scrolled()">
+  @if (showMenuButton()) {
+    <button
+      matIconButton
+      type="button"
+      class="NavBar-menu"
+      aria-label="Open navigation menu"
+      (click)="menuRequested.emit()"
+    >
+      <mat-icon>menu</mat-icon>
+    </button>
+  }
+
   <a class="NavBar-brand" routerLink="/">Showcase</a>
-  <span class="NavBar-spacer"></span>
+  <span class="App-spacer"></span>
 
   @if (auth.isSignedIn()) {
     <app-profile-menu />
   } @else {
-    <button matButton="filled" type="button" (click)="signIn()">Sign in</button>
+    <button matButton="tonal" type="button" (click)="signIn()">Sign in</button>
   }
-</mat-toolbar>
+</header>

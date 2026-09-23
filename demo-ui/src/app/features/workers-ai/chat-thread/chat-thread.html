@@ -1,6 +1,6 @@
 <div class="ChatThread">
   @if (loadErrorMessage(); as errorMessage) {
-    <p class="ChatThread-error">{{ errorMessage }}</p>
+    <p class="ChatThread-error" role="alert">{{ errorMessage }}</p>
   } @else if (isLoading() && !chat()) {
     <p class="ChatThread-loading">Loading…</p>
   } @else if (chat(); as chat) {
@@ -8,7 +8,10 @@
 
     <div class="ChatThread-messages">
       @for (message of messages(); track message.id) {
-        <div class="ChatThread-message" [class.ChatThread-message--assistant]="message.role === 'assistant'">
+        <div
+          class="ChatThread-message"
+          [class.ChatThread-message--assistant]="message.role === 'assistant'"
+        >
           @if (message.role === 'assistant') {
             <div
               class="ChatThread-messageText ChatThread-messageText--markdown"
@@ -23,13 +26,13 @@
       }
       @if (sending()) {
         <div class="ChatThread-message ChatThread-message--assistant ChatThread-message--pending">
-          <p class="ChatThread-messageText">Thinking…</p>
+          <p class="ChatThread-messageText" role="status">Thinking…</p>
         </div>
       }
     </div>
 
     @if (sendError()) {
-      <p class="ChatThread-error">{{ sendError() }}</p>
+      <p class="ChatThread-error" role="alert">{{ sendError() }}</p>
     }
 
     <form class="ChatThread-composer" (submit)="$event.preventDefault(); send()">
@@ -42,8 +45,15 @@
           [disabled]="sending()"
         />
       </mat-form-field>
-      <button matButton="filled" type="submit" [disabled]="sending() || !draft().trim()">
-        <mat-icon aria-hidden="true">send</mat-icon>
+      <button
+        matIconButton
+        class="ChatThread-send"
+        type="submit"
+        aria-label="Send message"
+        title="Send"
+        [disabled]="sending() || !draft().trim()"
+      >
+        <mat-icon>send</mat-icon>
       </button>
     </form>
   }

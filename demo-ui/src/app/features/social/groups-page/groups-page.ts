@@ -1,7 +1,6 @@
 import { httpResource } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -18,14 +17,7 @@ type Filter = 'all' | 'mine' | 'following';
 // Browse and search the groups you can see, and create a new one.
 @Component({
   selector: 'app-groups-page',
-  imports: [
-    RouterLink,
-    MatButtonModule,
-    MatCardModule,
-    MatFormFieldModule,
-    MatIconModule,
-    MatInputModule,
-  ],
+  imports: [RouterLink, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule],
   templateUrl: './groups-page.html',
   styleUrl: './groups-page.scss',
 })
