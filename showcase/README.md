@@ -1,24 +1,32 @@
 # Showcase
 
-Angular front end for the `Tutorials/fastapi-cloudflare-d1` API — a Python FastAPI
-service running as a Cloudflare Worker against a D1 database.
+Angular front end for the Python tutorial APIs in `Tutorials/`: the todos and
+tags screens talk to `fastapi-cloudflare-d1`, and the Workers AI chat screen
+talks to `fastapi-cloudflare-ai`.
+
+**Only one API runs at a time.** Every project serves on `localhost:8001`,
+which is the single `apiUrl` in `src/environments/environment.ts` — start the
+one that matches the screen you want to use. If the wrong one (or none) is
+running, a banner across the top says the API can't be reached.
 
 ## Routes
 
 | Path | Auth | Screen |
 |---|---|---|
-| `/` | Public | Home — intro text + Clerk sign-in button |
+| `/` | Public | Home — cards linking to Todos and Workers AI (sign in from the nav bar) |
 | `/profile` | Sign-in required | Current user's name/email/roles (read-only; sourced from `/me`) |
 | `/todos` | Sign-in required | List the signed-in user's todos, filterable by state |
 | `/todos/new`, `/todos/:id/edit` | Sign-in required | Create/edit a todo, including its tags |
 | `/tags` | Sign-in required | Browse, search, create, and delete tags across every resource |
+| `/workers-ai`, `/workers-ai/:chatId` | Sign-in required | Chat sessions with Cloudflare Workers AI or Groq: pick or create a session from the selector at the top, rename it, and message the model (needs `fastapi-cloudflare-ai` running) |
 
 Signed-out visitors hitting a guarded route are redirected to `/`
-(`core/auth/auth.guard.ts`). Every guarded screen talks to the API through
-links the API itself returns in each response (`_metaLinks`, per-resource
-`links`) rather than hand-built URLs — see `ngx-api-client`'s
-`LinkService`/`ApiClientService`, and `fastapi-cloudflare-d1/README.md`'s API
-Reference for what each response actually contains.
+(`core/auth/auth.guard.ts`). Screens follow the links the API returns in each
+response (`_metaLinks`, per-resource `links`) rather than hand-built URLs —
+see `ngx-api-client`'s `LinkService`/`ApiClientService`, and each API's
+README for what its responses contain. The first request to a collection
+has no link to follow yet, so it is built from `apiUrl` (the chat API's
+routes are under `/api`).
 
 ## Running it
 
@@ -27,8 +35,8 @@ npm install
 npm start          # ng serve -> http://localhost:4200/
 ```
 
-The API it talks to is configured in `src/environments/environment.ts`
-(`http://localhost:8001` in dev — the port that project's README and
+The API origin is `apiUrl` in `src/environments/environment.ts`
+(`http://localhost:8001` in dev — the port every Python project's README and
 `docker-compose.yml` use).
 
 ## Auth
@@ -39,7 +47,7 @@ Three things have to line up or a token will be rejected by the API:
 | Piece | Where it lives | Value |
 | --- | --- | --- |
 | Clerk instance | `environment.clerkPublishableKey` | `one-python-4861.clerk.accounts.dev` |
-| JWKS the API verifies against | `fastapi-cloudflare-d1/wrangler.jsonc` | same instance's `/.well-known/jwks.json` |
+| JWKS the API verifies against | each API's `wrangler.jsonc` / `.env` (`CLERK_JWKS_URL`) | same instance's `/.well-known/jwks.json` |
 | JWT template name = API audience | `environment.clerkJwtTemplate` / `CLERK_AUDIENCE` | `wiltech-dev-api` |
 
 The publishable key is base64 of the instance's frontend API domain, so it is
