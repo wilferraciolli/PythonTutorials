@@ -8,7 +8,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from auth import AuthenticatedUser, get_authenticated_user
-from errors import AppError, ForbiddenError, NotConfiguredError
+from errors import AppError, ForbiddenError, NotConfiguredError, UpstreamError
 from media_providers import MediaProviders
 from models import MediaRef, MediaType, PostCreate
 from social import MEMBER, OWNER, make_social
@@ -33,8 +33,9 @@ class FakeProviders:
         self.calls.append(request)
         path = request.url.path
         if request.url.host == "media.giphy.com":
-            assert request.method == "HEAD" and "api_key" not in request.url.params
-            return httpx.Response(200 if path == "/media/gif42/giphy.webp" else 404)
+            # a keyless GET of the small still (HEAD fails in Python Workers)
+            assert request.method == "GET" and "api_key" not in request.url.params
+            return httpx.Response(200 if path == "/media/gif42/200_s.gif" else 403)
         assert request.headers["Authorization"] == "Client-ID unsplash-key"
         if path == "/search/photos":
             return httpx.Response(200, json={"results": [PHOTO]})
@@ -84,6 +85,17 @@ async def test_giphy_and_youtube_need_no_key(fake):
     video = await providers.resolve(MediaRef(type=MediaType.YOUTUBE, id="dQw4w9WgXcQ"))
     assert (video.id, video.url) == ("dQw4w9WgXcQ", None)
     assert [c.url.host for c in fake.calls] == ["media.giphy.com"]  # YouTube is never called
+
+
+async def test_any_fetch_failure_is_a_502_not_a_crash():
+    # In a Worker a failed fetch may not be an httpx.HTTPError; it must still be a clean 502.
+    def explode(request):
+        raise RuntimeError("JsException: fetch failed")
+
+    providers = MediaProviders("key", transport=httpx.MockTransport(explode))
+    with pytest.raises(UpstreamError) as err:
+        await providers.resolve(MediaRef(type=MediaType.GIPHY, id="gif42"))
+    assert err.value.status_code == 502
 
 
 async def test_attaching_an_unsplash_photo_tracks_the_download(fake):

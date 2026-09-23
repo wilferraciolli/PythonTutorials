@@ -1,3 +1,4 @@
+import logging
 import re
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Protocol
@@ -7,9 +8,13 @@ import httpx
 from errors import AppError, NotConfiguredError, UpstreamError
 from models import MediaRef, MediaSearchResult, MediaType
 
+logger = logging.getLogger(__name__)
+
 UNSPLASH_API = "https://api.unsplash.com"
-# Every Giphy GIF is served at this address by id, no key needed.
+# Every Giphy GIF is served at these addresses by id, no key needed. The still
+# (a few KB) is what the server fetches to check the id exists; posts show the webp.
 GIPHY_MEDIA = "https://media.giphy.com/media/{id}/giphy.webp"
+GIPHY_STILL = "https://media.giphy.com/media/{id}/200_s.gif"
 # Unsplash's guidelines ask for these on every link back to them.
 UTM = "utm_source=wiltech&utm_medium=referral"
 YOUTUBE_ID = re.compile(r"^[A-Za-z0-9_-]{11}$")
@@ -42,7 +47,7 @@ class MediaProviders:
     - Unsplash: searched here (the access key stays on the server); attaching a
       photo looks it up for its URL and photographer.
     - Giphy: searched in the browser with Giphy's client key. Here the id is only
-      checked (a keyless HEAD on the GIF's own address) and the URL built from it.
+      checked (a keyless GET of the GIF's small still image) and the URL built from it.
     - YouTube: no call at all, the id is checked against the 11-character format.
     """
 
@@ -64,9 +69,9 @@ class MediaProviders:
             raise AppError(f"Not a valid {ref.type.value.title()} id")
 
         if ref.type == MediaType.GIPHY:
-            url = GIPHY_MEDIA.format(id=media_id)
-            await self._request("HEAD", url, {}, {}, "Giphy", missing="Unknown Giphy GIF")
-            return ResolvedMedia(MediaType.GIPHY, media_id, url)
+            # GET, not HEAD: the Python Workers HTTP layer fails on body-less HEAD replies.
+            await self._request("GET", GIPHY_STILL.format(id=media_id), {}, {}, "Giphy", missing="Unknown Giphy GIF")
+            return ResolvedMedia(MediaType.GIPHY, media_id, GIPHY_MEDIA.format(id=media_id))
 
         photo = await self._unsplash(f"/photos/{media_id}", {}, missing="Unknown Unsplash photo")
         # Unsplash API requirement: track a download whenever a photo is picked for
@@ -122,7 +127,10 @@ class MediaProviders:
         try:
             async with httpx.AsyncClient(timeout=10, transport=self.transport) as client:
                 response = await client.request(method, url, params=params, headers=headers)
-        except httpx.HTTPError as exc:
+        except Exception as exc:
+            # Not only httpx.HTTPError: in a Python Worker, fetch failures can surface
+            # as other exception types, and they must be a 502, never an unhandled 500.
+            logger.warning("%s request failed: %s %s: %r", provider, method, url.split("?")[0], exc)
             raise UpstreamError(f"{provider} didn't respond") from exc
         if response.status_code in (400, 403, 404) and missing:  # the id doesn't exist
             raise AppError(missing)

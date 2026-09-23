@@ -352,7 +352,7 @@ A post can carry **one** optional piece of media, from one of three sources:
   nothing is saved.
   - Unsplash: `GET /photos/{id}` with the server's key gives the URL, alt text and photographer.
   - Giphy: the server needs no key. It checks the id's format, builds
-    `https://media.giphy.com/media/{id}/giphy.webp` and confirms it exists with a `HEAD`.
+    `https://media.giphy.com/media/{id}/giphy.webp` and confirms the GIF exists by fetching its small still (`200_s.gif`). Not a `HEAD`: Python Workers fail on body-less replies.
   - YouTube: the id is checked against `^[A-Za-z0-9_-]{11}$`; YouTube is never called. The UI
     accepts a pasted `youtube.com/watch?v=`, `youtu.be/`, `/shorts/` or `/embed/` link and sends
     only the id.
@@ -383,7 +383,7 @@ sequenceDiagram
         API->>U: GET /photos/{id}
         API->>U: GET links.download_location (download tracking)
     else GIPHY
-        API->>G: HEAD media.giphy.com/media/{id}/giphy.webp
+        API->>G: GET media.giphy.com/media/{id}/200_s.gif (exists?)
     end
     API-->>UI: post with media {type, id, url, title, authorName, authorUrl}
 ```
