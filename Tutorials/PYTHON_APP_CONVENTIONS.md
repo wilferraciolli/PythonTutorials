@@ -29,6 +29,12 @@ The default target is a **portable local-development-first FastAPI app**:
    to move to another host.
 10. Make the local setup easy enough that a new developer can run the app in
     minutes.
+11. Every project runs locally on the **same port, `8001`** — never invent a
+    per-project port. The `showcase` Angular app's API base URL
+    (`environment.apiUrl` / `API_ORIGIN`) is a single fixed value, not one
+    per backend, so only one Python service is ever meant to be running
+    locally at a time. Switch which project is running (stop one, start the
+    next) instead of giving each project its own port.
 
 ## Recommended project structure
 

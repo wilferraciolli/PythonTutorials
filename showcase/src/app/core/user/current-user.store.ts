@@ -2,6 +2,7 @@ import { Injectable, computed, inject } from '@angular/core';
 import { ApiClientService, ILink } from '@wiliamferraciolli/ngx-api-client';
 
 import { AuthStore } from '../auth/auth.store';
+import { describeApiError } from '../api/api-error';
 import { environment } from '../../../environments/environment';
 
 export interface Me {
@@ -29,6 +30,14 @@ export class CurrentUserStore {
 
   readonly me = this.meResource.value;
   readonly loading = this.meResource.isLoading;
+
+  // Drives the app-wide banner in app.html — /me underpins the whole app
+  // (nav bar, myTodosLink below), so a signed-in visitor would otherwise
+  // just see a permanent "Loading…" with no indication the API is down.
+  readonly errorMessage = computed(() => {
+    const error = this.meResource.error();
+    return error ? describeApiError(error, "Couldn't load your account.") : null;
+  });
 
   readonly isAdmin = computed(() => this.me()?.roleIds?.includes('ADMIN') ?? false);
 

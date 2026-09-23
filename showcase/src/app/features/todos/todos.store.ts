@@ -8,6 +8,7 @@ import {
   MetadataService,
 } from '@wiliamferraciolli/ngx-api-client';
 
+import { describeApiError } from '../../core/api/api-error';
 import { CurrentUserStore } from '../../core/user/current-user.store';
 
 export type TodoState = 'NEW' | 'ACTIVE' | 'CLOSED';
@@ -61,6 +62,10 @@ export class TodosStore {
   readonly todos = computed(() => this.listResource.value()?._data['todos'] ?? []);
   readonly isLoading = computed(() => this.listResource.isLoading());
   readonly loadError = computed(() => this.listResource.error());
+  readonly loadErrorMessage = computed(() => {
+    const error = this.loadError();
+    return error ? describeApiError(error, "Couldn't load your todos.") : null;
+  });
 
   // Allowed state values straight from the API's own metadata (its
   // business rule: NEW stops being offered once a todo has left it) —

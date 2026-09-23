@@ -1,4 +1,3 @@
-import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormField, FormRoot, form, required, schema } from '@angular/forms/signals';
@@ -12,6 +11,7 @@ import { LinkService } from '@wiliamferraciolli/ngx-api-client';
 import { firstValueFrom } from 'rxjs';
 
 import { ConfirmDialog } from '../../../shared/confirm-dialog/confirm-dialog';
+import { describeApiError } from '../../../core/api/api-error';
 import { Tag } from '../../../core/api/tags-api';
 import { TagsStore } from '../tags.store';
 
@@ -128,9 +128,6 @@ export class TagsPage {
   }
 
   private extractErrorMessage(err: unknown): string {
-    if (err instanceof HttpErrorResponse) {
-      return err.error?.detail ?? 'Failed to create tag.';
-    }
-    return err instanceof Error ? err.message : 'Failed to create tag.';
+    return describeApiError(err, 'Failed to create tag.');
   }
 }

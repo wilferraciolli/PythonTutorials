@@ -17,8 +17,8 @@
     </select>
   </mat-form-field>
 
-  @if (store.loadError()) {
-    <p class="TodosList-error">Couldn't load your todos — check the API is reachable.</p>
+  @if (store.loadErrorMessage(); as errorMessage) {
+    <p class="TodosList-error">{{ errorMessage }}</p>
   } @else if (store.isLoading() && store.todos().length === 0) {
     <p class="TodosList-loading">Loading…</p>
   } @else if (store.todos().length === 0) {

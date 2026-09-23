@@ -16,6 +16,12 @@ D1 binding, or D1 HTTP.
 
 Verified working with Cloudflare D1 and portable local SQLite mode.
 
+> **Runs on port 8001 — same as every other Python tutorial project in this
+> repo** (`fastapi-cloudflare-ai`, `fastapi-template`, ...). The `showcase`
+> Angular app's API base URL is a single fixed value, not one per backend, so
+> only one of these services is ever meant to run locally at a time. Stop
+> whichever one is running before starting this one.
+
 ## Why a separate project?
 
 The project started as a Cloudflare D1 Worker app, but the database access is

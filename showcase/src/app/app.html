@@ -1,5 +1,8 @@
 <div class="AppShell">
   <app-nav-bar />
+  @if (auth.isSignedIn() && currentUser.errorMessage(); as apiError) {
+    <p class="AppShell-apiError">{{ apiError }}</p>
+  }
   <router-outlet />
   <footer class="AppShell-footer">v{{ version }}</footer>
 </div>

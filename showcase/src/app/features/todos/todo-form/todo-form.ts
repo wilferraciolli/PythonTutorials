@@ -1,4 +1,3 @@
-import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, effect, inject, input, signal } from '@angular/core';
 import { FormField, FormRoot, form, required, schema } from '@angular/forms/signals';
 import { MatButtonModule } from '@angular/material/button';
@@ -9,6 +8,7 @@ import { MatInputModule } from '@angular/material/input';
 import { Router, RouterLink } from '@angular/router';
 import { ApiClientService, LinkService } from '@wiliamferraciolli/ngx-api-client';
 
+import { describeApiError } from '../../../core/api/api-error';
 import { Tag } from '../../../core/api/tags-api';
 import { TodoPayload, TodosStore } from '../todos.store';
 
@@ -189,9 +189,6 @@ export class TodoForm {
   }
 
   private extractErrorMessage(err: unknown): string {
-    if (err instanceof HttpErrorResponse) {
-      return err.error?.detail ?? 'Failed to save.';
-    }
-    return err instanceof Error ? err.message : 'Failed to save.';
+    return describeApiError(err, 'Failed to save.');
   }
 }

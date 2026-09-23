@@ -19,6 +19,12 @@ its own small adapter, the same way `database.py` abstracts SQLite vs. D1.
 layer are wired up and working. The actual Workers AI call (`env.AI.run(...)`)
 has not been added yet — see "Roadmap" below.
 
+> **Runs on port 8001 — same as every other Python tutorial project in this
+> repo** (`fastapi-cloudflare-d1`, `fastapi-template`, ...). The `showcase`
+> Angular app's API base URL is a single fixed value, not one per backend, so
+> only one of these services is ever meant to run locally at a time. Stop
+> whichever one is running before starting this one.
+
 ## Why a separate project?
 
 Same reasoning as `fastapi-cloudflare-d1`: routers, services, DTOs, the
@@ -129,10 +135,10 @@ uv sync
 Copy-Item .env.example .env
 # Keep DATABASE_MODE=sqlite in .env
 
-uv run uvicorn main:app --app-dir src --host 127.0.0.1 --port 8002 --reload
+uv run uvicorn main:app --app-dir src --host 127.0.0.1 --port 8001 --reload
 ```
 
-Server runs at `http://127.0.0.1:8002`.
+Server runs at `http://127.0.0.1:8001`.
 
 ## Running locally with Docker + SQLite
 

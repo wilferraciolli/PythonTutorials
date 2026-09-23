@@ -27,6 +27,12 @@ Template only — not deployed anywhere. `wrangler.jsonc`'s `name` is
 `fastapi-template` and its `compatibility_date` is a placeholder; update both
 when you start a real project from this.
 
+> **Runs on port 8001 — same as every other Python tutorial project in this
+> repo** (`fastapi-cloudflare-d1`, `fastapi-cloudflare-ai`, ...). Keep it that
+> way: the `showcase` Angular app's API base URL is a single fixed value, not
+> one per backend, so only one of these services is ever meant to run
+> locally at a time. Don't give a new project its own port.
+
 ## Project Structure
 
 ```
@@ -68,8 +74,9 @@ fastapi-template/
 
 1. Copy this folder to `../your-new-project`.
 2. Rename `name` in `pyproject.toml` and `wrangler.jsonc`.
-3. Pick a free local port (this template defaults to `8000`) and update it in
-   `Dockerfile`, `docker-compose.yml`, and your run commands.
+3. Leave the port at `8001` — every project in this repo shares it on
+   purpose (see the note above). Only stop-one-start-the-next, never a new
+   port per project.
 4. Set `compatibility_date` in `wrangler.jsonc` to today, if deploying.
 5. Delete or repurpose the `users` resource: keep it if you want user
    accounts, otherwise use it as the reference implementation and add your
@@ -142,10 +149,10 @@ uv sync
 Copy-Item .env.example .env
 # Keep DATABASE_MODE=sqlite in .env
 
-uv run uvicorn main:app --app-dir src --host 127.0.0.1 --port 8000 --reload
+uv run uvicorn main:app --app-dir src --host 127.0.0.1 --port 8001 --reload
 ```
 
-Server runs at `http://127.0.0.1:8000`.
+Server runs at `http://127.0.0.1:8001`.
 
 ## Running locally with Docker + SQLite
 

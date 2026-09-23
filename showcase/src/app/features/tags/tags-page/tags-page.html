@@ -44,8 +44,8 @@
 
   <div class="TagsPage-divider"></div>
 
-  @if (store.loadError()) {
-    <p class="TagsPage-error">Couldn't load tags — check the API is reachable.</p>
+  @if (store.loadErrorMessage(); as errorMessage) {
+    <p class="TagsPage-error">{{ errorMessage }}</p>
   } @else if (store.isLoading() && store.tags().length === 0) {
     <p class="TagsPage-loading">Loading…</p>
   } @else if (store.tags().length === 0) {

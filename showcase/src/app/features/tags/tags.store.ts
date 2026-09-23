@@ -2,6 +2,7 @@ import { httpResource } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { ApiClientService, CollectionEnvelope } from '@wiliamferraciolli/ngx-api-client';
 
+import { describeApiError } from '../../core/api/api-error';
 import { Tag } from '../../core/api/tags-api';
 import { environment } from '../../../environments/environment';
 
@@ -28,6 +29,10 @@ export class TagsStore {
   readonly tags = computed(() => this.listResource.value()?._data['tags'] ?? []);
   readonly isLoading = computed(() => this.listResource.isLoading());
   readonly loadError = computed(() => this.listResource.error());
+  readonly loadErrorMessage = computed(() => {
+    const error = this.loadError();
+    return error ? describeApiError(error, "Couldn't load tags.") : null;
+  });
 
   // The collection's own `createTag` link — tags are the one resource that
   // still POSTs straight to a create link rather than going through a
