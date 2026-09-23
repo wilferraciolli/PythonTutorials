@@ -47,3 +47,52 @@ server holds that key) and Giphy straight from the browser using
 npm test
 npm run build
 ```
+
+## Running end-to-end tests
+
+E2E tests use [Playwright](https://playwright.dev/) plus Clerk's official
+[`@clerk/testing`](https://clerk.com/docs/guides/development/testing/playwright/overview)
+helper, since this app's sign-in is fully Clerk-hosted — a plain headless
+browser gets flagged by Clerk's bot detection before it ever reaches the
+app.
+
+**One-time setup:**
+
+```bash
+cp .env.example .env
+```
+
+Fill in (using the WILTECH Clerk instance at
+`https://lasting-colt-8233.clerk.accounts.dev`):
+
+- `CLERK_SECRET_KEY` — Clerk Dashboard → Configure → API Keys → "Secret
+  keys". Real secret — never commit `.env`.
+- `CLERK_PUBLISHABLE_KEY` — same dashboard page (also already hardcoded in
+  `src/environments/environment.ts`; `@clerk/testing` needs it as an env
+  var too).
+- `E2E_CLERK_USER_EMAIL` — an **existing** user in this Clerk instance,
+  with Email/Password auth enabled, using a `+clerk_test`-tagged address
+  (e.g. `e2e+clerk_test@wiltech.com` — Clerk suppresses real email delivery
+  to that pattern). Create this user once in the Clerk Dashboard if it
+  doesn't exist yet.
+
+**Run:**
+
+```bash
+npm run e2e        # headless
+npm run e2e:ui     # Playwright's interactive UI mode
+```
+
+This spins up both the API (`resource-management-api`, via `uv run
+uvicorn`) and the UI (`ng serve`) against a throwaway
+`../resource-management-api/e2e-local.db` (wiped at the start of each run —
+never your dev `local.db`), signs in as the configured test user via
+Clerk's server-side testing token (bypassing the hosted sign-in form
+entirely), promotes that user to admin in the fresh db (via
+`scripts/promote_admin.py`, needed for the admin-area tests), then runs
+the suite in `e2e/`.
+
+Requires `resource-management-api`'s own Python setup (`uv sync` — see
+that project's README) to already be done, since Playwright's `webServer`
+shells out to `uv run uvicorn` directly.
+
