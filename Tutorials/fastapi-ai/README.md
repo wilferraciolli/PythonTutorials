@@ -153,8 +153,11 @@ the non-secret values come from `wrangler.jsonc` `vars` and secrets from
 
 `CF_AI_MODEL` must be a model your Cloudflare plan can use — some
 newer/larger ones (e.g. `@cf/moonshotai/kimi-k2.7-code`) return `403` with
-"not available on the Workers Free plan". `@cf/meta/llama-3.1-8b-instruct`
-works on the free tier.
+"not available on the Workers Free plan", and old ones get retired with a `410`
+(`@cf/meta/llama-3.1-8b-instruct` was deprecated on 2026-05-30). The default,
+`@cf/meta/llama-4-scout-17b-16e-instruct`, is fast and handles the Ask tools well.
+Groq and Workers AI are both called with plain `httpx` (`src/llm.py`), not the
+`openai` package, which cost about 1.4 s of CPU to load on a cold Worker.
 
 ## Database modes
 

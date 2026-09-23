@@ -54,19 +54,19 @@ class AiHttpAdapter:
 
 
 class GroqAdapter:
-    """Groq's OpenAI-compatible Responses API adapter."""
+    """Groq through its OpenAI-compatible chat-completions API (plain httpx, see llm.py)."""
 
     def __init__(self, api_key: str, base_url: str) -> None:
-        from openai import AsyncOpenAI
-
-        self._client = AsyncOpenAI(api_key=api_key, base_url=base_url)
+        self._api_key = api_key
+        self._base_url = base_url
 
     async def run(self, model: str, inputs: dict[str, Any]) -> dict[str, Any]:
-        response = await self._client.responses.create(
-            model=model,
-            input=inputs["messages"],
+        from llm import chat_completion
+
+        message = await chat_completion(
+            self._api_key, self._base_url, {"model": model, "messages": inputs["messages"]}
         )
-        return {"response": response.output_text}
+        return {"response": message.get("content") or ""}
 
 
 def get_ai(request: Request, provider: ChatProvider = "cloudflare") -> AI:
