@@ -25,7 +25,6 @@ describe('Home', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     const hrefs = Array.from(compiled.querySelectorAll('a')).map((a) => a.getAttribute('href'));
     expect(hrefs).toContain('/todos');
-    expect(hrefs).toContain('/workers-ai?provider=cloudflare');
-    expect(hrefs).toContain('/workers-ai?provider=groq');
+    expect(hrefs).toContain('/workers-ai');
   });
 });

@@ -1,0 +1,50 @@
+<div class="ChatThread">
+  @if (loadErrorMessage(); as errorMessage) {
+    <p class="ChatThread-error">{{ errorMessage }}</p>
+  } @else if (isLoading() && !chat()) {
+    <p class="ChatThread-loading">Loading…</p>
+  } @else if (chat(); as chat) {
+    <h1 class="ChatThread-title">{{ chat.title }}</h1>
+
+    <div class="ChatThread-messages">
+      @for (message of messages(); track message.id) {
+        <div class="ChatThread-message" [class.ChatThread-message--assistant]="message.role === 'assistant'">
+          @if (message.role === 'assistant') {
+            <div
+              class="ChatThread-messageText ChatThread-messageText--markdown"
+              [innerHTML]="renderMarkdown(message.content)"
+            ></div>
+          } @else {
+            <p class="ChatThread-messageText">{{ message.content }}</p>
+          }
+        </div>
+      } @empty {
+        <p class="ChatThread-empty">Say something to start the conversation.</p>
+      }
+      @if (sending()) {
+        <div class="ChatThread-message ChatThread-message--assistant ChatThread-message--pending">
+          <p class="ChatThread-messageText">Thinking…</p>
+        </div>
+      }
+    </div>
+
+    @if (sendError()) {
+      <p class="ChatThread-error">{{ sendError() }}</p>
+    }
+
+    <form class="ChatThread-composer" (submit)="$event.preventDefault(); send()">
+      <mat-form-field class="ChatThread-input" appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Message</mat-label>
+        <input
+          matInput
+          [value]="draft()"
+          (input)="draft.set($any($event.target).value)"
+          [disabled]="sending()"
+        />
+      </mat-form-field>
+      <button matButton="filled" type="submit" [disabled]="sending() || !draft().trim()">
+        <mat-icon aria-hidden="true">send</mat-icon>
+      </button>
+    </form>
+  }
+</div>

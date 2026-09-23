@@ -1,0 +1,28 @@
+// One column, full height, so the home page's card can sit centred in
+// whatever space is left over the footer.
+.AppShell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+// Discrete build-version marker — useful for confirming which deploy is
+// live without giving an otherwise chrome-less app a header just for it.
+// Persists across every route while the API is unreachable — a page-level
+// loadError message only helps if you're already on the page that hit it.
+.AppShell-apiError {
+  margin: 0;
+  padding: 10px var(--app-gutter);
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-error-container);
+  background: var(--mat-sys-error-container);
+  text-align: center;
+}
+
+.AppShell-footer {
+  margin-top: auto;
+  padding: 12px var(--app-gutter);
+  font-size: 0.75rem;
+  color: var(--mat-sys-outline);
+  text-align: right;
+}

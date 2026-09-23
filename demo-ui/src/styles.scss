@@ -1,0 +1,59 @@
+// Angular Material theming. `mat.theme()` defines the --mat-sys-* CSS
+// variables Material components read; components in this app reference
+// those same tokens (see home.scss) rather than hardcoding hex values, so
+// changing the palette here restyles the whole app.
+@use '@angular/material' as mat;
+
+html {
+  height: 100%;
+  @include mat.theme(
+    (
+      color: (
+        primary: mat.$azure-palette,
+        tertiary: mat.$blue-palette,
+      ),
+      typography: Roboto,
+      density: 0,
+    )
+  );
+}
+
+:root {
+  // Shared page-layout constants — see `.App-page` below and
+  // docs/frontend-conventions.md's "Layout: mobile-first, max width,
+  // centered" section. Content never stretches edge-to-edge on a wide
+  // monitor; the footer and page content line up on the same gutter
+  // instead of each picking its own number.
+  --app-page-max-width: 900px;
+  --app-gutter: 24px;
+}
+
+body {
+  color-scheme: light;
+  margin: 0;
+  height: 100%;
+  font-family: Roboto, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color: var(--mat-sys-on-surface);
+  background: var(--mat-sys-surface);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+// Shared page-layout helpers. Apply `.App-page` to a route's top-level
+// container alongside its own component class (`<div class="TodosList
+// App-page">`) instead of that component defining its own
+// `max-width`/`margin: 0 auto`/`padding` — one shared constant beats a
+// different ad hoc pixel value per page.
+.App-page {
+  max-width: var(--app-page-max-width);
+  margin: 0 auto;
+  padding: var(--app-gutter);
+}
+
+.App-spacer {
+  flex: 1 1 auto;
+}

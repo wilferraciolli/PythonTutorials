@@ -1,0 +1,220 @@
+<div class="GroupPage App-page">
+  <a class="GroupPage-back" routerLink="/groups">← All groups</a>
+
+  @if (groupError(); as message) {
+    <p class="GroupPage-error" role="alert">{{ message }}</p>
+  } @else if (group(); as group) {
+    <header class="GroupPage-header">
+      <div>
+        <h1 class="GroupPage-title">
+          {{ group.name }}
+          @if (group.visibility === 'PRIVATE') {
+            <mat-icon class="GroupPage-lock" aria-label="Private" title="Private">lock</mat-icon>
+          }
+        </h1>
+        @if (group.description) {
+          <p class="GroupPage-description">{{ group.description }}</p>
+        }
+        <p class="GroupPage-meta">
+          {{ group.visibility === 'PRIVATE' ? 'Private' : 'Public' }} ·
+          {{ group.memberCount }} members · {{ group.followerCount }} followers
+          @if (!group.ownerId) {
+            · no owner
+          }
+          @if (group.isOwner) {
+            · you own this group
+          }
+        </p>
+      </div>
+
+      <div class="GroupPage-actions">
+        @if (group.links['join']) {
+          <button matButton="filled" type="button" [disabled]="busy()" (click)="run('join')">
+            Join
+          </button>
+        }
+        @if (group.links['follow']) {
+          <button matButton="outlined" type="button" [disabled]="busy()" (click)="run('follow')">
+            <mat-icon aria-hidden="true">notifications</mat-icon>
+            Follow
+          </button>
+        }
+        @if (group.links['unfollow']) {
+          <button matButton type="button" [disabled]="busy()" (click)="run('unfollow')">
+            <mat-icon aria-hidden="true">notifications_off</mat-icon>
+            Unfollow
+          </button>
+        }
+        @if (group.links['leave']) {
+          <button matButton type="button" [disabled]="busy()" (click)="run('leave')">Leave</button>
+        }
+        @if (group.links['update'] && !editing()) {
+          <button matButton type="button" [disabled]="busy()" (click)="startEdit(group)">
+            <mat-icon aria-hidden="true">edit</mat-icon>
+            Edit
+          </button>
+        }
+        @if (group.links['delete']) {
+          <button
+            matButton
+            type="button"
+            class="GroupPage-danger"
+            [disabled]="busy()"
+            (click)="deleteGroup()"
+          >
+            Delete group
+          </button>
+        }
+      </div>
+    </header>
+
+    @if (actionError(); as message) {
+      <p class="GroupPage-error" role="alert">{{ message }}</p>
+    }
+
+    @if (editing()) {
+      <mat-card appearance="outlined">
+        <mat-card-content>
+          <form
+            class="GroupPage-composerFields"
+            (submit)="$event.preventDefault(); saveEdit(group)"
+          >
+            <h2 class="GroupPage-sectionTitle">Edit group</h2>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>Name</mat-label>
+              <input
+                matInput
+                required
+                maxlength="80"
+                [value]="editName()"
+                (input)="editName.set($any($event.target).value)"
+              />
+            </mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>Description</mat-label>
+              <textarea
+                matInput
+                rows="2"
+                maxlength="500"
+                [value]="editDescription()"
+                (input)="editDescription.set($any($event.target).value)"
+              ></textarea>
+            </mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>Who can see it</mat-label>
+              <select matNativeControl (change)="setEditVisibility($any($event.target).value)">
+                <option value="PUBLIC" [selected]="editVisibility() === 'PUBLIC'">
+                  Public: anyone can see and join
+                </option>
+                <option value="PRIVATE" [selected]="editVisibility() === 'PRIVATE'">
+                  Private: members only
+                </option>
+              </select>
+            </mat-form-field>
+            @if (editVisibility() === 'PRIVATE' && group.visibility === 'PUBLIC') {
+              <p class="GroupPage-muted">
+                Making it private hides it from everyone who isn't a member, and followers who
+                aren't members stop following it.
+              </p>
+            }
+            <div class="GroupPage-formActions">
+              <button matButton type="button" (click)="editing.set(false)">Cancel</button>
+              <button matButton="filled" type="submit" [disabled]="busy() || !editName().trim()">
+                Save
+              </button>
+            </div>
+          </form>
+        </mat-card-content>
+      </mat-card>
+    }
+
+    <mat-button-toggle-group
+      class="GroupPage-tabs"
+      aria-label="Group sections"
+      [value]="section()"
+      (change)="section.set($event.value)"
+    >
+      <mat-button-toggle value="posts">Posts</mat-button-toggle>
+      <mat-button-toggle value="members">Members ({{ group.memberCount }})</mat-button-toggle>
+      <mat-button-toggle value="followers">Followers ({{ group.followerCount }})</mat-button-toggle>
+    </mat-button-toggle-group>
+
+    @if (section() === 'members') {
+      <app-group-members [group]="group" (changed)="reloadGroup()" />
+    } @else if (section() === 'followers') {
+      <app-group-followers [group]="group" />
+    } @else {
+      @if (group.links['createPost']) {
+        <mat-card class="GroupPage-composer" appearance="outlined">
+          <mat-card-content>
+            <form class="GroupPage-composerFields" (submit)="$event.preventDefault(); post()">
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>Title</mat-label>
+                <input
+                  matInput
+                  required
+                  maxlength="200"
+                  [value]="title()"
+                  (input)="title.set($any($event.target).value)"
+                />
+              </mat-form-field>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>What's on your mind?</mat-label>
+                <textarea
+                  matInput
+                  required
+                  rows="3"
+                  maxlength="10000"
+                  [value]="body()"
+                  (input)="body.set($any($event.target).value)"
+                ></textarea>
+              </mat-form-field>
+              @if (media(); as picked) {
+                <div class="GroupPage-mediaChoice">
+                  <img [src]="picked.previewUrl" alt="" />
+                  <span class="GroupPage-muted">{{ picked.label }}</span>
+                  <button matButton type="button" (click)="media.set(null)">
+                    <mat-icon aria-hidden="true">close</mat-icon>
+                    Remove
+                  </button>
+                </div>
+              } @else if (pickingMedia()) {
+                <app-media-picker
+                  (picked)="media.set($event); pickingMedia.set(false)"
+                  (cancelled)="pickingMedia.set(false)"
+                />
+              }
+              <div class="GroupPage-formActions">
+                @if (!media() && !pickingMedia()) {
+                  <button matButton type="button" (click)="pickingMedia.set(true)">
+                    <mat-icon aria-hidden="true">add_photo_alternate</mat-icon>
+                    Add media
+                  </button>
+                }
+                <button
+                  matButton="filled"
+                  type="submit"
+                  [disabled]="busy() || !title().trim() || !body().trim()"
+                >
+                  Post
+                </button>
+              </div>
+            </form>
+          </mat-card-content>
+        </mat-card>
+      } @else if (!group.isMember) {
+        <p class="GroupPage-muted">Join the group to post, comment and like.</p>
+      }
+
+      <section class="GroupPage-posts" aria-label="Posts">
+        @for (post of posts(); track post.id) {
+          <app-post-card [post]="post" [showGroup]="false" (changed)="reloadPosts()" />
+        } @empty {
+          <p class="GroupPage-muted">{{ postsLoading() ? 'Loading…' : 'No posts yet.' }}</p>
+        }
+      </section>
+    }
+  } @else {
+    <p class="GroupPage-muted">Loading…</p>
+  }
+</div>

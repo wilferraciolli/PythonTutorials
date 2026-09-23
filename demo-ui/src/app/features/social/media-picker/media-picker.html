@@ -1,0 +1,73 @@
+<div class="MediaPicker">
+  <div class="MediaPicker-header">
+    <mat-button-toggle-group
+      aria-label="Media type"
+      [value]="activeTab()"
+      (change)="selectTab($event.value)"
+    >
+      @for (type of tabs(); track type) {
+        <mat-button-toggle [value]="type">{{ tabLabel(type) }}</mat-button-toggle>
+      }
+    </mat-button-toggle-group>
+    <button matIconButton type="button" aria-label="Close media picker" (click)="cancelled.emit()">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  @if (activeTab() === 'YOUTUBE') {
+    <form class="MediaPicker-search" (submit)="$event.preventDefault(); pickVideo()">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>YouTube link or video id</mat-label>
+        <input
+          matInput
+          placeholder="https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+          [value]="draft()"
+          (input)="draft.set($any($event.target).value)"
+        />
+      </mat-form-field>
+      <button matButton="filled" type="submit" [disabled]="!videoId()">Use video</button>
+    </form>
+    @if (videoId(); as id) {
+      <img
+        class="MediaPicker-videoPreview"
+        [src]="'https://i.ytimg.com/vi/' + id + '/mqdefault.jpg'"
+        alt="Video thumbnail"
+      />
+    } @else if (draft().trim()) {
+      <p class="MediaPicker-muted">That doesn't look like a YouTube link or 11-character id.</p>
+    }
+  } @else {
+    <form class="MediaPicker-search" (submit)="$event.preventDefault(); search()">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Search {{ activeTab() === 'GIPHY' ? 'GIFs' : 'Unsplash photos' }}</mat-label>
+        <mat-icon matPrefix aria-hidden="true">search</mat-icon>
+        <input matInput [value]="draft()" (input)="draft.set($any($event.target).value)" />
+      </mat-form-field>
+      <button matButton="outlined" type="submit" [disabled]="!draft().trim()">Search</button>
+    </form>
+
+    @if (searchError(); as message) {
+      <p class="MediaPicker-error" role="alert">{{ message }}</p>
+    } @else if (searched()) {
+      <ul class="MediaPicker-grid" aria-label="Results">
+        @for (result of results(); track result.id) {
+          <li>
+            <button
+              class="MediaPicker-result"
+              type="button"
+              [title]="result.title ?? ''"
+              (click)="pick(result)"
+            >
+              <img [src]="result.previewUrl" [alt]="result.title ?? 'Result'" loading="lazy" />
+            </button>
+          </li>
+        } @empty {
+          <li class="MediaPicker-muted">{{ searching() ? 'Searching…' : 'Nothing found.' }}</li>
+        }
+      </ul>
+      @if (activeTab() === 'GIPHY') {
+        <p class="MediaPicker-muted">Powered by GIPHY</p>
+      }
+    }
+  }
+</div>

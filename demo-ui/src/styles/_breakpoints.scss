@@ -1,0 +1,36 @@
+// Shared breakpoint scale. `sm` is the phone cutoff most components stack
+// at; `md` and up is tablet/desktop. Ported from insurly-ui's
+// src/styles/_breakpoints.scss — see docs/frontend-conventions.md.
+@use 'sass:map';
+@use 'sass:meta';
+
+$breakpoints: (
+  sm: 560px,
+  md: 768px,
+  lg: 1024px,
+);
+
+// Accepts a key of $breakpoints or a raw length.
+@function -width($bp) {
+  @if meta.type-of($bp) == 'number' {
+    @return $bp;
+  }
+  @if not map.has-key($breakpoints, $bp) {
+    @error 'Unknown breakpoint `#{$bp}`. Expected one of #{map.keys($breakpoints)} or a length.';
+  }
+  @return map.get($breakpoints, $bp);
+}
+
+// Viewports at least as wide as $bp.
+@mixin up($bp) {
+  @media (min-width: -width($bp)) {
+    @content;
+  }
+}
+
+// Viewports narrower than $bp.
+@mixin down($bp) {
+  @media (max-width: -width($bp) - 1px) {
+    @content;
+  }
+}

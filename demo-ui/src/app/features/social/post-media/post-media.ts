@@ -1,0 +1,45 @@
+import { Component, computed, inject, input, signal } from '@angular/core';
+import { MatIconModule } from '@angular/material/icon';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+
+import { PostMedia as Media, YOUTUBE_ID } from '../social.models';
+
+// Shows a post's media: an Unsplash photo (with the photographer credit
+// Unsplash asks for), a Giphy GIF, or a YouTube video. With `deferVideo`
+// (lists) a video starts as its thumbnail and only loads the player on click,
+// so a timeline doesn't load dozens of iframes.
+@Component({
+  selector: 'app-post-media',
+  imports: [MatIconModule],
+  templateUrl: './post-media.html',
+  styleUrl: './post-media.scss',
+})
+export class PostMedia {
+  readonly media = input.required<Media>();
+  readonly deferVideo = input(false);
+
+  private readonly sanitizer = inject(DomSanitizer);
+  protected readonly playing = signal(false);
+
+  // Only ever built from an id that passed the 11-character check, so it's
+  // safe to hand the iframe (Angular requires the explicit trust call).
+  protected readonly youtubeId = computed(() => {
+    const media = this.media();
+    return media.type === 'YOUTUBE' && YOUTUBE_ID.test(media.id) ? media.id : null;
+  });
+  protected readonly embedUrl = computed<SafeResourceUrl | null>(() => {
+    const id = this.youtubeId();
+    return id
+      ? this.sanitizer.bypassSecurityTrustResourceUrl(
+          `https://www.youtube-nocookie.com/embed/${id}${this.deferVideo() ? '?autoplay=1' : ''}`,
+        )
+      : null;
+  });
+  protected readonly thumbnailUrl = computed(() => {
+    const id = this.youtubeId();
+    return id ? `https://i.ytimg.com/vi/${id}/hqdefault.jpg` : null;
+  });
+  protected readonly showPlayer = computed(() => !this.deferVideo() || this.playing());
+
+  protected readonly unsplashUrl = 'https://unsplash.com/?utm_source=wiltech&utm_medium=referral';
+}

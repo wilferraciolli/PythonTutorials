@@ -1,0 +1,64 @@
+// Centred hero — the cards are the whole page, so they get the leftover
+// vertical space rather than sitting under a header that doesn't exist
+// (the app-wide nav bar already covers that).
+.Home {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  padding: var(--app-gutter);
+
+  // Cards stay side by side above ~34rem and stack below it.
+  &-grid {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1.5rem;
+    width: 100%;
+    max-width: 62rem;
+  }
+
+  &-nav-card {
+    flex: 1 1 16rem;
+  }
+
+  &-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    padding-block: 2rem;
+    text-align: center;
+  }
+
+  &-content-nav {
+    padding-block: 1.5rem;
+  }
+
+  &-lead {
+    margin: 0;
+    max-width: 44ch;
+    font: var(--mat-sys-body-medium);
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  &-card-error {
+    margin: 0;
+    font: var(--mat-sys-label-large);
+    color: var(--mat-sys-error);
+  }
+
+  &-nav-icon {
+    color: var(--mat-sys-primary);
+    font-size: 2rem;
+    width: 2rem;
+    height: 2rem;
+  }
+
+  &-nav-title {
+    margin: 0;
+    font: var(--mat-sys-title-medium);
+  }
+}

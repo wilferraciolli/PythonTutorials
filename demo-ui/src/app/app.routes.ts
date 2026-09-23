@@ -29,8 +29,28 @@ export const routes: Routes = [
   {
     path: 'workers-ai',
     canActivate: [authGuard],
-    loadChildren: () =>
-      import('./features/workers-ai/workers-ai.routes').then((m) => m.workersAiRoutes),
+    loadChildren: () => import('./features/workers-ai/workers-ai.routes').then((m) => m.workersAiRoutes),
+  },
+  {
+    path: 'timeline',
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/social/timeline-page/timeline-page').then((m) => m.TimelinePage),
+  },
+  {
+    path: 'groups',
+    canActivate: [authGuard],
+    loadChildren: () => import('./features/social/social.routes').then((m) => m.groupsRoutes),
+  },
+  {
+    // Only admins get the profile's `admin` link; the API enforces it too.
+    path: 'admin',
+    canActivate: [authGuard],
+    loadChildren: () => import('./features/admin/admin.routes').then((m) => m.adminRoutes),
+  },
+  {
+    path: 'ask',
+    canActivate: [authGuard],
+    loadChildren: () => import('./features/ask/ask.routes').then((m) => m.askRoutes),
   },
   { path: '**', redirectTo: '' },
 ];

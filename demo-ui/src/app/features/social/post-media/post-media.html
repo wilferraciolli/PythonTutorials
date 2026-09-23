@@ -1,0 +1,66 @@
+@let item = media();
+<figure class="PostMedia">
+  @switch (item.type) {
+    @case ('YOUTUBE') {
+      @if (showPlayer() && embedUrl(); as src) {
+        <div class="PostMedia-video">
+          <iframe
+            [src]="src"
+            title="YouTube video"
+            loading="lazy"
+            referrerpolicy="strict-origin-when-cross-origin"
+            allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
+            allowfullscreen
+          ></iframe>
+        </div>
+      } @else if (thumbnailUrl(); as thumb) {
+        <button
+          class="PostMedia-poster"
+          type="button"
+          aria-label="Play video"
+          (click)="playing.set(true)"
+        >
+          <img [src]="thumb" alt="" loading="lazy" />
+          <mat-icon class="PostMedia-play" aria-hidden="true">play_circle</mat-icon>
+        </button>
+      }
+    }
+    @default {
+      @if (item.url) {
+        <img
+          class="PostMedia-image"
+          [src]="item.url"
+          [alt]="item.title ?? (item.type === 'GIPHY' ? 'GIF' : 'Photo')"
+          loading="lazy"
+        />
+      }
+    }
+  }
+
+  <!-- Unsplash requires this visible credit: photographer linked to their profile, and Unsplash, both with UTM params. -->
+  @if (item.type === 'UNSPLASH') {
+    <figcaption class="PostMedia-credit">
+      Photo by
+      @if (item.authorUrl) {
+        <a [href]="item.authorUrl" target="_blank" rel="noopener">{{
+          item.authorName ?? 'unknown'
+        }}</a>
+      } @else {
+        {{ item.authorName ?? 'unknown' }}
+      }
+      on <a [href]="unsplashUrl" target="_blank" rel="noopener">Unsplash</a>
+    </figcaption>
+  } @else if (item.type === 'GIPHY') {
+    <figcaption class="PostMedia-credit">
+      via GIPHY
+      @if (item.authorName) {
+        ·
+        @if (item.authorUrl) {
+          <a [href]="item.authorUrl" target="_blank" rel="noopener">{{ item.authorName }}</a>
+        } @else {
+          {{ item.authorName }}
+        }
+      }
+    </figcaption>
+  }
+</figure>

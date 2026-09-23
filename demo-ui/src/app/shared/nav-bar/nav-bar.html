@@ -1,0 +1,10 @@
+<mat-toolbar class="NavBar">
+  <a class="NavBar-brand" routerLink="/">Showcase</a>
+  <span class="NavBar-spacer"></span>
+
+  @if (auth.isSignedIn()) {
+    <app-profile-menu />
+  } @else {
+    <button matButton="filled" type="button" (click)="signIn()">Sign in</button>
+  }
+</mat-toolbar>

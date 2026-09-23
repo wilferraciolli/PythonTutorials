@@ -1,0 +1,99 @@
+.GroupPage {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 48rem;
+
+  &-back {
+    color: var(--mat-sys-primary);
+    text-decoration: none;
+    font: var(--mat-sys-label-large);
+  }
+
+  &-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  &-title {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    margin: 0;
+    font: var(--mat-sys-headline-small);
+  }
+
+  &-lock {
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  &-description {
+    margin: 0.25rem 0 0;
+  }
+
+  &-meta,
+  &-muted {
+    margin: 0.25rem 0 0;
+    font: var(--mat-sys-body-small);
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  &-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  &-danger {
+    color: var(--mat-sys-error);
+  }
+
+  &-composerFields {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  &-tabs {
+    align-self: flex-start;
+  }
+
+  &-sectionTitle {
+    margin: 0;
+    font: var(--mat-sys-title-medium);
+  }
+
+  &-formActions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+  }
+
+  &-mediaChoice {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+
+    img {
+      width: 6rem;
+      height: 4.5rem;
+      object-fit: cover;
+      border-radius: var(--mat-sys-corner-small, 8px);
+    }
+  }
+
+  &-posts {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  &-error {
+    margin: 0;
+    color: var(--mat-sys-error);
+  }
+}

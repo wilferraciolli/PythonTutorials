@@ -1,0 +1,30 @@
+<div class="ProfilePage">
+  <mat-card appearance="outlined">
+    <mat-card-header>
+      <mat-card-title>Profile</mat-card-title>
+    </mat-card-header>
+
+    @if (currentUser.me(); as me) {
+      <mat-card-content class="ProfilePage-content">
+        <div class="ProfilePage-row">
+          <span class="ProfilePage-label">Name</span>
+          <span>{{ me.name }}</span>
+        </div>
+        <div class="ProfilePage-row">
+          <span class="ProfilePage-label">Email</span>
+          <span>{{ me.email ?? '—' }}</span>
+        </div>
+        <div class="ProfilePage-row">
+          <span class="ProfilePage-label">Roles</span>
+          <mat-chip-set>
+            @for (role of me.roleIds; track role) {
+              <mat-chip>{{ role }}</mat-chip>
+            }
+          </mat-chip-set>
+        </div>
+      </mat-card-content>
+    } @else {
+      <mat-card-content>Loading…</mat-card-content>
+    }
+  </mat-card>
+</div>

@@ -1,0 +1,94 @@
+<div class="TodoForm App-page">
+  <h1 class="TodoForm-title">{{ isEditMode() ? 'Edit todo' : 'New todo' }}</h1>
+
+  @if (notFound()) {
+    <p class="TodoForm-error">Couldn't find that todo.</p>
+  } @else if (isEditMode() && !existing()) {
+    <p class="TodoForm-loading">Loading…</p>
+  } @else {
+    <form [formRoot]="todoForm" class="TodoForm-form">
+      <mat-form-field appearance="outline">
+        <mat-label>Title</mat-label>
+        <input matInput [formField]="todoForm.title" />
+        @if (todoForm.title().touched() && todoForm.title().invalid()) {
+          <mat-error>Title is required</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Description</mat-label>
+        <textarea matInput rows="3" [formField]="todoForm.description"></textarea>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Due</mat-label>
+        <input matInput type="datetime-local" [formField]="todoForm.complete_by" />
+        @if (todoForm.complete_by().touched() && todoForm.complete_by().invalid()) {
+          <mat-error>A due date is required</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>State</mat-label>
+        <select matNativeControl [formField]="todoForm.state">
+          @for (option of store.stateOptions(); track option.value) {
+            <option [value]="option.value">{{ option.viewValue }}</option>
+          }
+        </select>
+      </mat-form-field>
+
+      @if (saveError()) {
+        <p class="TodoForm-error">{{ saveError() }}</p>
+      }
+
+      <div class="TodoForm-actions">
+        <a matButton routerLink="/todos">Cancel</a>
+        <button matButton="filled" type="submit" [disabled]="saving()">
+          {{ saving() ? 'Saving…' : 'Save' }}
+        </button>
+      </div>
+    </form>
+
+    @if (isEditMode() && existing(); as todo) {
+      <div class="TodoForm-tags">
+        <h2 class="TodoForm-tags-title">Tags</h2>
+
+        @if (tagsLoading()) {
+          <p class="TodoForm-loading">Loading tags…</p>
+        } @else {
+          <mat-chip-set>
+            @for (tag of tags(); track tag.id) {
+              <mat-chip (removed)="removeTag(tag)">
+                {{ tag.tag }}
+                @if (links.hasLink(tag.links['delete'])) {
+                  <button matChipRemove aria-label="Remove tag">
+                    <mat-icon aria-hidden="true">cancel</mat-icon>
+                  </button>
+                }
+              </mat-chip>
+            }
+          </mat-chip-set>
+        }
+
+        @if (links.hasLink(todo.links['addTag'])) {
+          <div class="TodoForm-tags-add">
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>Add a tag</mat-label>
+              <input
+                matInput
+                [value]="newTag()"
+                (input)="newTag.set($any($event.target).value)"
+                (keyup.enter)="addTag()"
+              />
+            </mat-form-field>
+            <button matButton type="button" (click)="addTag()">Add</button>
+          </div>
+        }
+
+        @if (tagError()) {
+          <p class="TodoForm-error">{{ tagError() }}</p>
+        }
+      </div>
+    }
+  }
+</div>
