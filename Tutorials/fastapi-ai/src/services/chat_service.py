@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timezone
 from typing import Any, Callable, Dict, List, Optional
 from uuid import uuid4
@@ -6,6 +7,9 @@ from ai import AI
 from api_response import API_PREFIX, envelope
 from models import Chat, ChatMessage, ChatProvider, Link
 from repositories.chat_repository import ChatRepository
+from services.search_service import SearchService
+
+logger = logging.getLogger(__name__)
 
 SYSTEM_PROMPT = "You are a friendly, helpful assistant."
 
@@ -37,10 +41,12 @@ class ChatService:
         chat_repository: ChatRepository,
         ai_factory: Callable[[ChatProvider], AI],
         models: Dict[ChatProvider, str],
+        search_service: Optional["SearchService"] = None,
     ) -> None:
         self.chat_repository = chat_repository
         self.ai_factory = ai_factory
         self.models = models
+        self.search_service = search_service
 
     async def list_chats(self, user_id: str) -> List[Dict[str, Any]]:
         return await self.chat_repository.list_chats_for_user(user_id, list(self.models))
@@ -74,7 +80,7 @@ class ChatService:
         history = await self.chat_repository.list_messages(chat_id)
         sent_at = datetime.now(timezone.utc).isoformat()
 
-        await self.chat_repository.add_message(
+        user_message = await self.chat_repository.add_message(
             message_id=str(uuid4()),
             chat_id=chat_id,
             role="user",
@@ -91,13 +97,14 @@ class ChatService:
         reply = self._extract_reply(result)
 
         replied_at = datetime.now(timezone.utc).isoformat()
-        await self.chat_repository.add_message(
+        assistant_message = await self.chat_repository.add_message(
             message_id=str(uuid4()),
             chat_id=chat_id,
             role="assistant",
             content=reply,
             created_date=replied_at,
         )
+        await self._index_messages(user_id, [user_message, assistant_message])
 
         if chat["title"] == DEFAULT_TITLE:
             await self.chat_repository.update_title(chat_id, _derive_title(content))
@@ -110,6 +117,9 @@ class ChatService:
         chat = await self._get_owned_chat(chat_id, user_id)
         if not chat:
             return False
+
+        if self.search_service:
+            await self.search_service.remove_chat(chat_id)
 
         return await self.chat_repository.delete_chat(chat_id)
 
@@ -125,6 +135,17 @@ class ChatService:
         await self.chat_repository.update_title(chat_id, normalized_title)
         await self.chat_repository.touch(chat_id, datetime.now(timezone.utc).isoformat())
         return await self.get_chat_with_messages(chat_id, user_id)
+
+    async def _index_messages(self, user_id: str, messages: List[Dict[str, Any]]) -> None:
+        # Best effort: search indexing must never break sending a message.
+        # Anything missed here is picked up by the search reindex endpoint.
+        if not self.search_service:
+            return
+
+        try:
+            await self.search_service.index_messages(user_id, messages)
+        except Exception:
+            logger.exception("failed to index messages for search")
 
     async def _get_owned_chat(self, chat_id: str, user_id: str) -> Optional[Dict[str, Any]]:
         # Chats aren't nested under /users/{id}/... in the URL (unlike

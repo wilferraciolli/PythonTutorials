@@ -35,3 +35,16 @@ CREATE TABLE IF NOT EXISTS chat_messages (
 
 CREATE INDEX IF NOT EXISTS idx_chat_messages_chat_id ON chat_messages(chat_id);
 CREATE INDEX IF NOT EXISTS idx_chats_user_id ON chats(user_id);
+
+CREATE TABLE IF NOT EXISTS message_embeddings (
+    message_id TEXT PRIMARY KEY,
+    chat_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    model TEXT NOT NULL,
+    embedding TEXT NOT NULL,
+    created_date TEXT NOT NULL,
+    FOREIGN KEY (message_id) REFERENCES chat_messages(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_message_embeddings_user_id ON message_embeddings(user_id);
+CREATE INDEX IF NOT EXISTS idx_message_embeddings_chat_id ON message_embeddings(chat_id);

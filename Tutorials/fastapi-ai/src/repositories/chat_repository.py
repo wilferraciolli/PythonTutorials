@@ -88,3 +88,37 @@ class ChatRepository:
             "SELECT * FROM chat_messages WHERE chat_id = ? ORDER BY created_date ASC",
             (chat_id,),
         )
+
+    async def list_messages_for_user(self, user_id: str, providers: List[str]) -> List[Dict[str, Any]]:
+        """Every message in the user's chats (for the providers this project owns), with its chat title."""
+        placeholders = ", ".join("?" for _ in providers)
+        return await self.db.fetch_all(
+            "SELECT m.*, c.title AS chat_title, c.user_id AS user_id FROM chat_messages m "
+            "JOIN chats c ON c.id = m.chat_id "
+            f"WHERE c.user_id = ? AND c.provider IN ({placeholders}) ORDER BY m.created_date ASC",
+            (user_id, *providers),
+        )
+
+    async def get_messages_for_user(self, user_id: str, message_ids: List[str]) -> List[Dict[str, Any]]:
+        if not message_ids:
+            return []
+
+        placeholders = ", ".join("?" for _ in message_ids)
+        return await self.db.fetch_all(
+            "SELECT m.*, c.title AS chat_title, c.user_id AS user_id FROM chat_messages m "
+            "JOIN chats c ON c.id = m.chat_id "
+            f"WHERE c.user_id = ? AND m.id IN ({placeholders})",
+            (user_id, *message_ids),
+        )
+
+    async def search_messages_by_keyword(
+        self, user_id: str, term: str, providers: List[str], limit: int
+    ) -> List[Dict[str, Any]]:
+        placeholders = ", ".join("?" for _ in providers)
+        return await self.db.fetch_all(
+            "SELECT m.*, c.title AS chat_title, c.user_id AS user_id FROM chat_messages m "
+            "JOIN chats c ON c.id = m.chat_id "
+            f"WHERE c.user_id = ? AND c.provider IN ({placeholders}) AND m.content LIKE ? "
+            "ORDER BY m.created_date DESC LIMIT ?",
+            (user_id, *providers, f"%{term}%", limit),
+        )

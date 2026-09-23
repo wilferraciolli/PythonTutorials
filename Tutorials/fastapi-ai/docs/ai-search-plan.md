@@ -1,5 +1,11 @@
 # AI search over chat history: plan
 
+> **Status:** MVP backend built — see [how-ai-search-works.md](how-ai-search-works.md) for diagrams and
+> [architecture.md](architecture.md) for the big picture. Differences from this plan: vectors are stored
+> in the app database (`DatabaseVectorStore`) instead of Cloudflare Vectorize (the `VectorStore` protocol
+> allows swapping it in later); search routes are `/api/users/{user_id}/chats/search` and
+> `.../search/reindex`. Still to do: `ask` mode, chunking, the Angular page.
+
 Goal: let a user query their own chat data in natural language, e.g. "show me where I asked about Java".
 
 Sending all messages to the LLM is not viable (thousands of tokens per user, growing forever). Instead we use

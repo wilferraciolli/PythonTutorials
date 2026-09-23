@@ -21,7 +21,9 @@ talking to — both sit behind small adapters (`database.py`, `ai.py`).
 > as reference/resource projects. All three share the **same Clerk instance and
 > the same D1 database** (`wiltech-db`). This project owns both `cloudflare` and
 > `groq` chats and advertises `aiChats` on the user profile (used by the `showcase`
-> Home page card). Next up: AI search over chat history — see
+> Home page card). It also has **AI search over chat history** — see
+> [`docs/how-ai-search-works.md`](docs/how-ai-search-works.md) (diagrams),
+> [`docs/architecture.md`](docs/architecture.md) and
 > [`docs/ai-search-plan.md`](docs/ai-search-plan.md).
 
 ## Status
@@ -140,6 +142,7 @@ the non-secret values come from `wrangler.jsonc` `vars` and secrets from
 | `CF_AI_ACCOUNT_ID` | With `http` | Cloudflare account id used for Workers AI |
 | `CF_AI_API_TOKEN` | With `http` | Cloudflare API token with Workers AI access (secret) |
 | `CF_AI_MODEL` | Yes | Workers AI model for Cloudflare chats |
+| `CF_EMBEDDING_MODEL` | No | Workers AI embedding model for chat search (default `@cf/baai/bge-base-en-v1.5`) |
 | `GROQ_API_KEY` | For Groq chats | Groq API key (secret) |
 | `GROQ_BASE_URL` | For Groq chats | Groq's OpenAI-compatible base URL |
 | `GROQ_MODEL` | For Groq chats | Model used for Groq chats |
@@ -318,6 +321,8 @@ above) except `/api/health`, `/docs`, and `/openapi.json`.
 | GET | `/api/users/{id}/profile` | **Where links live.** `/me` only returns the `userProfile` link; this returns the user (`id`, `externalId`, `name`, `email`, `roleIds`) plus every link the UI follows, built from the `{id}` in the path. `UserProfileService.can_view_profile` is the seam for "may the caller see this user's resources?" |
 | GET | `/api/users/{user_id}/chats` | List the current user's chats (title + timestamps, no messages) |
 | POST | `/api/users/{user_id}/chats` | Create a new chat; body `{"provider": "cloudflare"}` or `"groq"` (default `cloudflare`). Title is "New chat" until the first message |
+| GET | `/api/users/{user_id}/chats/search` | Search the user's chat messages by meaning and keyword: `?q=java&limit=10` (best first) |
+| POST | `/api/users/{user_id}/chats/search/reindex` | Embed any of the user's messages that aren't indexed yet (backfill) |
 | GET | `/api/users/{user_id}/chats/{chat_id}` | Get one chat with its full message history |
 | PUT | `/api/users/{user_id}/chats/{chat_id}` | Rename a chat (`{"title": "..."}`, 1–60 characters) |
 | POST | `/api/users/{user_id}/chats/{chat_id}/messages` | Send a message; calls the chat's provider, stores both messages, returns the updated chat |

@@ -3,6 +3,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 
 from ai import get_ai
+from embeddings import DEFAULT_EMBEDDING_MODEL, embed
 from auth import AuthenticatedUser, get_authenticated_user
 from config import get_config
 from database import get_database
@@ -11,6 +12,8 @@ from repositories.chat_repository import ChatRepository
 from repositories.user_repository import UserRepository
 from services.chat_service import ChatService
 from services.me_service import MeService
+from services.search_service import DEFAULT_LIMIT, SearchService
+from vector_store import DatabaseVectorStore
 
 router = APIRouter(prefix="/users/{user_id}/chats", tags=["chats"])
 
@@ -53,6 +56,25 @@ def get_chat_service(request: Request) -> ChatService:
         ChatRepository(db),
         lambda provider: get_ai(request, provider),
         models,
+        get_search_service(request),
+    )
+
+
+def get_search_service(request: Request) -> SearchService:
+    db = get_database(request)
+    embedding_model = get_config(request, "CF_EMBEDDING_MODEL", DEFAULT_EMBEDDING_MODEL) or DEFAULT_EMBEDDING_MODEL
+    # Embeddings always come from Workers AI, whichever provider answers a chat.
+    ai = get_ai(request, "cloudflare")
+
+    async def embed_texts(texts: list[str]) -> list[list[float]]:
+        return await embed(ai, embedding_model, texts)
+
+    return SearchService(
+        ChatRepository(db),
+        DatabaseVectorStore(db),
+        embed_texts,
+        embedding_model,
+        ["cloudflare", "groq"],
     )
 
 
@@ -73,6 +95,28 @@ async def create_chat(
 ) -> dict[str, Any]:
     chat = await service.create_chat(user_id, payload.provider)
     return service.build_response(chat)
+
+
+@router.get("/search")
+async def search_chats(
+    q: str,
+    limit: int = DEFAULT_LIMIT,
+    user_id: str = Depends(get_current_user_id),
+    service: SearchService = Depends(get_search_service),
+) -> dict[str, Any]:
+    """Find messages in the user's chats by meaning (embeddings) and by keyword, best first."""
+    hits = await service.search(user_id, q, limit)
+    return service.build_response(user_id, hits)
+
+
+@router.post("/search/reindex")
+async def reindex_chats(
+    user_id: str = Depends(get_current_user_id),
+    service: SearchService = Depends(get_search_service),
+) -> dict[str, Any]:
+    """Backfill: embed this user's messages that aren't indexed yet."""
+    indexed = await service.reindex_user(user_id)
+    return service.build_reindex_response(indexed)
 
 
 @router.get("/{chat_id}")

@@ -62,6 +62,7 @@ class UserProfileService:
             "userTemplate": Link(href=f"{API_PREFIX}/users/template", method="GET"),
             "searchUsers": Link(href=f"{API_PREFIX}/users/search", method="GET"),
             "aiChats": Link(href=f"{API_PREFIX}/users/{user_id}/chats", method="GET"),
+            "aiChatSearch": Link(href=f"{API_PREFIX}/users/{user_id}/chats/search", method="GET"),
         }
 
     def build_metadata(self) -> dict[str, Any]:

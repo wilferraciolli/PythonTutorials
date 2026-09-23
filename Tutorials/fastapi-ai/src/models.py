@@ -115,6 +115,22 @@ class ChatMessage(BaseModel):
         return format_utc_datetime(value)
 
 
+class ChatSearchHit(LinkedResource):
+    """One message matching a search, with enough context to show and open it."""
+    messageId: str
+    chatId: str
+    chatTitle: str
+    role: ChatMessageRole
+    snippet: str
+    score: float
+    keywordMatch: bool
+    created_date: datetime
+
+    @field_serializer("created_date")
+    def serialize_created_date(self, value: datetime) -> str:
+        return format_utc_datetime(value)
+
+
 class Chat(LinkedResource):
     id: str
     user_id: str
