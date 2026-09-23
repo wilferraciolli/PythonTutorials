@@ -6,6 +6,7 @@ import { describeApiError } from '../../core/api/api-error';
 import { environment } from '../../../environments/environment';
 
 export type ChatMessageRole = 'user' | 'assistant';
+export type ChatProvider = 'cloudflare' | 'groq';
 
 export interface ChatMessage {
   id: string;
@@ -19,6 +20,8 @@ export interface Chat {
   id: string;
   user_id: string;
   title: string;
+  provider: ChatProvider;
+  model: string;
   created_date: string;
   updated_date: string;
   messages: ChatMessage[];
@@ -55,9 +58,9 @@ export class ChatsStore {
     () => this.listResource.value()?._metaLinks?.['createChat'],
   );
 
-  async createChat(): Promise<Chat> {
+  async createChat(provider: ChatProvider): Promise<Chat> {
     const url = this.api.requireLink(this.createChatLink(), 'No create-chat link available yet — try again.');
-    const chat = await this.api.post<'chat', Chat, Record<string, never>>('chat', url, {});
+    const chat = await this.api.post<'chat', Chat, { provider: ChatProvider }>('chat', url, { provider });
     this.listResource.reload();
     return chat;
   }

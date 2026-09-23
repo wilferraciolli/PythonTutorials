@@ -5,6 +5,7 @@
     <p class="ChatThread-loading">Loading…</p>
   } @else if (chat(); as chat) {
     <h1 class="ChatThread-title">{{ chat.title }}</h1>
+    <p class="ChatThread-provider">{{ providerLabel(chat.provider) }} · {{ chat.model }}</p>
 
     <div class="ChatThread-messages">
       @for (message of messages(); track message.id) {

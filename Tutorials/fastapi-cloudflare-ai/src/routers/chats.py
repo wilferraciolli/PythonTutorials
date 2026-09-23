@@ -6,7 +6,7 @@ from ai import get_ai
 from auth import AuthenticatedUser, get_authenticated_user
 from config import get_config
 from database import get_database
-from models import ChatMessageCreate, ChatTitleUpdate
+from models import ChatCreate, ChatMessageCreate, ChatProvider, ChatTitleUpdate
 from repositories.chat_repository import ChatRepository
 from repositories.user_repository import UserRepository
 from services.chat_service import DEFAULT_MODEL, ChatService
@@ -30,8 +30,15 @@ async def get_current_user_id(
 
 def get_chat_service(request: Request) -> ChatService:
     db = get_database(request)
-    model = get_config(request, "AI_CHAT_MODEL", DEFAULT_MODEL)
-    return ChatService(ChatRepository(db), get_ai(request), model)
+    models: dict[ChatProvider, str] = {
+        "cloudflare": get_config(request, "AI_CHAT_MODEL", DEFAULT_MODEL) or DEFAULT_MODEL,
+        "groq": get_config(request, "GROQ_MODEL", "openai/gpt-oss-20b") or "openai/gpt-oss-20b",
+    }
+    return ChatService(
+        ChatRepository(db),
+        lambda provider: get_ai(request, provider),
+        models,
+    )
 
 
 @router.get("")
@@ -45,10 +52,11 @@ async def list_chats(
 
 @router.post("", status_code=201)
 async def create_chat(
+    payload: ChatCreate,
     user_id: str = Depends(get_current_user_id),
     service: ChatService = Depends(get_chat_service),
 ) -> dict[str, Any]:
-    chat = await service.create_chat(user_id)
+    chat = await service.create_chat(user_id, payload.provider)
     return service.build_response(chat)
 
 

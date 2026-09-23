@@ -1,4 +1,16 @@
 <div class="ChatList">
+  <mat-form-field class="ChatList-providerField" appearance="outline">
+    <mat-label>Provider for new chats</mat-label>
+    <select
+      matNativeControl
+      [value]="selectedProvider()"
+      (change)="selectProvider($any($event.target).value)"
+    >
+      <option value="cloudflare">Cloudflare Workers AI</option>
+      <option value="groq">Groq</option>
+    </select>
+  </mat-form-field>
+
   <button matButton="filled" type="button" class="ChatList-new" (click)="newChat()" [disabled]="creating()">
     <mat-icon aria-hidden="true">add</mat-icon>
     {{ creating() ? 'Creating…' : 'New chat' }}
@@ -50,7 +62,10 @@
                 [routerLink]="['/workers-ai', chat.id]"
                 routerLinkActive="ChatList-item--active"
                 class="ChatList-item"
-              >{{ chat.title }}</a>
+              >
+                <span class="ChatList-title">{{ chat.title }}</span>
+                <small class="ChatList-provider">{{ providerLabel(chat.provider) }} · {{ chat.model }}</small>
+              </a>
               <button
                 matIconButton
                 type="button"

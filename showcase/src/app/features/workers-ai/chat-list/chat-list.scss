@@ -7,6 +7,10 @@
     width: 100%;
   }
 
+  &-providerField {
+    width: 100%;
+  }
+
   &-error {
     margin: 0;
     font: var(--mat-sys-body-small);
@@ -47,6 +51,18 @@
       background: var(--mat-sys-secondary-container);
       color: var(--mat-sys-on-secondary-container);
     }
+  }
+
+  &-title,
+  &-provider {
+    display: block;
+  }
+
+  &-provider {
+    margin-top: 0.125rem;
+    font: var(--mat-sys-label-small);
+    color: var(--mat-sys-on-surface-variant);
+    overflow-wrap: anywhere;
   }
 
   &-itemRow,

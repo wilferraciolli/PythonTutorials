@@ -1,10 +1,10 @@
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 from uuid import uuid4
 
 from ai import AI
 from api_response import API_PREFIX, envelope
-from models import Chat, ChatMessage, Link
+from models import Chat, ChatMessage, ChatProvider, Link
 from repositories.chat_repository import ChatRepository
 
 # @cf/moonshotai/kimi-k2.7-code (the model in the original sample this was
@@ -38,20 +38,27 @@ class ChatService:
     binding (see ai.get_ai()).
     """
 
-    def __init__(self, chat_repository: ChatRepository, ai: AI, model: str) -> None:
+    def __init__(
+        self,
+        chat_repository: ChatRepository,
+        ai_factory: Callable[[ChatProvider], AI],
+        models: Dict[ChatProvider, str],
+    ) -> None:
         self.chat_repository = chat_repository
-        self.ai = ai
-        self.model = model
+        self.ai_factory = ai_factory
+        self.models = models
 
     async def list_chats(self, user_id: str) -> List[Dict[str, Any]]:
         return await self.chat_repository.list_chats_for_user(user_id)
 
-    async def create_chat(self, user_id: str) -> Dict[str, Any]:
+    async def create_chat(self, user_id: str, provider: ChatProvider) -> Dict[str, Any]:
         now = datetime.now(timezone.utc).isoformat()
         chat = await self.chat_repository.create_chat(
             chat_id=str(uuid4()),
             user_id=user_id,
             title=DEFAULT_TITLE,
+            provider=provider,
+            model=self.models[provider],
             created_date=now,
         )
         chat["messages"] = []
@@ -85,7 +92,8 @@ class ChatService:
         messages.extend({"role": message["role"], "content": message["content"]} for message in history)
         messages.append({"role": "user", "content": content})
 
-        result = await self.ai.run(self.model, {"messages": messages})
+        provider = chat["provider"]
+        result = await self.ai_factory(provider).run(self.models[provider], {"messages": messages})
         reply = self._extract_reply(result)
 
         replied_at = datetime.now(timezone.utc).isoformat()
@@ -149,6 +157,8 @@ class ChatService:
             id=row["id"],
             user_id=row["user_id"],
             title=row["title"],
+            provider=row["provider"],
+            model=row["model"],
             created_date=row["created_date"],
             updated_date=row["updated_date"],
             messages=[self.to_message(message) for message in row.get("messages", [])],

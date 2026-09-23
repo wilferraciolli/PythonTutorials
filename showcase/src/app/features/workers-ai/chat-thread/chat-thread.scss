@@ -9,6 +9,12 @@
     font: var(--mat-sys-title-medium);
   }
 
+  &-provider {
+    margin: -0.5rem 0 0.75rem;
+    font: var(--mat-sys-label-medium);
+    color: var(--mat-sys-on-surface-variant);
+  }
+
   &-loading,
   &-empty {
     margin: 0;

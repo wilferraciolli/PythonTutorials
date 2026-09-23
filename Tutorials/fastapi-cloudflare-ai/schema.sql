@@ -17,6 +17,8 @@ CREATE TABLE IF NOT EXISTS chats (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,
     title TEXT NOT NULL,
+    provider TEXT NOT NULL DEFAULT 'cloudflare',
+    model TEXT NOT NULL DEFAULT '@cf/meta/llama-3.1-8b-instruct',
     created_date TEXT NOT NULL,
     updated_date TEXT NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users(id)

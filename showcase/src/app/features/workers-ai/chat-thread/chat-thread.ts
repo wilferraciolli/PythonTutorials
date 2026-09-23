@@ -7,7 +7,7 @@ import { ApiClientService } from '@wiliamferraciolli/ngx-api-client';
 
 import { describeApiError } from '../../../core/api/api-error';
 import { environment } from '../../../../environments/environment';
-import { Chat, ChatMessage } from '../chats.store';
+import { Chat, ChatMessage, ChatProvider } from '../chats.store';
 
 @Component({
   selector: 'app-chat-thread',
@@ -42,6 +42,10 @@ export class ChatThread {
   protected readonly draft = signal('');
   protected readonly sending = signal(false);
   protected readonly sendError = signal<string | null>(null);
+
+  protected providerLabel(provider: ChatProvider): string {
+    return provider === 'groq' ? 'Groq' : 'Cloudflare Workers AI';
+  }
 
   constructor() {
     // A different chat was opened — drop any half-typed draft/stale error

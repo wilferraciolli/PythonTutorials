@@ -14,10 +14,19 @@ class ChatRepository:
     def __init__(self, db: Database) -> None:
         self.db = db
 
-    async def create_chat(self, chat_id: str, user_id: str, title: str, created_date: str) -> Dict[str, Any]:
+    async def create_chat(
+        self,
+        chat_id: str,
+        user_id: str,
+        title: str,
+        provider: str,
+        model: str,
+        created_date: str,
+    ) -> Dict[str, Any]:
         await self.db.execute(
-            "INSERT INTO chats (id, user_id, title, created_date, updated_date) VALUES (?, ?, ?, ?, ?)",
-            (chat_id, user_id, title, created_date, created_date),
+            "INSERT INTO chats (id, user_id, title, provider, model, created_date, updated_date) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (chat_id, user_id, title, provider, model, created_date, created_date),
         )
 
         chat = await self.get_chat(chat_id)

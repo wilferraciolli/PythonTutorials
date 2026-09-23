@@ -1,6 +1,6 @@
 from enum import Enum
 from datetime import datetime, timezone
-from typing import Dict, Optional
+from typing import Dict, Literal, Optional
 from pydantic import BaseModel, Field, field_serializer
 
 
@@ -90,6 +90,13 @@ class ChatMessageCreate(BaseModel):
     content: str
 
 
+ChatProvider = Literal["cloudflare", "groq"]
+
+
+class ChatCreate(BaseModel):
+    provider: ChatProvider = "cloudflare"
+
+
 class ChatTitleUpdate(BaseModel):
     title: str = Field(min_length=1, max_length=60)
 
@@ -110,6 +117,8 @@ class Chat(LinkedResource):
     id: str
     user_id: str
     title: str
+    provider: ChatProvider
+    model: str
     created_date: datetime
     updated_date: datetime
     messages: list[ChatMessage] = Field(default_factory=list)
