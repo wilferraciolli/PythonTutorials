@@ -22,6 +22,7 @@ talking to — both sit behind small adapters (`database.py`, `ai.py`).
 > the same D1 database** (`wiltech-db`). This project owns both `cloudflare` and
 > `groq` chats and advertises `aiChats` on the user profile (used by the `showcase`
 > Home page card). It also has **AI search over chat history** — see
+> [`docs/ask-your-data.md`](docs/ask-your-data.md) (the AI assistant: todos, chats, ...),
 > [`docs/how-ai-search-works.md`](docs/how-ai-search-works.md) (diagrams),
 > [`docs/architecture.md`](docs/architecture.md) and
 > [`docs/ai-search-plan.md`](docs/ai-search-plan.md).
@@ -323,6 +324,7 @@ above) except `/api/health`, `/docs`, and `/openapi.json`.
 | POST | `/api/users/{user_id}/chats` | Create a new chat; body `{"provider": "cloudflare"}` or `"groq"` (default `cloudflare`). Title is "New chat" until the first message |
 | GET | `/api/users/{user_id}/chats/search` | Search the user's chat messages by meaning and keyword: `?q=java&limit=10` (best first) |
 | POST | `/api/users/{user_id}/chats/search/reindex` | Embed any of the user's messages that aren't indexed yet (backfill) |
+| POST | `/api/users/{user_id}/assistant/ask` | Ask a question about your own data in plain English (`{"question": "...", "provider": "groq"}`); the model calls read-only tools (todos, chat search) and returns the answer plus the tools it used |
 | GET | `/api/users/{user_id}/chats/{chat_id}` | Get one chat with its full message history |
 | PUT | `/api/users/{user_id}/chats/{chat_id}` | Rename a chat (`{"title": "..."}`, 1–60 characters) |
 | POST | `/api/users/{user_id}/chats/{chat_id}/messages` | Send a message; calls the chat's provider, stores both messages, returns the updated chat |

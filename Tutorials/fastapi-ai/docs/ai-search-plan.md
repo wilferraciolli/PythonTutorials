@@ -1,5 +1,8 @@
 # AI search over chat history: plan
 
+> **Bigger picture:** search over chats is now one *tool* of a general "ask your data" assistant that can also
+> answer exact questions such as "how many todos are overdue?" — see [ask-your-data.md](ask-your-data.md).
+
 > **Status:** MVP backend built — see [how-ai-search-works.md](how-ai-search-works.md) for diagrams and
 > [architecture.md](architecture.md) for the big picture. Differences from this plan: vectors are stored
 > in the app database (`DatabaseVectorStore`) instead of Cloudflare Vectorize (the `VectorStore` protocol

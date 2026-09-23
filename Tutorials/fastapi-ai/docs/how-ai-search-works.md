@@ -6,6 +6,8 @@ We can't send thousands of messages to an LLM, so we **retrieve first**: turn ev
 message into an *embedding* (a list of numbers that captures its meaning), and at
 search time find the messages whose numbers are closest to the question's.
 
+> Chat search is one tool of the wider assistant in [ask-your-data.md](ask-your-data.md).
+
 > **Status:** MVP is built and tested (`find` mode). Not built yet: `ask` mode (LLM
 > answer with citations), Cloudflare Vectorize adapter, chunking of long messages,
 > the Angular search page. See [ai-search-plan.md](ai-search-plan.md).

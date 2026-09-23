@@ -1,6 +1,6 @@
 from enum import Enum
 from datetime import datetime, timezone
-from typing import Dict, Literal, Optional
+from typing import Any, Dict, Literal, Optional
 from pydantic import BaseModel, Field, field_serializer
 
 
@@ -113,6 +113,26 @@ class ChatMessage(BaseModel):
     @field_serializer("created_date")
     def serialize_created_date(self, value: datetime) -> str:
         return format_utc_datetime(value)
+
+
+class AssistantAsk(BaseModel):
+    question: str = Field(min_length=1, max_length=1000)
+    provider: Literal["groq", "cloudflare"] = "groq"
+
+
+class ToolCallTrace(BaseModel):
+    """One tool the assistant ran to answer, kept so the UI can show its working."""
+    name: str
+    arguments: Dict[str, Any] = Field(default_factory=dict)
+    result: Any = None
+
+
+class AssistantAnswer(BaseModel):
+    question: str
+    answer: str
+    provider: str
+    model: str
+    toolCalls: list[ToolCallTrace] = Field(default_factory=list)
 
 
 class ChatSearchHit(LinkedResource):

@@ -117,4 +117,5 @@ flowchart LR
     Ask --> Save
 ```
 
-Details: [how-ai-search-works.md](how-ai-search-works.md).
+Details: [how-ai-search-works.md](how-ai-search-works.md). For questions about any data
+(todos, counts, dates) see [ask-your-data.md](ask-your-data.md).
