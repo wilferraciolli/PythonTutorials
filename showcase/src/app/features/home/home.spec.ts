@@ -1,5 +1,3 @@
-import { provideHttpClient } from '@angular/common/http';
-import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
 import { TestBed } from '@angular/core/testing';
 
@@ -9,7 +7,7 @@ describe('Home', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [Home],
-      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+      providers: [provideRouter([])],
     }).compileComponents();
   });
 
@@ -18,13 +16,14 @@ describe('Home', () => {
     expect(fixture.componentInstance).toBeTruthy();
   });
 
-  // AuthStore starts with no session and `init()` only runs via
-  // provideAppInitializer, so an un-bootstrapped store is signed out —
-  // which is exactly the state this page has to render a sign-in CTA for.
-  it('shows a sign-in button when signed out', () => {
+  // Both cards render unconditionally now — no sign-in gate on this page;
+  // authGuard is what stops a signed-out visitor at /todos or /workers-ai.
+  it('links to every guarded project route', () => {
     const fixture = TestBed.createComponent(Home);
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('button')?.textContent).toContain('Sign in');
+    const hrefs = Array.from(compiled.querySelectorAll('a')).map((a) => a.getAttribute('href'));
+    expect(hrefs).toContain('/todos');
+    expect(hrefs).toContain('/workers-ai');
   });
 });

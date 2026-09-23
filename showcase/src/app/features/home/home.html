@@ -1,29 +1,21 @@
 <main class="Home">
-  <mat-card class="Home-card" appearance="outlined">
-    <mat-card-content class="Home-content">
-      <h1 class="Home-title">FastAPI on Cloudflare D1</h1>
-      <p class="Home-lead">
-        A Python FastAPI service running as a Cloudflare Worker against a D1 database. Sign in with
-        Clerk to get a session token for the API.
-      </p>
-
-      @if (auth.isSignedIn()) {
-        <p class="Home-identity">Signed in as {{ signedInAs() }}</p>
-        <button matButton="outlined" type="button" (click)="signOut()">Sign out</button>
-      } @else {
-        <button matButton="filled" type="button" (click)="signIn()">Sign in</button>
-      }
-    </mat-card-content>
-  </mat-card>
-
-  @if (auth.isSignedIn()) {
-    <mat-card class="Home-card" appearance="outlined">
-      <mat-card-content class="Home-content Home-content-todos">
-        <mat-icon class="Home-todos-icon" aria-hidden="true">checklist</mat-icon>
-        <h2 class="Home-todos-title">Your todos</h2>
+  <div class="Home-grid">
+    <mat-card class="Home-nav-card" appearance="outlined">
+      <mat-card-content class="Home-content Home-content-nav">
+        <mat-icon class="Home-nav-icon" aria-hidden="true">checklist</mat-icon>
+        <h2 class="Home-nav-title">Todos</h2>
         <p class="Home-lead">Create, update, and tag your todos against the API.</p>
         <a matButton="filled" routerLink="/todos">Go to todos</a>
       </mat-card-content>
     </mat-card>
-  }
+
+    <mat-card class="Home-nav-card" appearance="outlined">
+      <mat-card-content class="Home-content Home-content-nav">
+        <mat-icon class="Home-nav-icon" aria-hidden="true">smart_toy</mat-icon>
+        <h2 class="Home-nav-title">Workers AI</h2>
+        <p class="Home-lead">Try Cloudflare Workers AI models running at the edge.</p>
+        <a matButton="filled" routerLink="/workers-ai">Go to Workers AI</a>
+      </mat-card-content>
+    </mat-card>
+  </div>
 </main>

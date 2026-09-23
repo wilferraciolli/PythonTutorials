@@ -10,9 +10,18 @@
   gap: 1.5rem;
   padding: var(--app-gutter);
 
-  &-card {
+  // Cards stay side by side above ~34rem and stack below it.
+  &-grid {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1.5rem;
     width: 100%;
-    max-width: 34rem;
+    max-width: 44rem;
+  }
+
+  &-nav-card {
+    flex: 1 1 16rem;
   }
 
   &-content {
@@ -24,13 +33,8 @@
     text-align: center;
   }
 
-  &-content-todos {
+  &-content-nav {
     padding-block: 1.5rem;
-  }
-
-  &-title {
-    margin: 0;
-    font: var(--mat-sys-headline-small);
   }
 
   &-lead {
@@ -40,20 +44,14 @@
     color: var(--mat-sys-on-surface-variant);
   }
 
-  &-identity {
-    margin: 0;
-    font: var(--mat-sys-body-small);
-    color: var(--mat-sys-on-surface-variant);
-  }
-
-  &-todos-icon {
+  &-nav-icon {
     color: var(--mat-sys-primary);
     font-size: 2rem;
     width: 2rem;
     height: 2rem;
   }
 
-  &-todos-title {
+  &-nav-title {
     margin: 0;
     font: var(--mat-sys-title-medium);
   }
