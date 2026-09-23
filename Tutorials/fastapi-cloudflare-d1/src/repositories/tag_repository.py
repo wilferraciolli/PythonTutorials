@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Optional
 from database import Database
 
 # tag_resource_view joins tags to the resource they're attached to (see
-# migrations/002_create_tag_resource_view.sql). Reads go through it so every
+# migrations/003_create_tag_resource_view.sql). Reads go through it so every
 # row already carries resource_name; the tag_id/tag_name columns are aliased
 # back to id/tag so the rest of the repository (and TagService._row_to_tag)
 # doesn't need to know the view exists.

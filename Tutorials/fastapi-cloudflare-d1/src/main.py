@@ -4,7 +4,7 @@ from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from auth import get_authenticated_user
-from routers import health, me, tags, todos, user_profile, users
+from routers import health, me, user_profile, users, tags, todos
 
 app = FastAPI(
     title="TODO API",

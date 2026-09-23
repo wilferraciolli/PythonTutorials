@@ -380,7 +380,7 @@ migrations/
 Each migration should be named with a sortable prefix:
 
 ```text
-001_create_tables.sql
+002_create_tables.sql
 002_add_user_roles.sql
 003_add_indexes.sql
 ```

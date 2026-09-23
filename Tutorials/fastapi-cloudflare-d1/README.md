@@ -57,8 +57,8 @@ fastapi-cloudflare-d1/
 │       └── users.py
 ├── migrations/                   # Auto-applied, in order, against local SQLite
 │   ├── 001_create_users.sql
-│   ├── 001_create_tables.sql     # todos + tags tables
-│   └── 002_create_tag_resource_view.sql  # tag_resource_view (tag ↔ resource join)
+│   ├── 002_create_tables.sql     # todos + tags tables
+│   └── 003_create_tag_resource_view.sql  # tag_resource_view (tag ↔ resource join)
 ├── Dockerfile
 ├── docker-compose.yml
 ├── .env.example
@@ -289,7 +289,7 @@ All paths require a bearer token (see "Authentication" above) except
 
 Every Tag response embeds `resource: {id, value}` — the tagged resource's
 display name, resolved through the `tag_resource_view` SQL view (todos are
-the only taggable resource today; see `migrations/002_create_tag_resource_view.sql`).
+the only taggable resource today; see `migrations/003_create_tag_resource_view.sql`).
 `resource` is `null` when the resource can't be resolved (e.g. it's been
 deleted); `/tags/search` matches against both the tag text and that resolved
 name, so searching `"groceries"` can surface a tag literally named `"urgent"`

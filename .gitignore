@@ -228,3 +228,4 @@ __marimo__/
 /.idea/fastapi-todo-d1.iml
 /.idea/gyp-next.iml
 /.idea/prettier.xml
+/.idea/sqldialects.xml
