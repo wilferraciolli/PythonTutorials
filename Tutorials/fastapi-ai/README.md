@@ -345,6 +345,66 @@ as `404`, not `403`, so its existence isn't leaked.
 The chat's provider decides which model answers: `CF_AI_MODEL` for
 `cloudflare`, `GROQ_MODEL` for `groq`.
 
+## Adding a new resource to AI search and Ask
+
+Ask and search know nothing about the database. On every question the model sees only a
+list of **tools** (a name, a plain-English description and the allowed arguments). A new
+resource, say `notes`, is invisible to the AI until you add a tool for it. Nothing about
+the loop, the prompt, the endpoint or the Angular page changes.
+
+```mermaid
+flowchart LR
+    New["New resource<br/>e.g. notes"] --> Q{Did you add a tool?}
+    Q -- no --> X["Invisible to Ask"]
+    Q -- yes --> Y["Model can count, list<br/>and filter it"]
+    Y --> E{Free text worth<br/>matching by meaning?}
+    E -- yes --> Emb["Also embed it<br/>(search_notes)"]
+    E -- no --> Done[Done]
+```
+
+### Checklist
+
+| # | Step | Needed? | How |
+|---|---|---|---|
+| 1 | **Query tool**: `count_notes` / `list_notes` with filters (state, dates, tags), scoped to the user | Always | Copy [`src/assistant/todo_tools.py`](src/assistant/todo_tools.py) to `note_tools.py` |
+| 2 | **Register it** | Always | Add `*build_note_tools(...)` to the `tools` list in [`src/routers/assistant.py`](src/routers/assistant.py) |
+| 3 | **Embeddings**: a `search_notes` tool, and vectors kept up to date | Only if people will search it *by meaning* (free text) | Copy [`todo_search_service.py`](src/services/todo_search_service.py); use `ResourceVectorStore(db, "note")` (same `resource_embeddings` table, new `resource_type`, no new table); call `index_...` on create/edit and `remove_...` on delete in the resource's service, best effort like `TodoService._index` |
+| 4 | **Reindex endpoint** to backfill existing rows | With step 3 | Copy `POST /todos/search/reindex` |
+| 5 | **Tests** | Always | Copy the pattern in [`tests/test_todo_questions.py`](tests/test_todo_questions.py): scripted model, real SQLite, check user isolation |
+
+### Do I need embeddings?
+
+| The question is about... | Use | Example |
+|---|---|---|
+| Exact fields: counts, states, dates, tags | A query tool (step 1 only) | "how many invoices were unpaid last quarter?" |
+| Free text matched by meaning | Embeddings too (steps 3-4) | "notes about the kitchen refit" |
+| Both | One search tool with filters | "open notes about the kitchen refit" |
+
+Embeddings cannot count or compare dates, so counting and filtering are always plain
+queries, even for a resource that is also embedded.
+
+### Rules every new tool must follow
+
+1. **`user_id` comes from the handler's first argument (the URL), never from the model's
+   arguments.** One tool that forgets this could leak another user's data.
+2. **Read-only.** No tool changes data.
+3. **Return small JSON**, and `{"error": "..."}` for bad arguments so the model can retry.
+4. **Write the description for a new colleague.** It is the only thing that tells the model
+   when to use the tool; a tool described as "notes" won't be picked for a question about
+   "memos". For relative dates (`last quarter`), say to call `date_range` first.
+
+### Keeping it manageable
+
+- About 5-10 well-described tools work well. Past roughly 20 the model starts picking the
+  wrong one and every request costs more; then prefer fewer, more general tools.
+- Vectors live in the app database and are ranked in Python for one user's rows, which is
+  fine for thousands. At much larger sizes swap in Cloudflare Vectorize behind the vector
+  store classes; nothing else changes.
+- Tool-calling quality varies by model. If an answer looks wrong, open **How I found this**
+  on the Ask page: did the model pick the right tool and arguments?
+
+Background and worked examples: [`docs/ask-your-data.md`](docs/ask-your-data.md).
+
 ## Roadmap
 
 - No conversation length/context-window trimming — `send_message` replays
