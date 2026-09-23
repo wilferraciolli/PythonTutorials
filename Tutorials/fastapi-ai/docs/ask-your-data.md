@@ -6,8 +6,8 @@ Goal: let a user ask questions about **any** of their data in plain English:
 - "How many todos are overdue?" — exact, needs counting
 - "How many are new, and which is due first?" — several lookups in one question
 
-> **Status:** built and tested with a scripted fake model (11 tests). Not yet run against
-> a real Groq / Workers AI model, and no Angular page yet.
+> **Status:** built and tested with a scripted fake model. Angular page: `/ask` in the showcase.
+> Not yet run against a real Groq / Workers AI model.
 
 ## Why embeddings alone are not enough
 
@@ -164,12 +164,12 @@ flowchart TD
     S --> Tools[assistant/tools.py<br/>Tool]
     R --> TT[assistant/todo_tools.py<br/>count_todos, list_todos]
     R --> CT[assistant/chat_tools.py<br/>search_chats]
-    TT --> TR[repositories/todo_repository.py<br/>read-only]
+    TT --> TR[repositories/todo_repository.py]
     CT --> SS[services/search_service.py]
 ```
 
-Todos are owned by `fastapi-cloudflare-d1` and live in the shared database; this project
-only reads them (migration `005` just creates the table on a fresh local SQLite file).
+Todos and tags are full APIs in this project (copied from `fastapi-cloudflare-d1`); the
+assistant tools only *read* them, through the same `TodoRepository`.
 
 ## Testing
 
