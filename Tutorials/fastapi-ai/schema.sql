@@ -49,6 +49,21 @@ CREATE TABLE IF NOT EXISTS message_embeddings (
 CREATE INDEX IF NOT EXISTS idx_message_embeddings_user_id ON message_embeddings(user_id);
 CREATE INDEX IF NOT EXISTS idx_message_embeddings_chat_id ON message_embeddings(chat_id);
 
+-- Migration 005. This database is fastapi-ai's own, so it creates todos itself
+-- (it used to be shared with fastapi-cloudflare-d1, which owned the table).
+-- tests/test_schema.py fails if this file drifts from the migrations.
+CREATE TABLE IF NOT EXISTS todos (
+    id                      TEXT PRIMARY KEY,
+    user_id                 TEXT NOT NULL,
+    title                   TEXT NOT NULL,
+    description             TEXT,
+    complete_by             TEXT NOT NULL,
+    state                   TEXT NOT NULL DEFAULT 'NEW',
+    created_date            TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_todos_user_id ON todos(user_id);
+
 CREATE TABLE IF NOT EXISTS tags (
     id                      TEXT PRIMARY KEY,
     resource_id             TEXT NOT NULL,
