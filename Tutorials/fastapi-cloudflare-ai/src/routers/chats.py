@@ -6,7 +6,7 @@ from ai import get_ai
 from auth import AuthenticatedUser, get_authenticated_user
 from config import get_config
 from database import get_database
-from models import ChatMessageCreate
+from models import ChatMessageCreate, ChatTitleUpdate
 from repositories.chat_repository import ChatRepository
 from repositories.user_repository import UserRepository
 from services.chat_service import DEFAULT_MODEL, ChatService
@@ -72,6 +72,19 @@ async def send_message(
     service: ChatService = Depends(get_chat_service),
 ) -> dict[str, Any]:
     chat = await service.send_message(chat_id, user_id, payload.content)
+    if not chat:
+        raise HTTPException(status_code=404, detail="Chat not found")
+    return service.build_response(chat)
+
+
+@router.put("/{chat_id}")
+async def update_chat_title(
+    chat_id: str,
+    payload: ChatTitleUpdate,
+    user_id: str = Depends(get_current_user_id),
+    service: ChatService = Depends(get_chat_service),
+) -> dict[str, Any]:
+    chat = await service.update_title(chat_id, user_id, payload.title)
     if not chat:
         raise HTTPException(status_code=404, detail="Chat not found")
     return service.build_response(chat)

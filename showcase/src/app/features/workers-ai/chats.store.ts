@@ -68,6 +68,13 @@ export class ChatsStore {
     this.listResource.reload();
   }
 
+  async updateTitle(chat: Chat, title: string): Promise<Chat> {
+    const url = this.api.requireLink(chat.links['updateTitle'], `Not permitted to rename chat ${chat.id}`);
+    const updatedChat = await this.api.put<'chat', Chat, { title: string }>('chat', url, { title });
+    this.listResource.reload();
+    return updatedChat;
+  }
+
   reloadList(): void {
     this.listResource.reload();
   }

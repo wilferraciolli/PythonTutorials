@@ -14,13 +14,60 @@
     <ul class="ChatList-items">
       @for (chat of store.chats(); track chat.id) {
         <li>
-          <a
-            [routerLink]="['/workers-ai', chat.id]"
-            routerLinkActive="ChatList-item--active"
-            class="ChatList-item"
-          >{{ chat.title }}</a>
+          @if (editingChatId() === chat.id) {
+            <form class="ChatList-edit" (submit)="$event.preventDefault(); saveTitle(chat)">
+              <input
+                class="ChatList-editInput"
+                aria-label="Chat name"
+                maxlength="60"
+                [value]="editingTitle()"
+                (input)="editingTitle.set($any($event.target).value)"
+                [disabled]="savingChatId() === chat.id"
+              />
+              <button
+                matIconButton
+                type="submit"
+                aria-label="Save chat name"
+                title="Save chat name"
+                [disabled]="savingChatId() === chat.id"
+              >
+                <mat-icon aria-hidden="true">check</mat-icon>
+              </button>
+              <button
+                matIconButton
+                type="button"
+                aria-label="Cancel renaming"
+                title="Cancel renaming"
+                [disabled]="savingChatId() === chat.id"
+                (click)="cancelEditing()"
+              >
+                <mat-icon aria-hidden="true">close</mat-icon>
+              </button>
+            </form>
+          } @else {
+            <div class="ChatList-itemRow">
+              <a
+                [routerLink]="['/workers-ai', chat.id]"
+                routerLinkActive="ChatList-item--active"
+                class="ChatList-item"
+              >{{ chat.title }}</a>
+              <button
+                matIconButton
+                type="button"
+                class="ChatList-editButton"
+                aria-label="Rename chat"
+                title="Rename chat"
+                (click)="startEditing(chat)"
+              >
+                <mat-icon aria-hidden="true">edit</mat-icon>
+              </button>
+            </div>
+          }
         </li>
       }
     </ul>
+    @if (renameError(); as errorMessage) {
+      <p class="ChatList-error">{{ errorMessage }}</p>
+    }
   }
 </div>

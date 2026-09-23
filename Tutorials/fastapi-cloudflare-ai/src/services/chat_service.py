@@ -111,6 +111,19 @@ class ChatService:
 
         return await self.chat_repository.delete_chat(chat_id)
 
+    async def update_title(self, chat_id: str, user_id: str, title: str) -> Optional[Dict[str, Any]]:
+        chat = await self._get_owned_chat(chat_id, user_id)
+        if not chat:
+            return None
+
+        normalized_title = " ".join(title.split())
+        if not normalized_title:
+            return None
+
+        await self.chat_repository.update_title(chat_id, normalized_title)
+        await self.chat_repository.touch(chat_id, datetime.now(timezone.utc).isoformat())
+        return await self.get_chat_with_messages(chat_id, user_id)
+
     async def _get_owned_chat(self, chat_id: str, user_id: str) -> Optional[Dict[str, Any]]:
         # Chats aren't nested under /users/{id}/... in the URL (unlike
         # fastapi-cloudflare-d1's todos), so ownership has to be checked
@@ -154,6 +167,7 @@ class ChatService:
     def build_chat_links(self, chat_id: str) -> Dict[str, Link]:
         return {
             "self": Link(href=f"{API_PREFIX}/chats/{chat_id}", method="GET"),
+            "updateTitle": Link(href=f"{API_PREFIX}/chats/{chat_id}", method="PUT"),
             "sendMessage": Link(href=f"{API_PREFIX}/chats/{chat_id}/messages", method="POST"),
             "delete": Link(href=f"{API_PREFIX}/chats/{chat_id}", method="DELETE"),
         }
@@ -164,7 +178,7 @@ class ChatService:
             data_name="chat",
             data=chat,
             metadata={
-                "title": {"readOnly": True},
+                "title": {"maxLength": TITLE_MAX_LENGTH},
             },
             meta_links={},
         )

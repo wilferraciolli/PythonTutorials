@@ -90,6 +90,10 @@ class ChatMessageCreate(BaseModel):
     content: str
 
 
+class ChatTitleUpdate(BaseModel):
+    title: str = Field(min_length=1, max_length=60)
+
+
 class ChatMessage(BaseModel):
     id: str
     chat_id: str
