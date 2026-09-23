@@ -27,7 +27,7 @@ class AiHttpAdapter:
 
     Prefer this over AiBindingAdapter for portability: it works the same from
     local uvicorn/Docker, another host, or a Cloudflare Worker, the same way
-    D1HttpDatabase lets any of those runtimes reach D1. Needs CF_ACCOUNT_ID
+    D1HttpDatabase lets any of those runtimes reach D1. Needs CF_AI_ACCOUNT_ID
     and CF_AI_API_TOKEN (a Cloudflare API token scoped to Workers AI).
     """
 
@@ -99,10 +99,10 @@ def get_ai(request: Request, provider: ChatProvider = "cloudflare") -> AI:
         return AiBindingAdapter(env.AI)
 
     if mode == "http":
-        account_id = get_config(request, "CF_ACCOUNT_ID")
+        account_id = get_config(request, "CF_AI_ACCOUNT_ID")
         api_token = get_config(request, "CF_AI_API_TOKEN")
         if not account_id or not api_token:
-            raise RuntimeError("AI_MODE='http' requires CF_ACCOUNT_ID and CF_AI_API_TOKEN")
+            raise RuntimeError("AI_MODE='http' requires CF_AI_ACCOUNT_ID and CF_AI_API_TOKEN")
         return AiHttpAdapter(account_id, api_token)
 
     raise RuntimeError(f"unknown AI_MODE: {mode!r}")

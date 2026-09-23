@@ -167,11 +167,11 @@ def get_database(request: Request) -> Database:
         return D1BindingDatabase(env.DB)
 
     if mode == "d1_http":
-        account_id = get_config(request, "CF_ACCOUNT_ID")
+        account_id = get_config(request, "CF_D1_ACCOUNT_ID")
         database_id = get_config(request, "CF_D1_DATABASE_ID")
         api_token = get_config(request, "CF_D1_API_TOKEN")
         if not account_id or not database_id or not api_token:
-            raise RuntimeError("d1_http mode requires CF_ACCOUNT_ID, CF_D1_DATABASE_ID, and CF_D1_API_TOKEN")
+            raise RuntimeError("d1_http mode requires CF_D1_ACCOUNT_ID, CF_D1_DATABASE_ID, and CF_D1_API_TOKEN")
         return D1HttpDatabase(account_id, database_id, api_token)
 
     raise RuntimeError(f"unknown DATABASE_MODE: {mode!r}")

@@ -124,11 +124,12 @@ the non-secret values come from `wrangler.jsonc` `vars` and secrets from
 |---|---|---|
 | `DATABASE_MODE` | No | `sqlite` (local), `d1_binding` (Worker) or `d1_http` — see "Database modes". Defaults to `d1_binding` when a D1 binding exists, otherwise `sqlite` |
 | `DATABASE_PATH` | With `sqlite` | SQLite file path, e.g. `./local.db` |
-| `CF_D1_DATABASE_ID` | With `d1_http` | Id of the D1 database (`wiltech-db`); uses `CF_ACCOUNT_ID` too |
+| `CF_D1_ACCOUNT_ID` | With `d1_http` | Cloudflare account id that owns the D1 database |
+| `CF_D1_DATABASE_ID` | With `d1_http` | Id of the D1 database (`wiltech-db`) |
 | `CF_D1_API_TOKEN` | With `d1_http` | Cloudflare API token with D1 edit access (secret) |
 | `CORS_ORIGINS` | For a browser UI | Comma-separated frontend origins. Local runs only — a Worker doesn't see it (see the note in `main.py`) |
 | `AI_MODE` | No | `http` (Cloudflare REST API) or `binding` (`env.AI`). Defaults to `binding` inside a Worker, otherwise `http` |
-| `CF_ACCOUNT_ID` | With `http` | Cloudflare account id |
+| `CF_AI_ACCOUNT_ID` | With `http` | Cloudflare account id used for Workers AI |
 | `CF_AI_API_TOKEN` | With `http` | Cloudflare API token with Workers AI access (secret) |
 | `CF_AI_MODEL` | Yes | Workers AI model for Cloudflare chats |
 | `GROQ_API_KEY` | For Groq chats | Groq API key (secret) |
@@ -159,7 +160,7 @@ DATABASE_MODE=d1_binding
 
 # Optional: non-Worker host using Cloudflare D1 over HTTP
 DATABASE_MODE=d1_http
-CF_ACCOUNT_ID=...
+CF_D1_ACCOUNT_ID=...
 CF_D1_DATABASE_ID=...
 CF_D1_API_TOKEN=...
 ```
@@ -173,7 +174,7 @@ To run uvicorn locally with your data in `wiltech-db` instead of SQLite:
 
 1. Apply the schema to the remote database once (see "Deploying to
    Cloudflare", step 2).
-2. In `.env`, fill in `CF_ACCOUNT_ID` and `CF_D1_API_TOKEN` (create the token
+2. In `.env`, fill in `CF_D1_ACCOUNT_ID` and `CF_D1_API_TOKEN` (create the token
    in the Cloudflare dashboard under My Profile → API Tokens, with **D1 →
    Edit**); `CF_D1_DATABASE_ID` is already set.
 3. Set `DATABASE_MODE=d1_http` (replacing `sqlite`) and start uvicorn as
