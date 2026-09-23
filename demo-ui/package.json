@@ -6,7 +6,9 @@
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "docs:sync": "node scripts/sync-conventions.mjs",
+    "docs:check": "node scripts/sync-conventions.mjs --check"
   },
   "private": true,
   "packageManager": "npm@11.6.4",
