@@ -5,12 +5,18 @@
     <p class="ChatThread-loading">Loading…</p>
   } @else if (chat(); as chat) {
     <h1 class="ChatThread-title">{{ chat.title }}</h1>
-    <p class="ChatThread-provider">{{ providerLabel(chat.provider) }} · {{ chat.model }}</p>
 
     <div class="ChatThread-messages">
       @for (message of messages(); track message.id) {
         <div class="ChatThread-message" [class.ChatThread-message--assistant]="message.role === 'assistant'">
-          <p class="ChatThread-messageText">{{ message.content }}</p>
+          @if (message.role === 'assistant') {
+            <div
+              class="ChatThread-messageText ChatThread-messageText--markdown"
+              [innerHTML]="renderMarkdown(message.content)"
+            ></div>
+          } @else {
+            <p class="ChatThread-messageText">{{ message.content }}</p>
+          }
         </div>
       } @empty {
         <p class="ChatThread-empty">Say something to start the conversation.</p>

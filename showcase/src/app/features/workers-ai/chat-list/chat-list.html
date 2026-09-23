@@ -1,86 +1,77 @@
 <div class="ChatList">
-  <mat-form-field class="ChatList-providerField" appearance="outline">
-    <mat-label>Provider for new chats</mat-label>
-    <select
-      matNativeControl
-      [value]="selectedProvider()"
-      (change)="selectProvider($any($event.target).value)"
-    >
-      <option value="cloudflare">Cloudflare Workers AI</option>
-      <option value="groq">Groq</option>
-    </select>
-  </mat-form-field>
-
-  <button matButton="filled" type="button" class="ChatList-new" (click)="newChat()" [disabled]="creating()">
-    <mat-icon aria-hidden="true">add</mat-icon>
-    {{ creating() ? 'Creating…' : 'New chat' }}
-  </button>
-
   @if (store.loadErrorMessage(); as errorMessage) {
     <p class="ChatList-error">{{ errorMessage }}</p>
-  } @else if (store.isLoading() && store.chats().length === 0) {
-    <p class="ChatList-loading">Loading…</p>
-  } @else if (store.chats().length === 0) {
-    <p class="ChatList-empty">No chats yet — start one above.</p>
   } @else {
-    <ul class="ChatList-items">
-      @for (chat of store.chats(); track chat.id) {
-        <li>
-          @if (editingChatId() === chat.id) {
-            <form class="ChatList-edit" (submit)="$event.preventDefault(); saveTitle(chat)">
-              <input
-                class="ChatList-editInput"
-                aria-label="Chat name"
-                maxlength="60"
-                [value]="editingTitle()"
-                (input)="editingTitle.set($any($event.target).value)"
-                [disabled]="savingChatId() === chat.id"
-              />
-              <button
-                matIconButton
-                type="submit"
-                aria-label="Save chat name"
-                title="Save chat name"
-                [disabled]="savingChatId() === chat.id"
-              >
-                <mat-icon aria-hidden="true">check</mat-icon>
-              </button>
-              <button
-                matIconButton
-                type="button"
-                aria-label="Cancel renaming"
-                title="Cancel renaming"
-                [disabled]="savingChatId() === chat.id"
-                (click)="cancelEditing()"
-              >
-                <mat-icon aria-hidden="true">close</mat-icon>
-              </button>
-            </form>
-          } @else {
-            <div class="ChatList-itemRow">
-              <a
-                [routerLink]="['/workers-ai', chat.id]"
-                routerLinkActive="ChatList-item--active"
-                class="ChatList-item"
-              >
-                <span class="ChatList-title">{{ chat.title }}</span>
-                <small class="ChatList-provider">{{ providerLabel(chat.provider) }} · {{ chat.model }}</small>
-              </a>
-              <button
-                matIconButton
-                type="button"
-                class="ChatList-editButton"
-                aria-label="Rename chat"
-                title="Rename chat"
-                (click)="startEditing(chat)"
-              >
-                <mat-icon aria-hidden="true">edit</mat-icon>
-              </button>
-            </div>
+    <div class="ChatList-row">
+      @if (editing() && currentChat(); as chat) {
+        <form class="ChatList-edit" (submit)="$event.preventDefault(); saveTitle(chat)">
+          <input
+            class="ChatList-control ChatList-editInput"
+            aria-label="Chat name"
+            maxlength="60"
+            [value]="editingTitle()"
+            (input)="editingTitle.set($any($event.target).value)"
+            [disabled]="saving()"
+          />
+          <button matIconButton type="submit" aria-label="Save chat name" title="Save" [disabled]="saving()">
+            <mat-icon aria-hidden="true">check</mat-icon>
+          </button>
+          <button
+            matIconButton
+            type="button"
+            aria-label="Cancel renaming"
+            title="Cancel"
+            [disabled]="saving()"
+            (click)="cancelEditing()"
+          >
+            <mat-icon aria-hidden="true">close</mat-icon>
+          </button>
+        </form>
+      } @else {
+        <select
+          class="ChatList-control ChatList-select"
+          aria-label="Chat session"
+          [disabled]="store.chats().length === 0"
+          (change)="openChat($any($event.target).value)"
+        >
+          <option value="" [selected]="!currentChat()" disabled>
+            {{ store.isLoading() ? 'Loading…' : store.chats().length === 0 ? 'No chats yet' : 'Select a chat…' }}
+          </option>
+          @for (chat of store.chats(); track chat.id) {
+            <option [value]="chat.id" [selected]="chat.id === currentChatId()">
+              {{ chat.title }} · {{ providerLabel(chat.provider) }}
+            </option>
           }
-        </li>
+        </select>
+        @if (currentChat(); as chat) {
+          <button
+            matIconButton
+            type="button"
+            aria-label="Rename chat"
+            title="Rename chat"
+            (click)="startEditing(chat)"
+          >
+            <mat-icon aria-hidden="true">edit</mat-icon>
+          </button>
+        }
       }
-    </ul>
+    </div>
+
+    <div class="ChatList-row">
+      <select
+        class="ChatList-control ChatList-provider"
+        aria-label="Provider for new chats"
+        (change)="selectProvider($any($event.target).value)"
+      >
+        <option value="cloudflare" [selected]="selectedProvider() === 'cloudflare'">Cloudflare Workers AI</option>
+        <option value="groq" [selected]="selectedProvider() === 'groq'">Groq</option>
+      </select>
+      <button matButton="filled" type="button" (click)="newChat()" [disabled]="creating()">
+        <mat-icon aria-hidden="true">add</mat-icon>
+        {{ creating() ? 'Creating…' : 'New chat' }}
+      </button>
+    </div>
+
     @if (renameError(); as errorMessage) {
       <p class="ChatList-error">{{ errorMessage }}</p>
     }

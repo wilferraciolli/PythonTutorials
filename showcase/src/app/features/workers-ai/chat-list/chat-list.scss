@@ -1,81 +1,27 @@
+// A compact selector bar above the thread — mobile-first: rows wrap and the
+// controls share the row instead of a permanent sidebar taking width.
 .ChatList {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.5rem;
 
-  &-new {
-    width: 100%;
-  }
-
-  &-providerField {
-    width: 100%;
-  }
-
-  &-error {
-    margin: 0;
-    font: var(--mat-sys-body-small);
-    color: var(--mat-sys-error);
-  }
-
-  &-loading,
-  &-empty {
-    margin: 0;
-    font: var(--mat-sys-body-small);
-    color: var(--mat-sys-on-surface-variant);
-  }
-
-  &-items {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 0.125rem;
-  }
-
-  &-item {
-    display: block;
-    flex: 1 1 auto;
-    padding: 0.5rem 0.625rem;
-    border-radius: var(--mat-sys-corner-small, 6px);
-    font: var(--mat-sys-body-medium);
-    color: var(--mat-sys-on-surface);
-    text-decoration: none;
-    overflow-wrap: anywhere;
-
-    &:hover {
-      background: var(--mat-sys-surface-container-high);
-    }
-
-    &--active {
-      background: var(--mat-sys-secondary-container);
-      color: var(--mat-sys-on-secondary-container);
-    }
-  }
-
-  &-title,
-  &-provider {
-    display: block;
-  }
-
-  &-provider {
-    margin-top: 0.125rem;
-    font: var(--mat-sys-label-small);
-    color: var(--mat-sys-on-surface-variant);
-    overflow-wrap: anywhere;
-  }
-
-  &-itemRow,
+  &-row,
   &-edit {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
+    gap: 0.5rem;
     min-width: 0;
   }
 
-  &-editInput {
-    min-width: 0;
+  &-edit {
     flex: 1 1 auto;
-    padding: 0.45rem 0.5rem;
+    flex-wrap: nowrap;
+  }
+
+  &-control {
+    min-width: 0;
+    padding: 0.5rem 0.625rem;
     border: 1px solid var(--mat-sys-outline);
     border-radius: var(--mat-sys-corner-small, 6px);
     background: var(--mat-sys-surface);
@@ -83,7 +29,18 @@
     font: var(--mat-sys-body-medium);
   }
 
-  &-editButton {
-    flex: 0 0 auto;
+  &-select,
+  &-editInput {
+    flex: 1 1 12rem;
+  }
+
+  &-provider {
+    flex: 0 1 auto;
+  }
+
+  &-error {
+    margin: 0;
+    font: var(--mat-sys-body-small);
+    color: var(--mat-sys-error);
   }
 }

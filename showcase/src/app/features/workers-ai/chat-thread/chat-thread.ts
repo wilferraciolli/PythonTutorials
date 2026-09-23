@@ -4,6 +4,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { ApiClientService } from '@wiliamferraciolli/ngx-api-client';
+import { marked } from 'marked';
 
 import { describeApiError } from '../../../core/api/api-error';
 import { environment } from '../../../../environments/environment';
@@ -45,6 +46,10 @@ export class ChatThread {
 
   protected providerLabel(provider: ChatProvider): string {
     return provider === 'groq' ? 'Groq' : 'Cloudflare Workers AI';
+  }
+
+  protected renderMarkdown(content: string): string {
+    return marked.parse(content, { async: false });
   }
 
   constructor() {

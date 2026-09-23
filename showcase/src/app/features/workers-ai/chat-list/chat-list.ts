@@ -1,31 +1,51 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
-import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
-import { ActivatedRoute, Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
+import { filter, map, startWith } from 'rxjs';
 
 import { describeApiError } from '../../../core/api/api-error';
 import { Chat, ChatProvider, ChatsStore } from '../chats.store';
 
+// The chat id lives in the child route (`/workers-ai/:chatId`), which this
+// component sits outside of — so it reads it off the URL rather than
+// ActivatedRoute params.
+function chatIdFromUrl(url: string): string | null {
+  const [, section, chatId] = url.split('?')[0].split('/');
+  return section === 'workers-ai' && chatId ? chatId : null;
+}
+
 @Component({
   selector: 'app-chat-list',
-  imports: [RouterLink, RouterLinkActive, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule],
+  imports: [MatButtonModule, MatIconModule],
   templateUrl: './chat-list.html',
   styleUrl: './chat-list.scss',
 })
 export class ChatList {
   protected readonly store = inject(ChatsStore);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
   protected readonly creating = signal(false);
   protected readonly selectedProvider = signal<ChatProvider>('cloudflare');
-  protected readonly editingChatId = signal<string | null>(null);
+  protected readonly editing = signal(false);
   protected readonly editingTitle = signal('');
-  protected readonly savingChatId = signal<string | null>(null);
+  protected readonly saving = signal(false);
   protected readonly renameError = signal<string | null>(null);
 
-  private readonly route = inject(ActivatedRoute);
+  protected readonly currentChatId = toSignal(
+    this.router.events.pipe(
+      filter((event): event is NavigationEnd => event instanceof NavigationEnd),
+      map((event) => chatIdFromUrl(event.urlAfterRedirects)),
+      startWith(chatIdFromUrl(this.router.url)),
+    ),
+    { initialValue: null },
+  );
+
+  protected readonly currentChat = computed(() =>
+    this.store.chats().find((chat) => chat.id === this.currentChatId()),
+  );
 
   constructor() {
     this.route.queryParamMap.subscribe((params) => {
@@ -34,6 +54,11 @@ export class ChatList {
         this.selectedProvider.set(provider);
       }
     });
+  }
+
+  protected async openChat(chatId: string): Promise<void> {
+    this.cancelEditing();
+    if (chatId) await this.router.navigate(['/workers-ai', chatId]);
   }
 
   protected async newChat(): Promise<void> {
@@ -63,13 +88,13 @@ export class ChatList {
   }
 
   protected startEditing(chat: Chat): void {
-    this.editingChatId.set(chat.id);
+    this.editing.set(true);
     this.editingTitle.set(chat.title);
     this.renameError.set(null);
   }
 
   protected cancelEditing(): void {
-    this.editingChatId.set(null);
+    this.editing.set(false);
     this.editingTitle.set('');
     this.renameError.set(null);
   }
@@ -81,7 +106,7 @@ export class ChatList {
       return;
     }
 
-    this.savingChatId.set(chat.id);
+    this.saving.set(true);
     this.renameError.set(null);
     try {
       await this.store.updateTitle(chat, title);
@@ -89,7 +114,7 @@ export class ChatList {
     } catch (err) {
       this.renameError.set(describeApiError(err, 'Failed to rename chat.'));
     } finally {
-      this.savingChatId.set(null);
+      this.saving.set(false);
     }
   }
 }
