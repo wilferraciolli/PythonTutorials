@@ -71,6 +71,9 @@ class UserProfileService:
             "timelineAll": Link(href=f"{API_PREFIX}/timeline/posts?type=ALL", method="GET"),
             "timelineFollowing": Link(href=f"{API_PREFIX}/timeline/posts?type=FOLLOWING", method="GET"),
             "timelinePopular": Link(href=f"{API_PREFIX}/timeline/posts?type=POPULAR", method="GET"),
+            # Unsplash search for the post media picker (append ?q=...). Giphy is searched
+            # from the browser and YouTube needs no search.
+            "searchUnsplash": Link(href=f"{API_PREFIX}/media/unsplash/search", method="GET"),
             "aiChats": Link(href=f"{API_PREFIX}/users/{user_id}/chats", method="GET"),
             "aiChatSearch": Link(href=f"{API_PREFIX}/users/{user_id}/chats/search", method="GET"),
             "aiAssistant": Link(href=f"{API_PREFIX}/users/{user_id}/assistant/ask", method="POST"),

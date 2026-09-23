@@ -12,6 +12,7 @@ from routers import (
     groups,
     health,
     me,
+    media,
     post_comments,
     posts,
     tags,
@@ -64,6 +65,7 @@ app.include_router(tags.router, prefix="/api", dependencies=[Depends(get_authent
 app.include_router(groups.router, prefix="/api", dependencies=[Depends(get_authenticated_user)])
 app.include_router(posts.router, prefix="/api", dependencies=[Depends(get_authenticated_user)])
 app.include_router(post_comments.router, prefix="/api", dependencies=[Depends(get_authenticated_user)])
+app.include_router(media.router, prefix="/api", dependencies=[Depends(get_authenticated_user)])
 app.include_router(timeline.router, prefix="/api", dependencies=[Depends(get_authenticated_user)])
 app.include_router(admin.router, prefix="/api", dependencies=[Depends(get_authenticated_user)])
 

@@ -295,12 +295,51 @@ class GroupFollower(BaseModel):
         return format_utc_datetime(value)
 
 
+class MediaType(str, Enum):
+    UNSPLASH = "UNSPLASH"
+    GIPHY = "GIPHY"
+    YOUTUBE = "YOUTUBE"
+
+
+class MediaRef(BaseModel):
+    """What a client sends: the provider and its id. The server looks up the rest."""
+    type: MediaType
+    id: str = Field(min_length=1, max_length=100)
+
+
+class PostMedia(BaseModel):
+    """
+    A post's media. `url` is the image or GIF to show (None for YouTube: build
+    the embed from `id`). `title` is the image's alt text. The author fields are
+    the Unsplash photographer, for the attribution Unsplash requires.
+    """
+    type: MediaType
+    id: str
+    url: Optional[str] = None
+    title: Optional[str] = None
+    authorName: Optional[str] = None
+    authorUrl: Optional[str] = None
+
+
+class MediaSearchResult(BaseModel):
+    """One Unsplash photo or Giphy GIF from a search; send {type, id} back to attach it."""
+    type: MediaType
+    id: str
+    title: Optional[str] = None
+    previewUrl: str
+    url: str
+    authorName: Optional[str] = None
+    authorUrl: Optional[str] = None
+
+
 class PostCreate(BaseModel):
     title: str = Field(min_length=1, max_length=200)
     body: str = Field(min_length=1, max_length=10000)
+    media: Optional[MediaRef] = None
 
 
 class PostUpdate(BaseModel):
+    # Media isn't edited here: remove it and add another (PUT/DELETE .../media).
     title: Optional[str] = Field(None, min_length=1, max_length=200)
     body: Optional[str] = Field(None, min_length=1, max_length=10000)
 
@@ -313,6 +352,7 @@ class Post(LinkedResource):
     authorName: Optional[str] = None  # "System" for seeded posts, "[deleted user]", None when deleted
     title: str
     body: str
+    media: Optional[PostMedia] = None
     isDeleted: bool = False
     likeCount: int = 0
     commentCount: int = 0

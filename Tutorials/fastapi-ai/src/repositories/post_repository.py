@@ -1,6 +1,7 @@
 from typing import Any, Dict, List, Optional
 
 from database import Database
+from media_providers import ResolvedMedia
 
 # author_name is NULL both for System (author_id NULL) and a deleted user
 # (author_id set, no users row); the service tells them apart.
@@ -50,6 +51,19 @@ class PostRepository:
         await self.db.execute(
             f"UPDATE posts SET {set_clause}, updated_date = ? WHERE id = ?",
             (*updatable.values(), updated_date, post_id),
+        )
+
+    async def set_media(self, post_id: str, media: Optional[ResolvedMedia], updated_date: str) -> None:
+        """Attach media, or clear it with None."""
+        values = (
+            (media.type.value, media.id, media.url, media.title, media.author_name, media.author_url)
+            if media
+            else (None,) * 6
+        )
+        await self.db.execute(
+            "UPDATE posts SET media_type = ?, media_id = ?, media_url = ?, media_title = ?, "
+            "media_author_name = ?, media_author_url = ?, updated_date = ? WHERE id = ?",
+            (*values, updated_date, post_id),
         )
 
     async def soft_delete(self, post_id: str, deleted_date: str) -> None:

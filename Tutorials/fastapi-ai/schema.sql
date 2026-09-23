@@ -141,7 +141,15 @@ CREATE TABLE IF NOT EXISTS posts (
     body         TEXT NOT NULL,
     created_date TEXT NOT NULL,
     updated_date TEXT NOT NULL,
-    deleted_date TEXT
+    deleted_date TEXT,
+    -- Optional media (migration 012). A D1 that already has `posts` needs
+    -- migrations/012_add_post_media.sql run once, since CREATE IF NOT EXISTS skips it.
+    media_type        TEXT CHECK (media_type IN ('UNSPLASH', 'GIPHY', 'YOUTUBE')),
+    media_id          TEXT,
+    media_url         TEXT,
+    media_title       TEXT,
+    media_author_name TEXT,
+    media_author_url  TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_posts_group_created ON posts(group_id, created_date);

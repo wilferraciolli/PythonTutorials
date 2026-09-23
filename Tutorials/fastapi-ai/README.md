@@ -20,7 +20,7 @@ talking to — both sit behind small adapters (`database.py`, `ai.py`).
 > (Workers AI only) and [`fastapi-groq-ai`](../fastapi-groq-ai) (Groq only) are kept
 > as reference/resource projects. All three share the **same Clerk instance and
 > the same D1 database** (`wiltech-db`). This project owns both `cloudflare` and
-> `groq` chats and advertises `aiChats` on the user profile (used by the `showcase`
+> `groq` chats and advertises `aiChats` on the user profile (used by `demo-ui`
 > Home page card). It also has **AI search over chat history** — see
 > [`docs/ask-your-data.md`](docs/ask-your-data.md) (the AI assistant: todos, chats, ...),
 > [`docs/how-ai-search-works.md`](docs/how-ai-search-works.md) (diagrams),
@@ -117,7 +117,7 @@ Every endpoint except `/api/health` requires a Clerk-issued JWT:
 there is no dev bypass, so a plain `curl` with no header gets `401 Unauthorized`
 on every route below.
 
-The `showcase` Angular app handles sign-in end to end. To call the API
+The `demo-ui` Angular app handles sign-in end to end. To call the API
 directly (`curl`, Swagger's "Try it out", etc.), sign in through that app and
 copy the bearer token it sends — e.g. from your browser's Network tab on any
 request to this API — into your own request.
@@ -333,8 +333,10 @@ above) except `/api/health`, `/docs`, and `/openapi.json`.
 | PUT | `/api/groups/{id}/owner` | Assign a new owner `{"userId"}` (must be a member; owner or admin) |
 | GET | `/api/groups/{id}/members` | Members; `PUT/DELETE /members/me` join or leave, `PUT/DELETE /members/{userId}` add (any member) or remove (owner or admin) |
 | GET | `/api/groups/{id}/followers` | Followers; `PUT/DELETE /followers/me` follow or unfollow |
-| GET / POST | `/api/groups/{id}/posts` | The group's posts, newest first (`?limit=`) / create one (`title` and `body` required; members and admins) |
+| GET / POST | `/api/groups/{id}/posts` | The group's posts, newest first (`?limit=`) / create one (`title` and `body` required, optional `media: {type, id}`; members and admins) |
 | GET / PUT / DELETE | `/api/groups/{id}/posts/{postId}` | Read, edit (author), soft delete (author, group owner or admin). `PUT/DELETE .../like` like or unlike |
+| PUT / DELETE | `/api/groups/{id}/posts/{postId}/media` | Add or remove the post's one Unsplash photo, Giphy GIF or YouTube video (author). Change = remove, then add. See [Post media](docs/social-groups.md#post-media) |
+| GET | `/api/media/unsplash/search` | `?q=` Unsplash search for the media picker; `UNSPLASH_ACCESS_KEY` stays on the server (503 if unset). Attaching a photo tracks the download as Unsplash requires. Giphy is searched from the browser |
 | GET / POST | `/api/groups/{id}/posts/{postId}/comments` | Comments oldest first / add one, or reply with `parentCommentId` |
 | PUT / DELETE | `/api/groups/{id}/posts/{postId}/comments/{commentId}` | Edit (author), soft delete (author, group owner or admin). `PUT/DELETE .../like` like or unlike |
 | GET | `/api/timeline/posts` | Your feed from the last year: `?type=ALL` (every post you can see, newest first), `FOLLOWING` (groups you follow, newest first) or `POPULAR` (score: comment = 2, like = 1). `?limit=` default 50 |

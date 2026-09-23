@@ -47,7 +47,7 @@ class Social:
         return row
 
 
-async def make_social(tmp_path) -> Social:
+async def make_social(tmp_path, media=None) -> Social:
     db = SQLiteDatabase(str(tmp_path / "social.db"))
     users = UserRepository(db)
     for user_id in ("owner", "member", "outsider", "admin"):
@@ -56,6 +56,6 @@ async def make_social(tmp_path) -> Social:
 
     stats, reactions = PostStatsRepository(db), ReactionRepository(db)
     groups = GroupService(GroupRepository(db), users)
-    posts = PostService(PostRepository(db), stats, reactions, groups)
+    posts = PostService(PostRepository(db), stats, reactions, groups, media)
     comments = PostCommentService(PostCommentRepository(db), stats, reactions, posts)
     return Social(db, users, groups, posts, comments)

@@ -20,7 +20,7 @@ router = APIRouter(prefix="/groups/{group_id}/posts/{post_id}/comments", tags=["
 def get_post_comment_service(request: Request) -> PostCommentService:
     db = get_database(request)
     return PostCommentService(
-        PostCommentRepository(db), PostStatsRepository(db), ReactionRepository(db), get_post_service(request)
+        PostCommentRepository(db), PostStatsRepository(db), ReactionRepository(db), get_post_service(request, media=None)
     )
 
 

@@ -24,6 +24,18 @@ class ConflictError(AppError):
     status_code = 409
 
 
+class UpstreamError(AppError):
+    """A third-party API (Unsplash, Giphy) failed."""
+
+    status_code = 502
+
+
+class NotConfiguredError(AppError):
+    """A feature's key isn't set (e.g. UNSPLASH_ACCESS_KEY)."""
+
+    status_code = 503
+
+
 def register_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(AppError)
     async def handle_app_error(request: Request, exc: AppError) -> JSONResponse:

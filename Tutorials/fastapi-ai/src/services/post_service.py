@@ -5,7 +5,8 @@ from uuid import uuid4
 from api_response import API_PREFIX, envelope
 from errors import ConflictError, ForbiddenError, NotFoundError
 from group_permissions import Caller, GroupAccess, GroupPermissions
-from models import Link, Post, PostCreate, PostUpdate
+from media_providers import MediaLookup
+from models import Link, MediaRef, MediaType, Post, PostCreate, PostMedia, PostUpdate
 from repositories.post_repository import PostRepository
 from repositories.post_stats_repository import PostStatsRepository
 from repositories.reaction_repository import ReactionRepository
@@ -49,12 +50,14 @@ class PostService:
         stats: PostStatsRepository,
         reactions: ReactionRepository,
         group_service: GroupService,
+        media: Optional[MediaLookup] = None,
         permissions: Optional[GroupPermissions] = None,
     ) -> None:
         self.posts = posts
         self.stats = stats
         self.reactions = reactions
         self.group_service = group_service
+        self.media = media
         self.permissions = permissions or GroupPermissions()
 
     async def get_post(self, caller: Caller, group_id: str, post_id: str):
@@ -81,20 +84,19 @@ class PostService:
         access = await self.group_service.get_visible(caller, group_id)
         if not self.permissions.can_post(caller, access):
             raise ForbiddenError("Only members can post in this group")
+        # Looked up before anything is saved, so a bad media id doesn't leave a post behind.
+        media = await self._resolve(payload.media) if payload.media else None
 
         post_id = str(uuid4())
         now = now_iso()
         await self.posts.create(post_id, group_id, caller.id, payload.title.strip(), payload.body.strip(), now)
+        if media:
+            await self.posts.set_media(post_id, media, now)
         await self.stats.refresh(post_id, now)
         return await self.get_post(caller, group_id, post_id)
 
     async def update_post(self, caller: Caller, group_id: str, post_id: str, payload: PostUpdate):
-        _, post = await self.get_post(caller, group_id, post_id)
-        if post["deleted_date"]:
-            raise NotFoundError(POST_NOT_FOUND)
-        if post["author_id"] != caller.id:  # nobody edits someone else's words, not even admins
-            raise ForbiddenError("Only the author can edit a post")
-
+        await self._own_post(caller, group_id, post_id)
         await self.posts.update(
             post_id,
             now_iso(),
@@ -110,6 +112,31 @@ class PostService:
         if not self.permissions.can_delete_content(caller, access, post["author_id"]):
             raise ForbiddenError("Only the author, the group owner or an admin can delete a post")
         await self.posts.soft_delete(post_id, now_iso())
+
+    # --- media: one per post. Changing it is remove, then add another.
+
+    async def set_media(self, caller: Caller, group_id: str, post_id: str, ref: MediaRef):
+        await self._own_post(caller, group_id, post_id)
+        await self.posts.set_media(post_id, await self._resolve(ref), now_iso())
+        return await self.get_post(caller, group_id, post_id)
+
+    async def remove_media(self, caller: Caller, group_id: str, post_id: str):
+        await self._own_post(caller, group_id, post_id)
+        await self.posts.set_media(post_id, None, now_iso())
+        return await self.get_post(caller, group_id, post_id)
+
+    async def _resolve(self, ref: MediaRef):
+        if self.media is None:
+            raise ConflictError("Media isn't available")
+        return await self.media.resolve(ref)
+
+    async def _own_post(self, caller: Caller, group_id: str, post_id: str):
+        _, post = await self.get_post(caller, group_id, post_id)
+        if post["deleted_date"]:
+            raise NotFoundError(POST_NOT_FOUND)
+        if post["author_id"] != caller.id:  # nobody edits someone else's words, not even admins
+            raise ForbiddenError("Only the author can edit a post")
+        return post
 
     # --- likes
 
@@ -146,6 +173,7 @@ class PostService:
             authorName=author_name(row),
             title=DELETED if deleted else row["title"],
             body=DELETED if deleted else row["body"],
+            media=None if deleted else self.to_media(row),
             isDeleted=deleted,
             likeCount=row.get("like_count", 0),
             commentCount=row.get("comment_count", 0),
@@ -153,6 +181,19 @@ class PostService:
             created_date=row["created_date"],
             updated_date=row["updated_date"],
             links=self.build_post_links(caller, access, row),
+        )
+
+    @staticmethod
+    def to_media(row: Dict[str, Any]) -> Optional[PostMedia]:
+        if not row.get("media_type"):
+            return None
+        return PostMedia(
+            type=row["media_type"],
+            id=row["media_id"],
+            url=row.get("media_url"),
+            title=row.get("media_title"),
+            authorName=row.get("media_author_name"),
+            authorUrl=row.get("media_author_url"),
         )
 
     def build_post_links(self, caller: Caller, access: GroupAccess, row: Dict[str, Any]) -> Dict[str, Link]:
@@ -173,6 +214,10 @@ class PostService:
                 links["like"] = Link(href=f"{base}/like", method="PUT")
         if row.get("author_id") == caller.id:
             links["update"] = Link(href=base, method="PUT")
+            if row.get("media_type"):
+                links["removeMedia"] = Link(href=f"{base}/media", method="DELETE")
+            else:
+                links["addMedia"] = Link(href=f"{base}/media", method="PUT")
         if self.permissions.can_delete_content(caller, access, row.get("author_id")):
             links["delete"] = Link(href=base, method="DELETE")
         return links
@@ -195,5 +240,9 @@ class PostService:
         return {
             "title": {"mandatory": True, "maxLength": 200},
             "body": {"mandatory": True, "maxLength": 10000},
+            "media": {
+                "mandatory": False,
+                "values": [{"id": t.value, "value": t.value.title()} for t in MediaType],
+            },
             "authorName": {"readOnly": True},
         }

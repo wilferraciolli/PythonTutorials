@@ -53,6 +53,14 @@ def get_todo_search_service(request: Request):
     return TodoSearchService(TodoRepository(db), ResourceVectorStore(db, "todo"), embed_texts, model)
 
 
+def get_media_providers(request: Request):
+    """Post media lookups with the server's Unsplash key (Unsplash routes answer 503 without it)."""
+    from config import get_config
+    from media_providers import MediaProviders
+
+    return MediaProviders(get_config(request, "UNSPLASH_ACCESS_KEY"))
+
+
 async def get_caller(
     request: Request,
     current_user: AuthenticatedUser = Depends(get_authenticated_user),

@@ -6,7 +6,7 @@ Goal: let a user ask questions about **any** of their data in plain English:
 - "How many todos are overdue?" — exact, needs counting
 - "How many are new, and which is due first?" — several lookups in one question
 
-> **Status:** built and tested with a scripted fake model. Angular page: `/ask` in the showcase.
+> **Status:** built and tested with a scripted fake model. Angular page: `/ask` in `demo-ui`.
 > Not yet run against a real Groq / Workers AI model.
 
 ## Why embeddings alone are not enough

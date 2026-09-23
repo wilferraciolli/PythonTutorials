@@ -106,4 +106,4 @@ Follows the router -> service -> repository -> adapter layering in `PYTHON_APP_C
 1. Find-only first, or include `ask` (LLM answers) in the MVP?
 2. Initial backfill: one-off script or admin endpoint?
 
-See also the frontend part of this plan in `showcase/docs/ai-search-plan.md`.
+See also the frontend part of this plan in `showcase/docs/ai-search-plan.md` (the tutorial UI; the fastapi-ai screens are in `demo-ui`).

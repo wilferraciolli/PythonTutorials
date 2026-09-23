@@ -4,9 +4,10 @@ Users create **groups** (public or private), post to them, and other people like
 posts and reply to comments. Users can **be a member** of a group or just **follow** it, and each
 user has a **timeline** built from the groups they can see.
 
-> **Status:** revision 5. **Steps 1-4 and 6 built**: groups, members, owner, followers, role re-sync;
+> **Status:** revision 6. **Steps 1-4, 6 and 7 built**: groups, members, owner, followers, role re-sync;
 > posts and post comments (separate APIs), News seed; likes, `post_stats` and the admin area
-> (`GET /api/admin`); timeline; Angular pages in `showcase` (`/timeline`, `/groups`, `/admin`). Step 5 (AI) not yet. Items marked **(decision)** can still be changed.
+> (`GET /api/admin`); timeline; Angular pages in `demo-ui` (`/timeline`, `/groups`, `/admin`);
+> post media (Unsplash, Giphy, YouTube). Step 5 (AI) paused. Items marked **(decision)** can still be changed.
 
 ## Roles: two different things
 
@@ -293,6 +294,8 @@ without going through its group.
 | POST | `/api/groups/{groupId}/posts/{postId}/comments` | Comment, or reply with `parentCommentId` (member) |
 | PUT / DELETE | `/api/groups/{groupId}/posts/{postId}/comments/{commentId}` | Edit (author), delete (author, owner, admin) |
 | PUT / DELETE | `.../posts/{postId}/like` and `.../comments/{commentId}/like` | Like / unlike |
+| PUT / DELETE | `.../posts/{postId}/media` | Add / remove the post's media (author); see [Post media](#post-media) |
+| GET | `/api/media/unsplash/search?q=` | Unsplash search for the media picker (`limit`, default 20, max 30). Giphy is searched from the browser |
 
 ### Timeline (your feed)
 
@@ -329,6 +332,96 @@ nested paths, so the UI never builds a URL. The profile links `groups`, `createG
 
 **Links carry the permissions:** a post only gets `delete` if the caller may delete it (its
 author, the group owner or an admin), a group only gets `join` if they can join it, and so on.
+
+## Post media
+
+A post can carry **one** optional piece of media, from one of three sources:
+
+| Type | Searched | Key and where it lives | What the post stores |
+|---|---|---|---|
+| `UNSPLASH` | **Server**: `GET /api/media/unsplash/search?q=` (profile link `searchUnsplash`) | `UNSPLASH_ACCESS_KEY`, server only (`.env` / wrangler secret) | Photo id, image URL, alt text, photographer name and profile link |
+| `GIPHY` | **Browser**: the picker calls `api.giphy.com` directly | `giphyApiKey` in `demo-ui`'s `src/environments` (a client key, it ships in the bundle) | GIF id, and the URL built from it |
+| `YOUTUBE` | Nothing to search: paste a link or id | none | The 11-character video id only (e.g. `dQw4w9WgXcQ`) |
+
+**Rules**
+
+- Media is optional and there is at most one per post (`posts.media_*` columns, migration 012).
+- The client only ever sends `{"type": "...", "id": "..."}`, on create (`media` in the
+  `POST .../posts` body) or on `PUT .../posts/{postId}/media`. The server works out everything
+  else itself, so nobody can put an arbitrary URL on a post. A bad or unknown id is a **400** and
+  nothing is saved.
+  - Unsplash: `GET /photos/{id}` with the server's key gives the URL, alt text and photographer.
+  - Giphy: the server needs no key. It checks the id's format, builds
+    `https://media.giphy.com/media/{id}/giphy.webp` and confirms it exists with a `HEAD`.
+  - YouTube: the id is checked against `^[A-Za-z0-9_-]{11}$`; YouTube is never called. The UI
+    accepts a pasted `youtube.com/watch?v=`, `youtu.be/`, `/shorts/` or `/embed/` link and sends
+    only the id.
+- **Editing media means remove, then add.** There is no "change media": the author gets a
+  `removeMedia` link (DELETE) when the post has media and an `addMedia` link (PUT) when it
+  doesn't. Only the author gets either; owners and admins can still delete the whole post.
+- A deleted post shows no media.
+- Without `UNSPLASH_ACCESS_KEY` the Unsplash routes answer **503** (and the UI still offers GIFs
+  and YouTube); an Unsplash outage is **502**. An empty `giphyApiKey` hides the GIF tab.
+
+```mermaid
+sequenceDiagram
+    participant UI as Angular media picker
+    participant API as fastapi-ai
+    participant U as Unsplash
+    participant G as Giphy
+    alt Unsplash
+        UI->>API: GET /api/media/unsplash/search?q=bike
+        API->>U: search (server's key)
+        API-->>UI: results with photographer credit
+    else Giphy
+        UI->>G: GET api.giphy.com/v1/gifs/search?q=dance (browser key)
+        G-->>UI: results
+    end
+    Note over UI: user picks one
+    UI->>API: POST .../posts {title, body, media: {type, id}}
+    alt UNSPLASH
+        API->>U: GET /photos/{id}
+        API->>U: GET links.download_location (download tracking)
+    else GIPHY
+        API->>G: HEAD media.giphy.com/media/{id}/giphy.webp
+    end
+    API-->>UI: post with media {type, id, url, title, authorName, authorUrl}
+```
+
+**Unsplash API requirements**
+
+- **Track downloads.** Unsplash requires a download event whenever a photo is picked for use:
+  a `GET` on the photo's `links.download_location` with `Authorization: Client-ID <access key>`.
+  We fire it on the server when the photo is attached to a post (create or `addMedia`), right
+  after looking the photo up. The key never reaches the browser, and browsing the search
+  results doesn't count as a download. Covered by
+  `test_attaching_an_unsplash_photo_tracks_the_download`.
+- **Attribute.** Every photo shows "Photo by *name* on Unsplash": the name links to
+  `user.links.html` and "Unsplash" to `https://unsplash.com/`, both with
+  `?utm_source=wiltech&utm_medium=referral`. The server stores the photographer link with the
+  UTM parameters already on it.
+- **Hotlink.** Images are shown from Unsplash's own `images.unsplash.com` URL (`urls.regular`),
+  never copied. The photo's `alt_description` is used as the image's alt text.
+
+**Other providers**
+
+- Giphy: searches use `rating=pg-13`; the picker shows "Powered by GIPHY" and posts "via GIPHY".
+- YouTube: embedded from `youtube-nocookie.com`. In lists (timeline, group page) the video shows
+  as its thumbnail and only loads the player when clicked.
+
+**UI.** The picker shows Unsplash only when the profile has the `searchUnsplash` link, GIFs only
+when `giphyApiKey` is set, and YouTube always. Searches run on **Search** or Enter, not on every
+keystroke. The group page's new-post form has **Add media**, and the post page has **Add media**
+/ **Remove media** following the post's links.
+
+**Setup.**
+- Unsplash: put `UNSPLASH_ACCESS_KEY` in `.env` (see `.env.example`). On Cloudflare, run
+  `npx wrangler secret put UNSPLASH_ACCESS_KEY`. `UNSPLASH_SECRET_KEY` is kept in `.env` for a
+  future OAuth flow but isn't used.
+- Giphy: set `giphyApiKey` in `demo-ui/src/environments/environment*.ts`. It is public by nature
+  (it runs in the browser), so restrict it in the Giphy dashboard.
+- A D1 database created before this feature needs `migrations/012_add_post_media.sql` run once:
+  `npx wrangler d1 execute wiltech-db --remote --file migrations/012_add_post_media.sql`.
 
 ## How it plugs into AI search and Ask
 
@@ -369,6 +462,8 @@ follow".
 5. **AI:** embeddings for posts and comments, tools with visibility scoping, docs.
 6. **Angular:** timeline page with the three tabs, groups list, group page, post page with
    threaded comments, members and follow controls.
+7. **Post media:** one optional Unsplash photo, Giphy GIF or YouTube video per post; server-side
+   search and lookup; picker and display in the UI.
 
 Each step is independently shippable.
 

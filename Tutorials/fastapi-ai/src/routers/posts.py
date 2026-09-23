@@ -1,14 +1,15 @@
-from typing import Any
+from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, Request, Response
 
 from database import get_database
 from group_permissions import Caller
-from models import PostCreate, PostUpdate
+from media_providers import MediaProviders
+from models import MediaRef, PostCreate, PostUpdate
 from repositories.post_repository import PostRepository
 from repositories.post_stats_repository import PostStatsRepository
 from repositories.reaction_repository import ReactionRepository
-from routers.deps import get_caller
+from routers.deps import get_caller, get_media_providers
 from routers.groups import get_group_service
 from services.post_service import DEFAULT_LIMIT, PostService
 
@@ -18,9 +19,14 @@ from services.post_service import DEFAULT_LIMIT, PostService
 router = APIRouter(prefix="/groups/{group_id}/posts", tags=["posts"])
 
 
-def get_post_service(request: Request) -> PostService:
+def get_post_service(
+    request: Request, media: Optional[MediaProviders] = Depends(get_media_providers)
+) -> PostService:
+    """Comments and the timeline reuse this with media=None: they only read posts."""
     db = get_database(request)
-    return PostService(PostRepository(db), PostStatsRepository(db), ReactionRepository(db), get_group_service(request))
+    return PostService(
+        PostRepository(db), PostStatsRepository(db), ReactionRepository(db), get_group_service(request), media
+    )
 
 
 @router.get("")
@@ -78,6 +84,30 @@ async def delete_post(
 ) -> Response:
     await service.delete_post(caller, group_id, post_id)
     return Response(status_code=204)
+
+
+@router.put("/{post_id}/media")
+async def set_post_media(
+    group_id: str,
+    post_id: str,
+    payload: MediaRef,
+    caller: Caller = Depends(get_caller),
+    service: PostService = Depends(get_post_service),
+) -> dict[str, Any]:
+    """Attach an Unsplash photo, Giphy GIF or YouTube video (author only)."""
+    access, row = await service.set_media(caller, group_id, post_id, payload)
+    return service.build_post_response(caller, access, row)
+
+
+@router.delete("/{post_id}/media")
+async def remove_post_media(
+    group_id: str,
+    post_id: str,
+    caller: Caller = Depends(get_caller),
+    service: PostService = Depends(get_post_service),
+) -> dict[str, Any]:
+    access, row = await service.remove_media(caller, group_id, post_id)
+    return service.build_post_response(caller, access, row)
 
 
 @router.put("/{post_id}/like")

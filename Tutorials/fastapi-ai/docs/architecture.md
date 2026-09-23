@@ -1,12 +1,12 @@
 # Architecture overview
 
-How the three Python projects, the Angular showcase and the shared services fit together.
+How the three Python projects, the Angular apps (showcase for the tutorials, demo-ui for fastapi-ai) and the shared services fit together.
 
 ## The projects
 
 ```mermaid
 flowchart TB
-    subgraph UI["showcase (Angular)"]
+    subgraph UI["demo-ui (Angular)"]
         Home[Home cards<br/>Cloudflare AI · Groq AI · AI]
         ChatUI[Chat UI]
     end
