@@ -1,4 +1,4 @@
-import { HttpResourceRequest, httpResource } from '@angular/common/http';
+import { HttpErrorResponse, HttpResourceRequest, httpResource } from '@angular/common/http';
 import { Component, computed, inject, output, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
@@ -111,7 +111,12 @@ export class MediaPicker {
   protected readonly searching = computed(() => this.activeResource().isLoading());
   protected readonly searchError = computed(() => {
     const error = this.activeResource().error();
-    return error ? describeApiError(error, "Couldn't search right now.") : null;
+    if (!error) return null;
+    if (this.activeTab() === 'GIPHY' && error instanceof HttpErrorResponse) {
+      if (error.status === 429) return "Giphy's search limit has been reached. Try again later.";
+      if (error.status === 401 || error.status === 403) return 'Giphy rejected the API key.';
+    }
+    return describeApiError(error, "Couldn't search right now.");
   });
   protected readonly searched = computed(() => this.query()?.type === this.activeTab());
 

@@ -26,11 +26,9 @@ export class Home {
   protected readonly todosError = computed(() => this.missingLink(this.currentUser.myTodosLink()));
 
   // Each Python project advertises its own chats link on the user profile (see
-  // user_profile_service.py in fastapi-cloudflare-ai / fastapi-groq-ai / fastapi-ai).
-  // Only one runs locally at a time, so a card whose link isn't there
-  // means "that project isn't the one answering" — same 'Not found' as todos.
-  protected readonly cloudflareAiError = computed(() => this.missingLink(this.currentUser.link('cloudflareChats')));
-  protected readonly groqAiError = computed(() => this.missingLink(this.currentUser.link('groqChats')));
+  // user_profile_service.py). demo-ui talks to fastapi-ai only, which serves both
+  // providers from one AI card; the single-provider projects live in showcase.
+  // A card whose link isn't on the profile shows 'Not found', same as todos.
   protected readonly aiError = computed(() => this.missingLink(this.currentUser.link('aiChats')));
   protected readonly askError = computed(() => this.missingLink(this.currentUser.link('aiAssistant')));
   protected readonly timelineError = computed(() => this.missingLink(this.currentUser.link('timelineAll')));
