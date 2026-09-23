@@ -70,7 +70,9 @@ class User(LinkedResource):
 
 class UserProfile(LinkedResource):
     id: str
+    externalId: Optional[str] = None
     name: str
+    email: Optional[str] = None
     roleIds: list[UserRole]
 
 
@@ -90,7 +92,7 @@ class ChatMessageCreate(BaseModel):
     content: str
 
 
-ChatProvider = Literal["cloudflare", "groq"]
+ChatProvider = Literal["cloudflare"]
 
 
 class ChatCreate(BaseModel):

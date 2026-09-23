@@ -42,6 +42,10 @@ class UserService:
         rows = await self.user_repository.get_all()
         return [self.to_user(row) for row in rows]
 
+    async def search_users(self, term: Optional[str] = None) -> List[User]:
+        rows = await self.user_repository.search(term)
+        return [self.to_user(row) for row in rows]
+
     async def update_user(self, user_id: str, user: UserUpdate) -> Optional[User]:
         existing = await self.user_repository.get_by_id(user_id)
 
@@ -131,6 +135,7 @@ class UserService:
         return {
             "createUser": Link(href=f"{API_PREFIX}/users", method="POST"),
             "userTemplate": Link(href=f"{API_PREFIX}/users/template", method="GET"),
+            "searchUsers": Link(href=f"{API_PREFIX}/users/search", method="GET"),
         }
 
     def build_response(

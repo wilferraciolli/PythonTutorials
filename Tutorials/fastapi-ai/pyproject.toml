@@ -1,0 +1,18 @@
+[project]
+name = "fastapi-ai"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = [
+    "aiosqlite",
+    "fastapi",
+    "httpx",
+    "openai",
+    "pyjwt[crypto]",
+    "uvicorn",
+]
+
+[dependency-groups]
+dev = [
+    "workers-py",
+    "workers-runtime-sdk",
+]

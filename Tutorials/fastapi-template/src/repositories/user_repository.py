@@ -76,6 +76,23 @@ class UserRepository:
 
         return users
 
+    async def search(self, term: Optional[str] = None) -> List[Dict[str, Any]]:
+        # Case-insensitive match on name or email (SQLite LIKE and D1 both
+        # are for ASCII). No term returns everyone, same as get_all().
+        if not term:
+            return await self.get_all()
+
+        like = f"%{term}%"
+        users = await self.db.fetch_all(
+            "SELECT * FROM users WHERE name LIKE ? OR email LIKE ? ORDER BY name",
+            (like, like),
+        )
+
+        for user in users:
+            user["roleIds"] = await self.get_role_ids(user["id"])
+
+        return users
+
     async def update(self, user_id: str, **fields: Any) -> Optional[Dict[str, Any]]:
         role_ids = fields.pop("roleIds", None)
 

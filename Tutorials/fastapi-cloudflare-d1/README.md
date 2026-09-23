@@ -271,12 +271,13 @@ All paths require a bearer token (see "Authentication" above) except
 | GET | `/health` | Health check |
 | GET | `/me` | Current user — upserted from the Clerk token's identity on first call |
 | GET | `/users` | List users |
+| GET | `/users/search` | Search users by name or email (`?q=`); no `q` returns everyone |
 | GET | `/users/template` | Create-template payload for users |
 | GET | `/users/{id}` | Get one user |
 | POST | `/users` | Create a user |
 | PUT | `/users/{id}` | Update a user |
 | DELETE | `/users/{id}` | Delete a user (returns `204 No Content`) |
-| GET | `/users/{id}/profile` | Navigation hub — links to that user's todos, tags, etc. |
+| GET | `/users/{id}/profile` | **Where links live.** `/me` only returns the `userProfile` link; this returns the user (`id`, `externalId`, `name`, `email`, `roleIds`) plus every link the UI follows, built from the `{id}` in the path. `UserProfileService.can_view_profile` is the seam for "may the caller see this user's resources?" |
 | GET | `/users/{user_id}/todos` | List all todos for a user |
 | GET | `/users/{user_id}/todos/template` | Create-template payload for todos |
 | GET | `/users/{user_id}/todos/{id}` | Get one todo |

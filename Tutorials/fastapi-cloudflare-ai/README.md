@@ -1,4 +1,4 @@
-# FastAPI Cloudflare Workers AI — portable FastAPI chat API (SQLite/D1 + Workers AI or Groq)
+# FastAPI Cloudflare Workers AI — portable FastAPI chat API (SQLite/D1 + Workers AI)
 
 This app keeps the same portability pattern as the sibling
 [`fastapi-cloudflare-d1`](../fastapi-cloudflare-d1) project:
@@ -9,18 +9,26 @@ This app keeps the same portability pattern as the sibling
   same protocol, and reaches **Workers AI** through the native `env.AI`
   binding declared in `wrangler.jsonc` (or its REST API when running
   anywhere else).
-- **Groq** is a second chat provider, called through its OpenAI-compatible
-  API. Each chat records which provider it uses (chosen when it's created).
+- Each chat records which provider it uses. This project owns `cloudflare`
+  chats only — Groq lives in [`fastapi-groq-ai`](../fastapi-groq-ai).
 
 The repository layer does not know whether the database is SQLite or
 Cloudflare D1, and the chat service does not know which AI provider it is
 talking to — both sit behind small adapters (`database.py`, `ai.py`).
 
+> **Part of a trio of sibling projects** — [`fastapi-cloudflare-ai`](../fastapi-cloudflare-ai)
+> (Cloudflare Workers AI only), [`fastapi-groq-ai`](../fastapi-groq-ai) (Groq only)
+> and [`fastapi-ai`](../fastapi-ai) (both, where new AI work happens). All three
+> share the **same Clerk instance and the same D1 database** (`wiltech-db`, same
+> `users`/`chats` tables). Each project only lists and opens chats for the
+> providers it owns (`chats.provider`), and advertises its own chats link (`cloudflareChats`) on
+> the user profile (`/api/users/{id}/profile`), which the `showcase` Home page uses to show its card.
+
 ## Status
 
 ✅ **Working end to end, locally.** Auth, user records, and a ChatGPT-style
-`/api/chats` feature (list chats, open one, rename it, send a message, get an
-AI reply from Cloudflare Workers AI or Groq) are wired up. Not yet deployed —
+`/api/users/{user_id}/chats` feature (list chats, open one, rename it, send a message, get an
+AI reply from Cloudflare Workers AI) are wired up. Not yet deployed —
 see "Deploying to Cloudflare" below.
 
 > **Runs on port 8001 — same as every other Python tutorial project in this
@@ -48,7 +56,7 @@ fastapi-cloudflare-ai/
 │   ├── database.py              # SQLite, D1 binding, and D1 HTTP adapters
 │   ├── config.py                # Runtime config from Worker env / .env / OS env
 │   ├── api_response.py          # Shared response envelope model + API_PREFIX
-│   ├── ai.py                    # AI protocol: Workers AI (REST or env.AI binding) and Groq adapters
+│   ├── ai.py                    # AI protocol: Workers AI (REST or env.AI binding) adapters
 │   ├── models.py                # Pydantic DTOs and UTC date formatting
 │   ├── repositories/
 │   │   ├── user_repository.py
@@ -57,7 +65,7 @@ fastapi-cloudflare-ai/
 │   │   ├── user_service.py          # /api/users CRUD
 │   │   ├── user_profile_service.py  # /api/users/{id}/profile navigation hub
 │   │   ├── me_service.py            # /api/me — maps the Clerk identity to a users row
-│   │   └── chat_service.py          # /api/chats — talks to the chat's AI provider via ai.py
+│   │   └── chat_service.py          # /api/users/{user_id}/chats — talks to the chat's AI provider via ai.py
 │   └── routers/
 │       ├── health.py
 │       ├── me.py
@@ -86,7 +94,6 @@ fastapi-cloudflare-ai/
 | `uv` | Python package/venv manager used by this project | PowerShell: `powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 \| iex"` <br> Git Bash / Linux / macOS: `curl -LsSf https://astral.sh/uv/install.sh \| sh` |
 | Docker | Optional local SQLite container workflow | https://www.docker.com/products/docker-desktop/ |
 | A free Cloudflare account | Required to call Workers AI (even in local `wrangler dev` — see below) | https://dash.cloudflare.com/sign-up |
-| A Groq API key | Only if you want the Groq provider | https://console.groq.com/keys |
 
 > **Corporate proxy / TLS-inspecting network note:** if `uv` fails with
 > `invalid peer certificate: UnknownIssuer`, set `$env:UV_NATIVE_TLS = "true"`
@@ -132,9 +139,6 @@ the non-secret values come from `wrangler.jsonc` `vars` and secrets from
 | `CF_AI_ACCOUNT_ID` | With `http` | Cloudflare account id used for Workers AI |
 | `CF_AI_API_TOKEN` | With `http` | Cloudflare API token with Workers AI access (secret) |
 | `CF_AI_MODEL` | Yes | Workers AI model for Cloudflare chats |
-| `GROQ_API_KEY` | For Groq chats | Groq API key (secret) |
-| `GROQ_BASE_URL` | For Groq chats | Groq's OpenAI-compatible base URL |
-| `GROQ_MODEL` | For Groq chats | Model used for Groq chats |
 | `CLERK_JWKS_URL` | Yes | Clerk JWKS endpoint the API verifies tokens against |
 | `CLERK_AUDIENCE` | Yes | JWT audience (the Clerk JWT template name) |
 | `CLERK_AUTHORIZED_PARTIES` | No | Comma-separated frontend origins; when set, the token's `azp` claim must match one |
@@ -261,14 +265,9 @@ npx wrangler d1 execute wiltech-db --remote --file=./schema.sql
 You'll be asked to confirm (`Y`) since this touches the live database.
 
 ### 3. Set secrets
-Non-secret settings (`CF_AI_MODEL`, `GROQ_BASE_URL`, `GROQ_MODEL`, Clerk) are
-already in `wrangler.jsonc` `vars`. The Worker reaches Workers AI through the
-`env.AI` binding, so `CF_AI_API_TOKEN` isn't needed there. Only Groq needs a
-secret:
-
-```powershell
-npx wrangler secret put GROQ_API_KEY
-```
+Non-secret settings (`CF_AI_MODEL`, Clerk) are already in `wrangler.jsonc`
+`vars`. The Worker reaches Workers AI through the `env.AI` binding, so
+`CF_AI_API_TOKEN` isn't needed there — no secrets to set.
 
 ### 4. Deploy
 
@@ -301,18 +300,19 @@ above) except `/api/health`, `/docs`, and `/openapi.json`.
 | GET | `/api/health` | Health check |
 | GET | `/api/me` | Current user — upserted from the Clerk token's identity on first call |
 | GET | `/api/users` | List users |
+| GET | `/api/users/search` | Search users by name or email (`?q=`); no `q` returns everyone |
 | GET | `/api/users/template` | Create-template payload for users |
 | GET | `/api/users/{id}` | Get one user |
 | POST | `/api/users` | Create a user |
 | PUT | `/api/users/{id}` | Update a user |
 | DELETE | `/api/users/{id}` | Delete a user (returns `204 No Content`) |
-| GET | `/api/users/{id}/profile` | Navigation hub — links to that user's related resources |
-| GET | `/api/chats` | List the current user's chats (title + timestamps, no messages) |
-| POST | `/api/chats` | Create a new chat; body `{"provider": "cloudflare"}` or `"groq"` (default `cloudflare`). Title is "New chat" until the first message |
-| GET | `/api/chats/{id}` | Get one chat with its full message history |
-| PUT | `/api/chats/{id}` | Rename a chat (`{"title": "..."}`, 1–60 characters) |
-| POST | `/api/chats/{id}/messages` | Send a message; calls the chat's provider, stores both messages, returns the updated chat |
-| DELETE | `/api/chats/{id}` | Delete a chat and its messages (returns `204 No Content`) |
+| GET | `/api/users/{id}/profile` | **Where links live.** `/me` only returns the `userProfile` link; this returns the user (`id`, `externalId`, `name`, `email`, `roleIds`) plus every link the UI follows, built from the `{id}` in the path. `UserProfileService.can_view_profile` is the seam for "may the caller see this user's resources?" |
+| GET | `/api/users/{user_id}/chats` | List the current user's chats (title + timestamps, no messages) |
+| POST | `/api/users/{user_id}/chats` | Create a new chat; body `{"provider": "cloudflare"}` (the default). Title is "New chat" until the first message |
+| GET | `/api/users/{user_id}/chats/{chat_id}` | Get one chat with its full message history |
+| PUT | `/api/users/{user_id}/chats/{chat_id}` | Rename a chat (`{"title": "..."}`, 1–60 characters) |
+| POST | `/api/users/{user_id}/chats/{chat_id}/messages` | Send a message; calls the chat's provider, stores both messages, returns the updated chat |
+| DELETE | `/api/users/{user_id}/chats/{chat_id}` | Delete a chat and its messages (returns `204 No Content`) |
 | GET | `/docs` | Interactive Swagger UI |
 | GET | `/openapi.json` | OpenAPI schema |
 
@@ -322,8 +322,7 @@ under `/users/{id}/...` — `chat_service.py._get_owned_chat()` checks
 ownership itself, and a chat that exists but belongs to someone else reads
 as `404`, not `403`, so its existence isn't leaked.
 
-The chat's provider decides which model answers: `CF_AI_MODEL` for
-`cloudflare`, `GROQ_MODEL` for `groq`.
+Chats are answered by `CF_AI_MODEL`.
 
 ## Roadmap
 

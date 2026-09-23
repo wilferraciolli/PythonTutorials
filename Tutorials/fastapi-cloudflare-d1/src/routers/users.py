@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 
@@ -20,6 +20,16 @@ async def get_users(
     service: UserService = Depends(get_user_service),
 ) -> dict[str, Any]:
     users = await service.get_users()
+    return service.build_response("users", users)
+
+
+@router.get("/search")
+async def search_users(
+    q: Optional[str] = None,
+    service: UserService = Depends(get_user_service),
+) -> dict[str, Any]:
+    """Search users by name or email (`?q=`); no `q` returns everyone."""
+    users = await service.search_users(q)
     return service.build_response("users", users)
 
 

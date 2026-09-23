@@ -202,12 +202,13 @@ above) except `/api/health`, `/docs`, and `/openapi.json`.
 | GET | `/api/health` | Health check |
 | GET | `/api/me` | Current user — upserted from the Clerk token's identity on first call |
 | GET | `/api/users` | List users |
+| GET | `/api/users/search` | Search users by name or email (`?q=`); no `q` returns everyone |
 | GET | `/api/users/template` | Create-template payload for users |
 | GET | `/api/users/{id}` | Get one user |
 | POST | `/api/users` | Create a user |
 | PUT | `/api/users/{id}` | Update a user |
 | DELETE | `/api/users/{id}` | Delete a user (returns `204 No Content`) |
-| GET | `/api/users/{id}/profile` | Navigation hub — links to that user's related resources |
+| GET | `/api/users/{id}/profile` | **Where links live.** `/me` only returns the `userProfile` link; this returns the user (`id`, `externalId`, `name`, `email`, `roleIds`) plus every link the UI follows, built from the `{id}` in the path. `UserProfileService.can_view_profile` is the seam for "may the caller see this user's resources?" |
 | GET | `/docs` | Interactive Swagger UI |
 | GET | `/openapi.json` | OpenAPI schema |
 
