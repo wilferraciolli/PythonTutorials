@@ -1,9 +1,7 @@
-import os
-
 from fastapi import Depends, FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 
 from auth import get_authenticated_user
+from cors import EnvCORSMiddleware
 from errors import register_error_handlers
 from routers import (
     admin,
@@ -29,26 +27,10 @@ app = FastAPI(
     description="AI sample",
     version="1.0.0")
 
-# The Clerk token travels as an `Authorization: Bearer …` header, not a
-# cookie, so `allow_credentials` stays False — the browser doesn't need to
-# send/receive cookies cross-origin for this to work.
-# CORS_ORIGINS is read from os.environ (config.py's _load_dotenv()
-# populates it for local runs), not via config.get_config() — that needs a
-# Request, and CORSMiddleware is built once at import time, before any
-# request exists. That also means a wrangler.jsonc `vars` entry would NOT
-# reach this: per config.py, Cloudflare injects vars into
-# request.scope["env"], not into os.environ. So CORS_ORIGINS (see .env) only
-# takes effect for local uvicorn/Docker runs; empty means no cross-origin
-# access.
-_cors_origins = [origin.strip() for origin in os.environ.get("CORS_ORIGINS", "").split(",") if origin.strip()]
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=_cors_origins,
-    allow_credentials=False,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# CORS_ORIGINS is read on every request (cors.py): from wrangler.jsonc `vars`
+# in a Worker, or from .env locally. A fixed list built at import time never
+# saw the Worker's vars, so the deployed UI would have been blocked.
+app.add_middleware(EnvCORSMiddleware)
 
 
 # Register routers under /api (e.g. /api/health, /api/me, /api/users) —

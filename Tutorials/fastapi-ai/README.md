@@ -138,7 +138,7 @@ the non-secret values come from `wrangler.jsonc` `vars` and secrets from
 | `CF_D1_ACCOUNT_ID` | With `d1_http` | Cloudflare account id that owns the D1 database |
 | `CF_D1_DATABASE_ID` | With `d1_http` | Id of the D1 database (`wiltech-db`) |
 | `CF_D1_API_TOKEN` | With `d1_http` | Cloudflare API token with D1 edit access (secret) |
-| `CORS_ORIGINS` | For a browser UI | Comma-separated frontend origins. Local runs only — a Worker doesn't see it (see the note in `main.py`) |
+| `CORS_ORIGINS` | For a browser UI | Comma-separated frontend origins, read on every request (`src/cors.py`): `.env` locally, `wrangler.jsonc` `vars` in the Worker (set to the deployed demo-ui, `https://demo-ui-2pk.pages.dev`) |
 | `AI_MODE` | No | `http` (Cloudflare REST API) or `binding` (`env.AI`). Defaults to `binding` inside a Worker, otherwise `http` |
 | `CF_AI_ACCOUNT_ID` | With `http` | Cloudflare account id used for Workers AI |
 | `CF_AI_API_TOKEN` | With `http` | Cloudflare API token with Workers AI access (secret) |
