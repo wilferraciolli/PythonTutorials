@@ -52,6 +52,26 @@ export interface PostComment {
   links: Record<string, ILink>;
 }
 
+export interface GroupMember {
+  userId: string;
+  name: string | null;
+  isOwner: boolean;
+  joined_date: string;
+  links: Record<string, ILink>;
+}
+
+export interface GroupFollower {
+  userId: string;
+  name: string | null;
+  created_date: string;
+}
+
+export interface UserSummary {
+  id: string;
+  name: string;
+  email: string;
+}
+
 export interface ThreadedComment {
   comment: PostComment;
   depth: number;

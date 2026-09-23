@@ -75,6 +75,41 @@ export class PostPage {
   protected readonly busy = signal(false);
   protected readonly actionError = signal<string | null>(null);
 
+  protected readonly editingPost = signal(false);
+  protected readonly editTitle = signal('');
+  protected readonly editBody = signal('');
+  protected readonly editingComment = signal<string | null>(null);
+  protected readonly editCommentBody = signal('');
+
+  protected startEditPost(post: Post): void {
+    this.editTitle.set(post.title);
+    this.editBody.set(post.body);
+    this.editingPost.set(true);
+  }
+
+  protected async savePost(post: Post): Promise<void> {
+    await this.attempt(async () => {
+      await this.actions.updatePost(post, {
+        title: this.editTitle().trim(),
+        body: this.editBody().trim(),
+      });
+      this.editingPost.set(false);
+    }, "Couldn't save the post.");
+  }
+
+  protected startEditComment(comment: PostComment): void {
+    this.replyTo.set(null);
+    this.editCommentBody.set(comment.body);
+    this.editingComment.set(comment.id);
+  }
+
+  protected async saveComment(comment: PostComment): Promise<void> {
+    await this.attempt(async () => {
+      await this.actions.updateComment(comment, this.editCommentBody().trim());
+      this.editingComment.set(null);
+    }, "Couldn't save the comment.");
+  }
+
   protected indent(depth: number): string {
     return `${Math.min(depth, MAX_INDENT) * 1.25}rem`;
   }

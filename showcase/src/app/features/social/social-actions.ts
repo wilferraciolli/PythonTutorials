@@ -5,7 +5,7 @@ import { ApiClientService, ILink } from '@wiliamferraciolli/ngx-api-client';
 import { firstValueFrom } from 'rxjs';
 
 import { ConfirmDialog } from '../../shared/confirm-dialog/confirm-dialog';
-import { Group, GroupVisibility, Post, PostComment } from './social.models';
+import { Group, GroupMember, GroupVisibility, Post, PostComment } from './social.models';
 
 // Every write in the social feature, each one following a link the API
 // handed out (never a hand-built URL). Callers reload their own resources
@@ -42,12 +42,39 @@ export class SocialActions {
       : this.api.delete(url);
   }
 
+  updateGroup(
+    group: Group,
+    payload: { name: string; description: string; visibility: GroupVisibility },
+  ): Promise<Group> {
+    return this.api.put('group', this.require(group.links['update'], 'edit this group'), payload);
+  }
+
+  // The API hands out `addMember` as a template (`.../members/{userId}`).
+  addMember(group: Group, userId: string): Promise<Group> {
+    const template = this.require(group.links['addMember'], 'add people to this group');
+    return this.api.put('group', template.replace('{userId}', encodeURIComponent(userId)), {});
+  }
+
+  removeMember(member: GroupMember): Promise<void> {
+    return this.api.delete(this.require(member.links['remove'], 'remove this member'));
+  }
+
+  makeOwner(member: GroupMember): Promise<Group> {
+    return this.api.put('group', this.require(member.links['makeOwner'], 'change the owner'), {
+      userId: member.userId,
+    });
+  }
+
   deleteGroup(group: Group): Promise<void> {
     return this.api.delete(this.require(group.links['delete'], 'delete this group'));
   }
 
   createPost(group: Group, payload: { title: string; body: string }): Promise<Post> {
     return this.api.post('post', this.require(group.links['createPost'], 'post here'), payload);
+  }
+
+  updatePost(post: Post, payload: { title: string; body: string }): Promise<Post> {
+    return this.api.put('post', this.require(post.links['update'], 'edit this post'), payload);
   }
 
   deletePost(post: Post): Promise<void> {
@@ -65,6 +92,12 @@ export class SocialActions {
     return this.api.post('comment', this.require(link, 'comment here'), {
       body,
       parentCommentId: parent?.id ?? null,
+    });
+  }
+
+  updateComment(comment: PostComment, body: string): Promise<PostComment> {
+    return this.api.put('comment', this.require(comment.links['update'], 'edit this comment'), {
+      body,
     });
   }
 

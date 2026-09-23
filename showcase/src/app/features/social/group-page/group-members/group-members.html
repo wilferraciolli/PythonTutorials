@@ -1,0 +1,77 @@
+<div class="GroupMembers">
+  @if (canAdd()) {
+    <div class="GroupMembers-add">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Add someone (search by name or email)</mat-label>
+        <mat-icon matPrefix aria-hidden="true">person_add</mat-icon>
+        <input matInput [value]="search()" (input)="search.set($any($event.target).value)" />
+      </mat-form-field>
+      @if (search().trim().length >= 2) {
+        <ul class="GroupMembers-candidates" aria-label="Matching users">
+          @for (user of candidates(); track user.id) {
+            <li class="GroupMembers-row">
+              <span class="GroupMembers-person">
+                <span class="GroupMembers-name">{{ user.name }}</span>
+                <span class="GroupMembers-sub">{{ user.email }}</span>
+              </span>
+              <button matButton="outlined" type="button" [disabled]="busy()" (click)="add(user)">
+                Add
+              </button>
+            </li>
+          } @empty {
+            <li class="GroupMembers-sub">
+              {{
+                searching()
+                  ? 'Searching…'
+                  : 'No one else matches. People appear here once they have signed in.'
+              }}
+            </li>
+          }
+        </ul>
+      }
+    </div>
+  }
+
+  @if (error(); as message) {
+    <p class="GroupMembers-error" role="alert">{{ message }}</p>
+  }
+
+  <ul class="GroupMembers-list">
+    @for (member of members(); track member.userId) {
+      <li class="GroupMembers-row">
+        <span class="GroupMembers-person">
+          <span class="GroupMembers-name">
+            {{ member.name ?? '[deleted user]' }}
+            @if (member.userId === myId()) {
+              (you)
+            }
+            @if (member.isOwner) {
+              <span class="GroupMembers-badge">Owner</span>
+            }
+          </span>
+          <span class="GroupMembers-sub">Joined {{ member.joined_date | date: 'mediumDate' }}</span>
+        </span>
+        <span class="GroupMembers-actions">
+          @if (member.links['makeOwner']) {
+            <button matButton type="button" [disabled]="busy()" (click)="makeOwner(member)">
+              Make owner
+            </button>
+          }
+          @if (member.links['remove'] && member.userId !== myId()) {
+            <button
+              matButton
+              type="button"
+              class="GroupMembers-danger"
+              [disabled]="busy()"
+              (click)="remove(member)"
+            >
+              Remove
+            </button>
+          }
+        </span>
+      </li>
+    } @empty {
+      <li class="GroupMembers-sub">No members.</li>
+    }
+  </ul>
+</div>

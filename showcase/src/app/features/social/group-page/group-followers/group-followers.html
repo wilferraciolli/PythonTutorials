@@ -1,0 +1,10 @@
+<ul class="GroupFollowers">
+  @for (follower of followers(); track follower.userId) {
+    <li class="GroupFollowers-row">
+      <span>{{ follower.name ?? '[deleted user]' }}</span>
+      <span class="GroupFollowers-sub">since {{ follower.created_date | date: 'mediumDate' }}</span>
+    </li>
+  } @empty {
+    <li class="GroupFollowers-sub">No followers yet.</li>
+  }
+</ul>

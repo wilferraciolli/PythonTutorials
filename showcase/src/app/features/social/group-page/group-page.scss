@@ -57,6 +57,21 @@
     gap: 0.75rem;
   }
 
+  &-tabs {
+    align-self: flex-start;
+  }
+
+  &-sectionTitle {
+    margin: 0;
+    font: var(--mat-sys-title-medium);
+  }
+
+  &-formActions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+  }
+
   &-postButton {
     align-self: flex-end;
   }

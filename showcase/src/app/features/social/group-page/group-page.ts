@@ -1,6 +1,7 @@
 import { httpResource } from '@angular/common/http';
 import { Component, computed, inject, input, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
@@ -15,8 +16,10 @@ import {
 import { describeApiError } from '../../../core/api/api-error';
 import { CurrentUserStore } from '../../../core/user/current-user.store';
 import { PostCard } from '../post-card/post-card';
+import { GroupFollowers } from './group-followers/group-followers';
+import { GroupMembers } from './group-members/group-members';
 import { SocialActions } from '../social-actions';
-import { Group, Post } from '../social.models';
+import { Group, GroupVisibility, Post } from '../social.models';
 
 // One group: its details, join/leave/follow buttons (each shown only when
 // the API hands out that link), a new-post form for members, and its posts.
@@ -25,11 +28,14 @@ import { Group, Post } from '../social.models';
   imports: [
     RouterLink,
     MatButtonModule,
+    MatButtonToggleModule,
     MatCardModule,
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
     PostCard,
+    GroupMembers,
+    GroupFollowers,
   ],
   templateUrl: './group-page.html',
   styleUrl: './group-page.scss',
@@ -63,6 +69,13 @@ export class GroupPage {
 
   protected readonly busy = signal(false);
   protected readonly actionError = signal<string | null>(null);
+
+  protected readonly section = signal<'posts' | 'members' | 'followers'>('posts');
+
+  protected readonly editing = signal(false);
+  protected readonly editName = signal('');
+  protected readonly editDescription = signal('');
+  protected readonly editVisibility = signal<GroupVisibility>('PUBLIC');
 
   protected readonly title = signal('');
   protected readonly body = signal('');
@@ -103,6 +116,33 @@ export class GroupPage {
       await this.actions.deleteGroup(group);
       await this.router.navigate(['/groups']);
     }, "Couldn't delete the group.");
+  }
+
+  protected startEdit(group: Group): void {
+    this.editName.set(group.name);
+    this.editDescription.set(group.description ?? '');
+    this.editVisibility.set(group.visibility);
+    this.editing.set(true);
+  }
+
+  protected setEditVisibility(value: string): void {
+    if (value === 'PUBLIC' || value === 'PRIVATE') this.editVisibility.set(value);
+  }
+
+  protected async saveEdit(group: Group): Promise<void> {
+    await this.attempt(async () => {
+      await this.actions.updateGroup(group, {
+        name: this.editName().trim(),
+        description: this.editDescription().trim(),
+        visibility: this.editVisibility(),
+      });
+      this.editing.set(false);
+      this.groupResource.reload();
+    }, "Couldn't save the group.");
+  }
+
+  protected reloadGroup(): void {
+    this.groupResource.reload();
   }
 
   protected reloadPosts(): void {

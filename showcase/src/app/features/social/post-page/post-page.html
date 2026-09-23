@@ -10,8 +10,47 @@
       <p class="PostPage-meta">
         {{ post.authorName ?? 'Unknown' }} · {{ post.created_date | date: 'medium' }}
       </p>
-      <h1 class="PostPage-title">{{ post.title }}</h1>
-      <p class="PostPage-body">{{ post.body }}</p>
+      @if (editingPost()) {
+        <form class="PostPage-composer" (submit)="$event.preventDefault(); savePost(post)">
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Title</mat-label>
+            <input
+              matInput
+              required
+              maxlength="200"
+              [value]="editTitle()"
+              (input)="editTitle.set($any($event.target).value)"
+            />
+          </mat-form-field>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Post</mat-label>
+            <textarea
+              matInput
+              required
+              rows="5"
+              maxlength="10000"
+              [value]="editBody()"
+              (input)="editBody.set($any($event.target).value)"
+            ></textarea>
+          </mat-form-field>
+          <div class="PostPage-replyActions">
+            <button matButton type="button" (click)="editingPost.set(false)">Cancel</button>
+            <button
+              matButton="filled"
+              type="submit"
+              [disabled]="busy() || !editTitle().trim() || !editBody().trim()"
+            >
+              Save
+            </button>
+          </div>
+        </form>
+      } @else {
+        <h1 class="PostPage-title">{{ post.title }}</h1>
+        <p class="PostPage-body">{{ post.body }}</p>
+        @if (post.updated_date !== post.created_date && !post.isDeleted) {
+          <p class="PostPage-meta">edited {{ post.updated_date | date: 'medium' }}</p>
+        }
+      }
       <div class="PostPage-actions">
         <button
           matButton
@@ -32,6 +71,11 @@
           <mat-icon aria-hidden="true">chat_bubble_outline</mat-icon>
           {{ post.commentCount }}
         </span>
+        @if (post.links['update'] && !editingPost()) {
+          <button matButton type="button" [disabled]="busy()" (click)="startEditPost(post)">
+            Edit
+          </button>
+        }
         @if (post.links['delete']) {
           <button
             matButton
@@ -81,10 +125,38 @@
             {{ item.comment.authorName ?? '[deleted]' }} ·
             {{ item.comment.created_date | date: 'short' }}
           </p>
-          <p class="PostPage-commentBody" [class.PostPage-muted]="item.comment.isDeleted">
-            {{ item.comment.body }}
-          </p>
-          @if (!item.comment.isDeleted) {
+          @if (editingComment() === item.comment.id) {
+            <form
+              class="PostPage-composer"
+              (submit)="$event.preventDefault(); saveComment(item.comment)"
+            >
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>Edit comment</mat-label>
+                <textarea
+                  matInput
+                  rows="2"
+                  maxlength="5000"
+                  [value]="editCommentBody()"
+                  (input)="editCommentBody.set($any($event.target).value)"
+                ></textarea>
+              </mat-form-field>
+              <div class="PostPage-replyActions">
+                <button matButton type="button" (click)="editingComment.set(null)">Cancel</button>
+                <button
+                  matButton="filled"
+                  type="submit"
+                  [disabled]="busy() || !editCommentBody().trim()"
+                >
+                  Save
+                </button>
+              </div>
+            </form>
+          } @else {
+            <p class="PostPage-commentBody" [class.PostPage-muted]="item.comment.isDeleted">
+              {{ item.comment.body }}
+            </p>
+          }
+          @if (!item.comment.isDeleted && editingComment() !== item.comment.id) {
             <div class="PostPage-commentActions">
               <button
                 matButton
@@ -100,6 +172,11 @@
               </button>
               @if (item.comment.links['reply']) {
                 <button matButton type="button" (click)="startReply(item.comment)">Reply</button>
+              }
+              @if (item.comment.links['update']) {
+                <button matButton type="button" (click)="startEditComment(item.comment)">
+                  Edit
+                </button>
               }
               @if (item.comment.links['delete']) {
                 <button
