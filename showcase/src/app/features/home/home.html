@@ -5,7 +5,11 @@
         <mat-icon class="Home-nav-icon" aria-hidden="true">checklist</mat-icon>
         <h2 class="Home-nav-title">Todos</h2>
         <p class="Home-lead">Create, update, and tag your todos against the API.</p>
-        <a matButton="filled" routerLink="/todos">Go to todos</a>
+        @if (todosError(); as errorMessage) {
+          <p class="Home-card-error" role="alert">{{ errorMessage }}</p>
+        } @else {
+          <a matButton="filled" routerLink="/todos">Go to todos</a>
+        }
       </mat-card-content>
     </mat-card>
 
