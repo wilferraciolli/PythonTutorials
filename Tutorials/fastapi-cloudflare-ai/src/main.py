@@ -21,11 +21,10 @@ app = FastAPI(
 # Request, and CORSMiddleware is built once at import time, before any
 # request exists. That also means a wrangler.jsonc `vars` entry would NOT
 # reach this: per config.py, Cloudflare injects vars into
-# request.scope["env"], not into os.environ. TODO: once the showcase UI
-# has a deployed (Pages) origin, add it to the default list below directly
-# — this default only covers `ng serve` talking to a local uvicorn/Docker
-# run.
-_cors_origins = [origin.strip() for origin in os.environ.get("CORS_ORIGINS", "http://localhost:4200").split(",") if origin.strip()]
+# request.scope["env"], not into os.environ. So CORS_ORIGINS (see .env) only
+# takes effect for local uvicorn/Docker runs; empty means no cross-origin
+# access.
+_cors_origins = [origin.strip() for origin in os.environ.get("CORS_ORIGINS", "").split(",") if origin.strip()]
 
 app.add_middleware(
     CORSMiddleware,

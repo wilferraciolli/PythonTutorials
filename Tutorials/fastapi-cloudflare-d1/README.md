@@ -101,7 +101,7 @@ Every endpoint except `/health` requires a Clerk-issued JWT:
 `Authorization: Bearer <token>`. `auth.py` verifies it against
 `CLERK_JWKS_URL`/`CLERK_AUDIENCE` (from `.env` or `wrangler.jsonc` `vars`) —
 there is no dev bypass, so a plain `curl` with no header gets `401 Unauthorized`
-on every route below.
+on every route below. Optionally set `CLERK_AUTHORIZED_PARTIES` (comma-separated frontend origins) to also require the token's `azp` claim to match one of them.
 
 The `showcase` Angular app handles sign-in end to end. To call the API
 directly (`curl`, Swagger's "Try it out", etc.), sign in through that app and

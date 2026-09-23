@@ -84,7 +84,7 @@ def get_ai(request: Request, provider: ChatProvider = "cloudflare") -> AI:
     """
     if provider == "groq":
         api_key = get_config(request, "GROQ_API_KEY")
-        base_url = get_config(request, "GROQ_BASE_URL", "https://api.groq.com/openai/v1")
+        base_url = get_config(request, "GROQ_BASE_URL")
         if not api_key or not base_url:
             raise RuntimeError("Groq requires GROQ_API_KEY and GROQ_BASE_URL")
         return GroqAdapter(api_key, base_url)

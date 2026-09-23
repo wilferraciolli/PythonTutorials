@@ -111,7 +111,7 @@ Every endpoint except `/api/health` requires a Clerk-issued JWT:
 `Authorization: Bearer <token>`. `auth.py` verifies it against
 `CLERK_JWKS_URL`/`CLERK_AUDIENCE` (from `.env` or `wrangler.jsonc` `vars`) —
 there is no dev bypass, so a plain `curl` with no header gets `401 Unauthorized`
-on every route below. The Clerk values checked into `.env.example` point at a
+on every route below. Optionally set `CLERK_AUTHORIZED_PARTIES` (comma-separated frontend origins) to also require the token's `azp` claim to match one of them. The Clerk values checked into `.env.example` point at a
 shared dev instance; swap them for your own project's Clerk instance if this
 stops being a throwaway/tutorial app.
 

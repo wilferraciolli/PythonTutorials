@@ -1,4 +1,4 @@
-# FastAPI Cloudflare Workers AI — portable FastAPI with SQLite + Workers AI
+# FastAPI Cloudflare Workers AI — portable FastAPI chat API (SQLite/D1 + Workers AI or Groq)
 
 This app keeps the same portability pattern as the sibling
 [`fastapi-cloudflare-d1`](../fastapi-cloudflare-d1) project:
@@ -7,18 +7,21 @@ This app keeps the same portability pattern as the sibling
   for user records.
 - **Cloudflare Workers** can use the native D1 binding (`env.DB`) through the
   same protocol, and reaches **Workers AI** through the native `env.AI`
-  binding declared in `wrangler.jsonc`.
+  binding declared in `wrangler.jsonc` (or its REST API when running
+  anywhere else).
+- **Groq** is a second chat provider, called through its OpenAI-compatible
+  API. Each chat records which provider it uses (chosen when it's created).
 
 The repository layer does not know whether the database is SQLite or
-Cloudflare D1, and application code that calls Workers AI should stay behind
-its own small adapter, the same way `database.py` abstracts SQLite vs. D1.
+Cloudflare D1, and the chat service does not know which AI provider it is
+talking to — both sit behind small adapters (`database.py`, `ai.py`).
 
 ## Status
 
 ✅ **Working end to end, locally.** Auth, user records, and a ChatGPT-style
-`/api/chats` feature (list chats, open one, send a message, get an AI reply)
-are all wired up and tested against real Workers AI. Not yet deployed — see
-"Deploying to Cloudflare" below once you're ready.
+`/api/chats` feature (list chats, open one, rename it, send a message, get an
+AI reply from Cloudflare Workers AI or Groq) are wired up. Not yet deployed —
+see "Deploying to Cloudflare" below.
 
 > **Runs on port 8001 — same as every other Python tutorial project in this
 > repo** (`fastapi-cloudflare-d1`, `fastapi-template`, ...). The `showcase`
@@ -45,7 +48,7 @@ fastapi-cloudflare-ai/
 │   ├── database.py              # SQLite, D1 binding, and D1 HTTP adapters
 │   ├── config.py                # Runtime config from Worker env / .env / OS env
 │   ├── api_response.py          # Shared response envelope model + API_PREFIX
-│   ├── ai.py                    # Portable AI protocol: REST (AiHttpAdapter) vs. env.AI binding
+│   ├── ai.py                    # AI protocol: Workers AI (REST or env.AI binding) and Groq adapters
 │   ├── models.py                # Pydantic DTOs and UTC date formatting
 │   ├── repositories/
 │   │   ├── user_repository.py
@@ -54,7 +57,7 @@ fastapi-cloudflare-ai/
 │   │   ├── user_service.py          # /api/users CRUD
 │   │   ├── user_profile_service.py  # /api/users/{id}/profile navigation hub
 │   │   ├── me_service.py            # /api/me — maps the Clerk identity to a users row
-│   │   └── chat_service.py          # /api/chats — talks to Workers AI via ai.py
+│   │   └── chat_service.py          # /api/chats — talks to the chat's AI provider via ai.py
 │   └── routers/
 │       ├── health.py
 │       ├── me.py
@@ -66,7 +69,7 @@ fastapi-cloudflare-ai/
 │   └── 002_create_chats_tables.sql  # chats + chat_messages
 ├── Dockerfile
 ├── docker-compose.yml
-├── .env.example
+├── .env.example                  # Copy to .env — see "Configuration"
 ├── schema.sql                    # Consolidated snapshot of the migrations above,
 │                                  # applied manually to D1 via wrangler if used
 ├── wrangler.jsonc                # Worker config + Workers AI binding + D1 binding
@@ -82,7 +85,8 @@ fastapi-cloudflare-ai/
 | Node.js + npm | Runs `wrangler` (the Cloudflare CLI) | https://nodejs.org (LTS) |
 | `uv` | Python package/venv manager used by this project | PowerShell: `powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 \| iex"` <br> Git Bash / Linux / macOS: `curl -LsSf https://astral.sh/uv/install.sh \| sh` |
 | Docker | Optional local SQLite container workflow | https://www.docker.com/products/docker-desktop/ |
-| A free Cloudflare account | Required to actually call Workers AI (even in local `wrangler dev` — see below) | https://dash.cloudflare.com/sign-up |
+| A free Cloudflare account | Required to call Workers AI (even in local `wrangler dev` — see below) | https://dash.cloudflare.com/sign-up |
+| A Groq API key | Only if you want the Groq provider | https://console.groq.com/keys |
 
 > **Corporate proxy / TLS-inspecting network note:** if `uv` fails with
 > `invalid peer certificate: UnknownIssuer`, set `$env:UV_NATIVE_TLS = "true"`
@@ -106,6 +110,38 @@ The `showcase` Angular app handles sign-in end to end. To call the API
 directly (`curl`, Swagger's "Try it out", etc.), sign in through that app and
 copy the bearer token it sends — e.g. from your browser's Network tab on any
 request to this API — into your own request.
+
+## Configuration
+
+All infrastructure settings (models, base URLs, origins, credentials) live in
+`.env` locally — copy `.env.example` and fill in the blanks; `.env` is
+gitignored. Nothing infrastructure-related has a default in the code, so a
+missing required value fails with an error naming it. In a deployed Worker
+the non-secret values come from `wrangler.jsonc` `vars` and secrets from
+`wrangler secret put`.
+
+| Variable | Required | Purpose |
+|---|---|---|
+| `DATABASE_MODE` | No | `sqlite` (local), `d1_binding` (Worker) or `d1_http` — see "Database modes". Defaults to `d1_binding` when a D1 binding exists, otherwise `sqlite` |
+| `DATABASE_PATH` | With `sqlite` | SQLite file path, e.g. `./local.db` |
+| `CF_D1_DATABASE_ID` | With `d1_http` | Id of the D1 database (`wiltech-db`); uses `CF_ACCOUNT_ID` too |
+| `CF_D1_API_TOKEN` | With `d1_http` | Cloudflare API token with D1 edit access (secret) |
+| `CORS_ORIGINS` | For a browser UI | Comma-separated frontend origins. Local runs only — a Worker doesn't see it (see the note in `main.py`) |
+| `AI_MODE` | No | `http` (Cloudflare REST API) or `binding` (`env.AI`). Defaults to `binding` inside a Worker, otherwise `http` |
+| `CF_ACCOUNT_ID` | With `http` | Cloudflare account id |
+| `CF_AI_API_TOKEN` | With `http` | Cloudflare API token with Workers AI access (secret) |
+| `CF_AI_MODEL` | Yes | Workers AI model for Cloudflare chats |
+| `GROQ_API_KEY` | For Groq chats | Groq API key (secret) |
+| `GROQ_BASE_URL` | For Groq chats | Groq's OpenAI-compatible base URL |
+| `GROQ_MODEL` | For Groq chats | Model used for Groq chats |
+| `CLERK_JWKS_URL` | Yes | Clerk JWKS endpoint the API verifies tokens against |
+| `CLERK_AUDIENCE` | Yes | JWT audience (the Clerk JWT template name) |
+| `CLERK_AUTHORIZED_PARTIES` | No | Comma-separated frontend origins; when set, the token's `azp` claim must match one |
+
+`CF_AI_MODEL` must be a model your Cloudflare plan can use — some
+newer/larger ones (e.g. `@cf/moonshotai/kimi-k2.7-code`) return `403` with
+"not available on the Workers Free plan". `@cf/meta/llama-3.1-8b-instruct`
+works on the free tier.
 
 ## Database modes
 
@@ -131,6 +167,21 @@ CF_D1_API_TOKEN=...
 Do not keep multiple `DATABASE_MODE=` lines active in the same `.env`; the
 last one wins.
 
+### Running locally against the real D1 database
+
+To run uvicorn locally with your data in `wiltech-db` instead of SQLite:
+
+1. Apply the schema to the remote database once (see "Deploying to
+   Cloudflare", step 2).
+2. In `.env`, fill in `CF_ACCOUNT_ID` and `CF_D1_API_TOKEN` (create the token
+   in the Cloudflare dashboard under My Profile → API Tokens, with **D1 →
+   Edit**); `CF_D1_DATABASE_ID` is already set.
+3. Set `DATABASE_MODE=d1_http` (replacing `sqlite`) and start uvicorn as
+   usual.
+
+Every request then goes over the Cloudflare REST API, so it is slower than
+SQLite, and changes are made to the live database.
+
 ## Running locally with SQLite and uvicorn
 
 This mode does not use Wrangler or Cloudflare. Migrations are applied
@@ -140,7 +191,7 @@ automatically from `migrations/` the first time the SQLite file is opened.
 uv sync
 
 Copy-Item .env.example .env
-# Keep DATABASE_MODE=sqlite in .env
+# Fill in the credentials (see "Configuration"); keep DATABASE_MODE=sqlite
 
 uv run uvicorn main:app --app-dir src --host 127.0.0.1 --port 8001 --reload
 ```
@@ -150,14 +201,14 @@ Server runs at `http://127.0.0.1:8001`.
 ## Running locally with Docker + SQLite
 
 ```powershell
-Copy-Item .env.example .env
+Copy-Item .env.example .env   # then fill in the credentials
 docker compose up --build
 ```
 
 The SQLite database lives in the named Docker volume `sqlite-data` at
 `/data/local.db`, so it behaves the same on Windows, macOS, and Linux.
 
-## Running locally against real Workers AI
+## Running locally as a Worker (`pywrangler dev`)
 
 Unlike D1, **Workers AI has no local emulator** — `wrangler dev` routes
 `env.AI` calls to the real Cloudflare Workers AI API against your account
@@ -208,7 +259,17 @@ npx wrangler d1 execute wiltech-db --remote --file=./schema.sql
 ```
 You'll be asked to confirm (`Y`) since this touches the live database.
 
-### 3. Deploy
+### 3. Set secrets
+Non-secret settings (`CF_AI_MODEL`, `GROQ_BASE_URL`, `GROQ_MODEL`, Clerk) are
+already in `wrangler.jsonc` `vars`. The Worker reaches Workers AI through the
+`env.AI` binding, so `CF_AI_API_TOKEN` isn't needed there. Only Groq needs a
+secret:
+
+```powershell
+npx wrangler secret put GROQ_API_KEY
+```
+
+### 4. Deploy
 
 ```powershell
 npx wrangler deploy
@@ -246,9 +307,10 @@ above) except `/api/health`, `/docs`, and `/openapi.json`.
 | DELETE | `/api/users/{id}` | Delete a user (returns `204 No Content`) |
 | GET | `/api/users/{id}/profile` | Navigation hub — links to that user's related resources |
 | GET | `/api/chats` | List the current user's chats (title + timestamps, no messages) |
-| POST | `/api/chats` | Create a new chat (title defaults to "New chat" until the first message) |
+| POST | `/api/chats` | Create a new chat; body `{"provider": "cloudflare"}` or `"groq"` (default `cloudflare`). Title is "New chat" until the first message |
 | GET | `/api/chats/{id}` | Get one chat with its full message history |
-| POST | `/api/chats/{id}/messages` | Send a message; calls Workers AI, stores both messages, returns the updated chat |
+| PUT | `/api/chats/{id}` | Rename a chat (`{"title": "..."}`, 1–60 characters) |
+| POST | `/api/chats/{id}/messages` | Send a message; calls the chat's provider, stores both messages, returns the updated chat |
 | DELETE | `/api/chats/{id}` | Delete a chat and its messages (returns `204 No Content`) |
 | GET | `/docs` | Interactive Swagger UI |
 | GET | `/openapi.json` | OpenAPI schema |
@@ -259,19 +321,14 @@ under `/users/{id}/...` — `chat_service.py._get_owned_chat()` checks
 ownership itself, and a chat that exists but belongs to someone else reads
 as `404`, not `403`, so its existence isn't leaked.
 
-`chat_service.py.DEFAULT_MODEL` is `@cf/meta/llama-3.1-8b-instruct` —
-confirmed working on a free-tier Workers AI account. Override per-request via
-`AI_CHAT_MODEL` if your account has access to something else; some
-newer/larger models (e.g. `@cf/moonshotai/kimi-k2.7-code`) 403 with "not
-available on the Workers Free plan" until you upgrade.
+The chat's provider decides which model answers: `CF_AI_MODEL` for
+`cloudflare`, `GROQ_MODEL` for `groq`.
 
 ## Roadmap
 
 - No conversation length/context-window trimming — `send_message` replays
   the entire stored history as `messages` on every call, which will
   eventually hit the model's context limit on a long-running chat.
-- No way to rename a chat — the title is set once, automatically, from the
-  first message.
 
 ## Known Beta Caveats
 
@@ -283,4 +340,4 @@ available on the Workers Free plan" until you upgrade.
 - No traditional SQLAlchemy ORM — repository SQL is raw and parameterized.
 - `env` (and therefore `env.DB` / `env.AI`) is only available per-request
   (`request.scope["env"]`), not as a global/startup-time object. Routers build
-  services per request through `get_database(request)`/`get_ai(request)`.
+  services per request through `get_database(request)`/`get_ai(request, provider)`.

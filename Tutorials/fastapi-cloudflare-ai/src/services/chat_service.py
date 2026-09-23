@@ -7,12 +7,6 @@ from api_response import API_PREFIX, envelope
 from models import Chat, ChatMessage, ChatProvider, Link
 from repositories.chat_repository import ChatRepository
 
-# @cf/moonshotai/kimi-k2.7-code (the model in the original sample this was
-# built from) needs a paid Workers AI plan — this one is confirmed working
-# on the free tier. Override via AI_CHAT_MODEL if your account has access
-# to something else.
-DEFAULT_MODEL = "@cf/meta/llama-3.1-8b-instruct"
-
 SYSTEM_PROMPT = "You are a friendly, helpful assistant."
 
 TITLE_MAX_LENGTH = 60

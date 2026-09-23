@@ -81,7 +81,7 @@ async def get_authenticated_user(
         raise _unauthorized("Bearer token required")
 
     jwks_url = get_config(request, "CLERK_JWKS_URL")
-    audience = get_config(request, "CLERK_AUDIENCE", "wiltech-dev-api")
+    audience = get_config(request, "CLERK_AUDIENCE")
     if not jwks_url or not audience:
         raise RuntimeError("CLERK_JWKS_URL and CLERK_AUDIENCE must be configured")
 

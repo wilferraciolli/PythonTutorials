@@ -9,7 +9,7 @@ from database import get_database
 from models import ChatCreate, ChatMessageCreate, ChatProvider, ChatTitleUpdate
 from repositories.chat_repository import ChatRepository
 from repositories.user_repository import UserRepository
-from services.chat_service import DEFAULT_MODEL, ChatService
+from services.chat_service import ChatService
 from services.me_service import MeService
 
 router = APIRouter(prefix="/chats", tags=["chats"])
@@ -28,11 +28,18 @@ async def get_current_user_id(
     return user_row["id"]
 
 
+def _required_config(request: Request, key: str) -> str:
+    value = get_config(request, key)
+    if not value:
+        raise RuntimeError(f"{key} must be configured (see .env.example)")
+    return value
+
+
 def get_chat_service(request: Request) -> ChatService:
     db = get_database(request)
     models: dict[ChatProvider, str] = {
-        "cloudflare": get_config(request, "AI_CHAT_MODEL", DEFAULT_MODEL) or DEFAULT_MODEL,
-        "groq": get_config(request, "GROQ_MODEL", "openai/gpt-oss-20b") or "openai/gpt-oss-20b",
+        "cloudflare": _required_config(request, "CF_AI_MODEL"),
+        "groq": _required_config(request, "GROQ_MODEL"),
     }
     return ChatService(
         ChatRepository(db),
