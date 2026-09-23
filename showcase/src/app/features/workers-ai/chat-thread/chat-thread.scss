@@ -60,64 +60,97 @@
     border-radius: 1rem;
     background: var(--mat-sys-primary-container);
     color: var(--mat-sys-on-primary-container);
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
     word-break: break-word;
   }
 
+  // The rendered markdown arrives via [innerHTML], so those elements don't
+  // carry this component's style-scoping attribute — without ::ng-deep none
+  // of the nested rules below match, and wide code blocks/tables spill out
+  // of the bubble.
   &-messageText--markdown {
     line-height: 1.5;
+    white-space: normal;
 
-    :first-child {
-      margin-top: 0;
-    }
+    ::ng-deep {
+      > :first-child {
+        margin-top: 0;
+      }
 
-    :last-child {
-      margin-bottom: 0;
-    }
+      > :last-child {
+        margin-bottom: 0;
+      }
 
-    p,
-    ul,
-    ol,
-    pre,
-    blockquote {
-      margin: 0.65rem 0;
-    }
+      p,
+      ul,
+      ol,
+      pre,
+      blockquote,
+      table {
+        margin: 0.65rem 0;
+      }
 
-    ul,
-    ol {
-      padding-left: 1.25rem;
-    }
-
-    code {
-      padding: 0.1rem 0.3rem;
-      border-radius: 0.25rem;
-      background: color-mix(in srgb, currentColor 12%, transparent);
-      font-size: 0.9em;
-    }
-
-    pre {
-      padding: 0.75rem;
-      overflow-x: auto;
-      max-width: 100%;
-      border-radius: 0.5rem;
-      background: color-mix(in srgb, currentColor 10%, transparent);
+      ul,
+      ol {
+        padding-left: 1.25rem;
+      }
 
       code {
-        padding: 0;
-        background: transparent;
+        padding: 0.1rem 0.3rem;
+        border-radius: 0.25rem;
+        background: color-mix(in srgb, currentColor 12%, transparent);
+        font-size: 0.9em;
+        overflow-wrap: anywhere;
       }
-    }
 
-    blockquote {
-      padding-left: 0.75rem;
-      border-left: 3px solid currentColor;
-      opacity: 0.8;
-    }
+      pre {
+        padding: 0.75rem;
+        overflow-x: auto;
+        max-width: 100%;
+        border-radius: 0.5rem;
+        background: color-mix(in srgb, currentColor 10%, transparent);
+        white-space: pre;
 
-    a {
-      color: inherit;
-      text-decoration: underline;
+        code {
+          padding: 0;
+          background: transparent;
+          overflow-wrap: normal;
+        }
+      }
+
+      table {
+        display: block;
+        max-width: 100%;
+        overflow-x: auto;
+        border-collapse: collapse;
+
+        th,
+        td {
+          padding: 0.25rem 0.5rem;
+          border: 1px solid var(--mat-sys-outline-variant);
+        }
+      }
+
+      img {
+        max-width: 100%;
+        height: auto;
+      }
+
+      blockquote {
+        padding-left: 0.75rem;
+        border-left: 3px solid currentColor;
+        opacity: 0.8;
+      }
+
+      a {
+        color: inherit;
+        text-decoration: underline;
+        overflow-wrap: anywhere;
+      }
     }
   }
 
@@ -130,7 +163,7 @@
     display: flex;
     align-items: flex-start;
     gap: 0.75rem;
-    padding-top: 0.75rem;
+    padding: 0.75rem 0 1rem;
     border-top: 1px solid var(--mat-sys-outline-variant);
   }
 
