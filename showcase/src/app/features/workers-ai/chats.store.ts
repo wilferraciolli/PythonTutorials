@@ -3,7 +3,7 @@ import { Injectable, computed, inject } from '@angular/core';
 import { ApiClientService, CollectionEnvelope, ILink } from '@wiliamferraciolli/ngx-api-client';
 
 import { describeApiError } from '../../core/api/api-error';
-import { environment } from '../../../environments/environment';
+import { CurrentUserStore } from '../../core/user/current-user.store';
 
 export type ChatMessageRole = 'user' | 'assistant';
 export type ChatProvider = 'cloudflare' | 'groq';
@@ -34,17 +34,23 @@ type ChatsEnvelope = CollectionEnvelope<'chats', Chat>;
 // Provided on WorkersAiShell so its lifecycle matches the /workers-ai route
 // tree, same as TodosStore/TodosShell.
 //
-// Talks to fastapi-cloudflare-ai, not the D1 API — its routes are the one
-// backend in this app mounted under `/api` (see that project's main.py), so
-// unlike tags.store.ts's hand-built `/tags` this hand-built URL needs the
-// prefix. Only one Python service runs locally at a time (see
-// PYTHON_APP_CONVENTIONS.md) — this feature only works while that one is
-// fastapi-cloudflare-ai.
+// Talks to whichever AI project is running (fastapi-cloudflare-ai,
+// fastapi-groq-ai or fastapi-ai — only one runs locally at a time, see
+// PYTHON_APP_CONVENTIONS.md). The chats URL is never built by hand: it is
+// the chats link on the user profile (`/users/{id}/chats`), which each
+// project names after itself (CHATS_LINK_NAMES).
+const CHATS_LINK_NAMES = ['aiChats', 'cloudflareChats', 'groqChats'];
 @Injectable()
 export class ChatsStore {
   private readonly api = inject(ApiClientService);
 
-  private readonly listResource = httpResource<ChatsEnvelope>(() => `${environment.apiUrl}/api/chats`);
+  private readonly currentUser = inject(CurrentUserStore);
+
+  private readonly chatsLink = computed<ILink | undefined>(() =>
+    CHATS_LINK_NAMES.map((name) => this.currentUser.link(name)).find((link) => !!link),
+  );
+
+  private readonly listResource = httpResource<ChatsEnvelope>(() => this.api.resolve(this.chatsLink()));
 
   readonly chats = computed(() => this.listResource.value()?._data['chats'] ?? []);
   readonly isLoading = computed(() => this.listResource.isLoading());

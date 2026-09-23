@@ -7,8 +7,7 @@ import { ApiClientService } from '@wiliamferraciolli/ngx-api-client';
 import { marked } from 'marked';
 
 import { describeApiError } from '../../../core/api/api-error';
-import { environment } from '../../../../environments/environment';
-import { Chat, ChatMessage, ChatProvider } from '../chats.store';
+import { Chat, ChatMessage, ChatProvider, ChatsStore } from '../chats.store';
 
 @Component({
   selector: 'app-chat-thread',
@@ -22,13 +21,14 @@ export class ChatThread {
   readonly chatId = input.required<string>();
 
   private readonly api = inject(ApiClientService);
+  private readonly chats = inject(ChatsStore);
 
   // A resource of its own, not ChatsStore state — the list only carries
   // chat summaries (no messages; see chats.store.ts/chat_service.py), so
-  // opening a specific chat always needs its own GET.
-  private readonly detailResource = this.api.resource<'chat', Chat>(
-    'chat',
-    () => `${environment.apiUrl}/api/chats/${this.chatId()}`,
+  // opening a specific chat always needs its own GET, at the `self` link
+  // the list handed out for it (no request until the list has loaded).
+  private readonly detailResource = this.api.resource<'chat', Chat>('chat', () =>
+    this.api.resolve(this.chats.chats().find((chat) => chat.id === this.chatId())?.links['self']),
   );
 
   protected readonly chat = this.detailResource.value;

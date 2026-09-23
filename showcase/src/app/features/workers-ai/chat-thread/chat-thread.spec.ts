@@ -2,13 +2,14 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 
+import { ChatsStore } from '../chats.store';
 import { ChatThread } from './chat-thread';
 
 describe('ChatThread', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [ChatThread],
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      providers: [ChatsStore, provideHttpClient(), provideHttpClientTesting()],
     }).compileComponents();
   });
 

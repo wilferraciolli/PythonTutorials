@@ -48,9 +48,9 @@ export class TodosStore {
   // A raw httpResource, not ApiClientService.collectionResource() — this
   // list also needs `_metadata` (stateOptions below) and `_metaLinks`
   // (todoTemplate), which that convenience wrapper only exposes `_data`
-  // from. The URL is never built by hand: it's the `myTodos` link /me
-  // hands out (current-user.store.ts), resolved via ApiClientService
-  // against API_ORIGIN. No link yet (still loading /me) means no request.
+  // from. The URL is never built by hand: it's the `todos` link the user
+  // profile hands out (current-user.store.ts), resolved via ApiClientService
+  // against API_ORIGIN. No link yet (still loading the profile) means no request.
   private readonly listResource = httpResource<TodosEnvelope>(() => {
     const link = this.currentUser.myTodosLink();
     if (!link) return undefined;

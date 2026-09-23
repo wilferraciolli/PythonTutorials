@@ -16,8 +16,9 @@ describe('Home', () => {
     expect(fixture.componentInstance).toBeTruthy();
   });
 
-  // Both cards render unconditionally now — no sign-in gate on this page;
-  // authGuard is what stops a signed-out visitor at /todos or /workers-ai.
+  // All cards render unconditionally when signed out — no sign-in gate on
+  // this page; authGuard is what stops a signed-out visitor at /todos or
+  // /workers-ai. (When signed in, a card hides its link if /me lacks it.)
   it('links to every guarded project route', () => {
     const fixture = TestBed.createComponent(Home);
     fixture.detectChanges();
