@@ -33,6 +33,10 @@ export class Home {
   protected readonly groqAiError = computed(() => this.missingLink(this.currentUser.link('groqChats')));
   protected readonly aiError = computed(() => this.missingLink(this.currentUser.link('aiChats')));
   protected readonly askError = computed(() => this.missingLink(this.currentUser.link('aiAssistant')));
+  protected readonly timelineError = computed(() => this.missingLink(this.currentUser.link('timelineAll')));
+  protected readonly groupsError = computed(() => this.missingLink(this.currentUser.link('groups')));
+  // The admin card is only shown to admins at all (their profile has the link).
+  protected readonly showAdmin = computed(() => !!this.currentUser.link('admin'));
 
   private missingLink(link: ILink | undefined): string | null {
     if (!this.auth.isSignedIn()) return null;

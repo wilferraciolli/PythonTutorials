@@ -1,0 +1,151 @@
+<div class="PostPage App-page">
+  <a class="PostPage-back" [routerLink]="['/groups', groupId()]"
+    >← {{ group()?.name ?? 'Group' }}</a
+  >
+
+  @if (loadError(); as message) {
+    <p class="PostPage-error" role="alert">{{ message }}</p>
+  } @else if (post(); as post) {
+    <article class="PostPage-post">
+      <p class="PostPage-meta">
+        {{ post.authorName ?? 'Unknown' }} · {{ post.created_date | date: 'medium' }}
+      </p>
+      <h1 class="PostPage-title">{{ post.title }}</h1>
+      <p class="PostPage-body">{{ post.body }}</p>
+      <div class="PostPage-actions">
+        <button
+          matButton
+          type="button"
+          [disabled]="!canLike(post) || busy()"
+          [attr.aria-pressed]="post.likedByMe"
+          [title]="
+            canLike(post) ? (post.likedByMe ? 'Unlike' : 'Like') : 'Join the group to like posts'
+          "
+          (click)="togglePostLike(post)"
+        >
+          <mat-icon aria-hidden="true">{{
+            post.likedByMe ? 'favorite' : 'favorite_border'
+          }}</mat-icon>
+          {{ post.likeCount }}
+        </button>
+        <span class="PostPage-count">
+          <mat-icon aria-hidden="true">chat_bubble_outline</mat-icon>
+          {{ post.commentCount }}
+        </span>
+        @if (post.links['delete']) {
+          <button
+            matButton
+            type="button"
+            class="PostPage-danger"
+            [disabled]="busy()"
+            (click)="deletePost(post)"
+          >
+            Delete
+          </button>
+        }
+      </div>
+    </article>
+
+    @if (actionError(); as message) {
+      <p class="PostPage-error" role="alert">{{ message }}</p>
+    }
+
+    @if (post.links['addComment']) {
+      <form class="PostPage-composer" (submit)="$event.preventDefault(); comment(post)">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Add a comment</mat-label>
+          <textarea
+            matInput
+            rows="2"
+            maxlength="5000"
+            [value]="draft()"
+            (input)="draft.set($any($event.target).value)"
+          ></textarea>
+        </mat-form-field>
+        <button matButton="filled" type="submit" [disabled]="busy() || !draft().trim()">
+          Comment
+        </button>
+      </form>
+    } @else if (!post.isDeleted) {
+      <p class="PostPage-muted">Join the group to comment and like.</p>
+    }
+
+    <section class="PostPage-comments" aria-label="Comments">
+      @for (item of thread(); track item.comment.id) {
+        <div
+          class="PostPage-comment"
+          [style.margin-left]="indent(item.depth)"
+          [class.PostPage-comment--reply]="item.depth > 0"
+        >
+          <p class="PostPage-meta">
+            {{ item.comment.authorName ?? '[deleted]' }} ·
+            {{ item.comment.created_date | date: 'short' }}
+          </p>
+          <p class="PostPage-commentBody" [class.PostPage-muted]="item.comment.isDeleted">
+            {{ item.comment.body }}
+          </p>
+          @if (!item.comment.isDeleted) {
+            <div class="PostPage-commentActions">
+              <button
+                matButton
+                type="button"
+                [disabled]="!canLike(item.comment) || busy()"
+                [attr.aria-pressed]="item.comment.likedByMe"
+                (click)="toggleCommentLike(item.comment)"
+              >
+                <mat-icon aria-hidden="true">{{
+                  item.comment.likedByMe ? 'favorite' : 'favorite_border'
+                }}</mat-icon>
+                {{ item.comment.likeCount }}
+              </button>
+              @if (item.comment.links['reply']) {
+                <button matButton type="button" (click)="startReply(item.comment)">Reply</button>
+              }
+              @if (item.comment.links['delete']) {
+                <button
+                  matButton
+                  type="button"
+                  class="PostPage-danger"
+                  (click)="deleteComment(item.comment)"
+                >
+                  Delete
+                </button>
+              }
+            </div>
+          }
+          @if (replyTo() === item.comment.id) {
+            <form
+              class="PostPage-composer"
+              (submit)="$event.preventDefault(); reply(post, item.comment)"
+            >
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>Reply to {{ item.comment.authorName }}</mat-label>
+                <textarea
+                  matInput
+                  rows="2"
+                  maxlength="5000"
+                  [value]="replyDraft()"
+                  (input)="replyDraft.set($any($event.target).value)"
+                ></textarea>
+              </mat-form-field>
+              <div class="PostPage-replyActions">
+                <button matButton type="button" (click)="replyTo.set(null)">Cancel</button>
+                <button
+                  matButton="filled"
+                  type="submit"
+                  [disabled]="busy() || !replyDraft().trim()"
+                >
+                  Reply
+                </button>
+              </div>
+            </form>
+          }
+        </div>
+      } @empty {
+        <p class="PostPage-muted">No comments yet.</p>
+      }
+    </section>
+  } @else {
+    <p class="PostPage-muted">Loading…</p>
+  }
+</div>

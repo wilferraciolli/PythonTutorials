@@ -1,0 +1,33 @@
+<div class="AdminPage App-page">
+  <h1 class="AdminPage-title">Admin</h1>
+
+  @if (profileLoaded() && !adminLink()) {
+    <p class="AdminPage-error" role="alert">The admin area is only available to admins.</p>
+  } @else if (loadError(); as message) {
+    <p class="AdminPage-error" role="alert">{{ message }}</p>
+  } @else {
+    <div class="AdminPage-tools">
+      @for (tool of tools(); track tool.id) {
+        <mat-card appearance="outlined">
+          <mat-card-content class="AdminPage-tool">
+            <h2 class="AdminPage-toolName">{{ tool.name }}</h2>
+            <p class="AdminPage-toolDescription">{{ tool.description }}</p>
+            <button
+              matButton="filled"
+              type="button"
+              [disabled]="!hasAction(tool) || running() !== null"
+              (click)="run(tool)"
+            >
+              {{ running() === tool.id ? 'Running…' : 'Run' }}
+            </button>
+            @if (results()[tool.id]; as result) {
+              <p class="AdminPage-result" role="status">{{ result }}</p>
+            }
+          </mat-card-content>
+        </mat-card>
+      } @empty {
+        <p class="AdminPage-muted">Loading…</p>
+      }
+    </div>
+  }
+</div>

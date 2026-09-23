@@ -1,0 +1,55 @@
+<div class="TimelinePage App-page">
+  <header class="TimelinePage-header">
+    <h1 class="TimelinePage-title">Timeline</h1>
+    <a matButton routerLink="/groups">
+      <mat-icon aria-hidden="true">groups</mat-icon>
+      Groups
+    </a>
+  </header>
+
+  @if (!available()) {
+    <p class="TimelinePage-error" role="alert">
+      The timeline isn't available on this API. Run <strong>fastapi-ai</strong> to use it.
+    </p>
+  } @else {
+    <mat-button-toggle-group
+      class="TimelinePage-tabs"
+      aria-label="Timeline"
+      [value]="type()"
+      (change)="select($event.value)"
+    >
+      @for (tab of tabs; track tab.type) {
+        <mat-button-toggle [value]="tab.type">{{ tab.label }}</mat-button-toggle>
+      }
+    </mat-button-toggle-group>
+
+    <p class="TimelinePage-hint">
+      @switch (type()) {
+        @case ('ALL') {
+          Every post you can see, newest first.
+        }
+        @case ('FOLLOWING') {
+          Posts from groups you follow, newest first.
+        }
+        @case ('POPULAR') {
+          Most liked and discussed first (a comment counts twice as much as a like).
+        }
+      }
+      Only the last year is shown.
+    </p>
+
+    @if (errorMessage(); as message) {
+      <p class="TimelinePage-error" role="alert">{{ message }}</p>
+    } @else if (isLoading() && posts().length === 0) {
+      <p class="TimelinePage-muted">Loading…</p>
+    } @else {
+      <div class="TimelinePage-list">
+        @for (post of posts(); track post.id) {
+          <app-post-card [post]="post" (changed)="reload()" />
+        } @empty {
+          <p class="TimelinePage-muted">{{ tab().empty }}</p>
+        }
+      </div>
+    }
+  }
+</div>

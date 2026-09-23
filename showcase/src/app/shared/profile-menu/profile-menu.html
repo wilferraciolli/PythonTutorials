@@ -22,6 +22,20 @@
     <mat-icon aria-hidden="true">label</mat-icon>
     <span>Tags</span>
   </a>
+  <a mat-menu-item routerLink="/timeline">
+    <mat-icon aria-hidden="true">dynamic_feed</mat-icon>
+    <span>Timeline</span>
+  </a>
+  <a mat-menu-item routerLink="/groups">
+    <mat-icon aria-hidden="true">groups</mat-icon>
+    <span>Groups</span>
+  </a>
+  @if (currentUser.link('admin')) {
+    <a mat-menu-item routerLink="/admin">
+      <mat-icon aria-hidden="true">admin_panel_settings</mat-icon>
+      <span>Admin</span>
+    </a>
+  }
   <button mat-menu-item type="button" (click)="signOut()">
     <mat-icon aria-hidden="true">logout</mat-icon>
     <span>Sign out</span>

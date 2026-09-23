@@ -64,5 +64,42 @@
         }
       </mat-card-content>
     </mat-card>
+
+    <mat-card class="Home-nav-card" appearance="outlined">
+      <mat-card-content class="Home-content Home-content-nav">
+        <mat-icon class="Home-nav-icon" aria-hidden="true">dynamic_feed</mat-icon>
+        <h2 class="Home-nav-title">Timeline</h2>
+        <p class="Home-lead">Posts from your groups: everything, what you follow, or what's popular.</p>
+        @if (timelineError(); as errorMessage) {
+          <p class="Home-card-error" role="alert">{{ errorMessage }}</p>
+        } @else {
+          <a matButton="filled" routerLink="/timeline">Go to timeline</a>
+        }
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="Home-nav-card" appearance="outlined">
+      <mat-card-content class="Home-content Home-content-nav">
+        <mat-icon class="Home-nav-icon" aria-hidden="true">groups</mat-icon>
+        <h2 class="Home-nav-title">Groups</h2>
+        <p class="Home-lead">Find, create and join groups, public or private.</p>
+        @if (groupsError(); as errorMessage) {
+          <p class="Home-card-error" role="alert">{{ errorMessage }}</p>
+        } @else {
+          <a matButton="filled" routerLink="/groups">Go to groups</a>
+        }
+      </mat-card-content>
+    </mat-card>
+
+    @if (showAdmin()) {
+      <mat-card class="Home-nav-card" appearance="outlined">
+        <mat-card-content class="Home-content Home-content-nav">
+          <mat-icon class="Home-nav-icon" aria-hidden="true">admin_panel_settings</mat-icon>
+          <h2 class="Home-nav-title">Admin</h2>
+          <p class="Home-lead">Maintenance tools, such as recalculating post stats.</p>
+          <a matButton="filled" routerLink="/admin">Go to admin</a>
+        </mat-card-content>
+      </mat-card>
+    }
   </div>
 </main>

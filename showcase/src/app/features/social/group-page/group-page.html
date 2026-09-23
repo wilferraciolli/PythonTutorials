@@ -1,0 +1,119 @@
+<div class="GroupPage App-page">
+  <a class="GroupPage-back" routerLink="/groups">← All groups</a>
+
+  @if (groupError(); as message) {
+    <p class="GroupPage-error" role="alert">{{ message }}</p>
+  } @else if (group(); as group) {
+    <header class="GroupPage-header">
+      <div>
+        <h1 class="GroupPage-title">
+          {{ group.name }}
+          @if (group.visibility === 'PRIVATE') {
+            <mat-icon class="GroupPage-lock" aria-label="Private" title="Private">lock</mat-icon>
+          }
+        </h1>
+        @if (group.description) {
+          <p class="GroupPage-description">{{ group.description }}</p>
+        }
+        <p class="GroupPage-meta">
+          {{ group.visibility === 'PRIVATE' ? 'Private' : 'Public' }} ·
+          {{ group.memberCount }} members · {{ group.followerCount }} followers
+          @if (!group.ownerId) {
+            · no owner
+          }
+          @if (group.isOwner) {
+            · you own this group
+          }
+        </p>
+      </div>
+
+      <div class="GroupPage-actions">
+        @if (group.links['join']) {
+          <button matButton="filled" type="button" [disabled]="busy()" (click)="run('join')">
+            Join
+          </button>
+        }
+        @if (group.links['follow']) {
+          <button matButton="outlined" type="button" [disabled]="busy()" (click)="run('follow')">
+            <mat-icon aria-hidden="true">notifications</mat-icon>
+            Follow
+          </button>
+        }
+        @if (group.links['unfollow']) {
+          <button matButton type="button" [disabled]="busy()" (click)="run('unfollow')">
+            <mat-icon aria-hidden="true">notifications_off</mat-icon>
+            Unfollow
+          </button>
+        }
+        @if (group.links['leave']) {
+          <button matButton type="button" [disabled]="busy()" (click)="run('leave')">Leave</button>
+        }
+        @if (group.links['delete']) {
+          <button
+            matButton
+            type="button"
+            class="GroupPage-danger"
+            [disabled]="busy()"
+            (click)="deleteGroup()"
+          >
+            Delete group
+          </button>
+        }
+      </div>
+    </header>
+
+    @if (actionError(); as message) {
+      <p class="GroupPage-error" role="alert">{{ message }}</p>
+    }
+
+    @if (group.links['createPost']) {
+      <mat-card class="GroupPage-composer" appearance="outlined">
+        <mat-card-content>
+          <form class="GroupPage-composerFields" (submit)="$event.preventDefault(); post()">
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>Title</mat-label>
+              <input
+                matInput
+                required
+                maxlength="200"
+                [value]="title()"
+                (input)="title.set($any($event.target).value)"
+              />
+            </mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>What's on your mind?</mat-label>
+              <textarea
+                matInput
+                required
+                rows="3"
+                maxlength="10000"
+                [value]="body()"
+                (input)="body.set($any($event.target).value)"
+              ></textarea>
+            </mat-form-field>
+            <button
+              class="GroupPage-postButton"
+              matButton="filled"
+              type="submit"
+              [disabled]="busy() || !title().trim() || !body().trim()"
+            >
+              Post
+            </button>
+          </form>
+        </mat-card-content>
+      </mat-card>
+    } @else if (!group.isMember) {
+      <p class="GroupPage-muted">Join the group to post, comment and like.</p>
+    }
+
+    <section class="GroupPage-posts" aria-label="Posts">
+      @for (post of posts(); track post.id) {
+        <app-post-card [post]="post" [showGroup]="false" (changed)="reloadPosts()" />
+      } @empty {
+        <p class="GroupPage-muted">{{ postsLoading() ? 'Loading…' : 'No posts yet.' }}</p>
+      }
+    </section>
+  } @else {
+    <p class="GroupPage-muted">Loading…</p>
+  }
+</div>

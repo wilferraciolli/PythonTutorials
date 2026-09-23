@@ -4,9 +4,9 @@ Users create **groups** (public or private), post to them, and other people like
 posts and reply to comments. Users can **be a member** of a group or just **follow** it, and each
 user has a **timeline** built from the groups they can see.
 
-> **Status:** revision 5. **Steps 1-4 built**: groups, members, owner, followers, role re-sync;
+> **Status:** revision 5. **Steps 1-4 and 6 built**: groups, members, owner, followers, role re-sync;
 > posts and post comments (separate APIs), News seed; likes, `post_stats` and the admin area
-> (`GET /api/admin`); timeline. Steps 5-6 (AI, Angular) not yet. Items marked **(decision)** can still be changed.
+> (`GET /api/admin`); timeline; Angular pages in `showcase` (`/timeline`, `/groups`, `/admin`). Step 5 (AI) not yet. Items marked **(decision)** can still be changed.
 
 ## Roles: two different things
 

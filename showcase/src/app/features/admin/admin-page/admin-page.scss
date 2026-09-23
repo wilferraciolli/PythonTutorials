@@ -1,0 +1,45 @@
+.AdminPage {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 48rem;
+
+  &-title {
+    margin: 0;
+    font: var(--mat-sys-headline-small);
+  }
+
+  &-tools {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  &-tool {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  &-toolName {
+    margin: 0;
+    font: var(--mat-sys-title-medium);
+  }
+
+  &-toolDescription,
+  &-muted {
+    margin: 0;
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  &-result {
+    margin: 0;
+    font: var(--mat-sys-body-small);
+  }
+
+  &-error {
+    margin: 0;
+    color: var(--mat-sys-error);
+  }
+}
