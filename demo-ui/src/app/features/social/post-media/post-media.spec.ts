@@ -59,6 +59,32 @@ describe('PostMedia', () => {
     expect(deferred.querySelector('iframe')?.src).toContain('autoplay=1');
   });
 
+  it('shows a GIF as a still frame and animates it only while hovered', () => {
+    const el = render({
+      type: 'GIPHY',
+      id: 'gif42',
+      url: 'https://media.giphy.com/media/gif42/giphy.webp',
+      authorName: null,
+      authorUrl: null,
+    });
+    const img = () => el.querySelector('img')!.getAttribute('src');
+    const button = el.querySelector('button') as HTMLButtonElement;
+    expect(img()).toBe('https://media.giphy.com/media/gif42/giphy_s.gif');
+    expect(el.textContent).toContain('GIF');
+
+    button.dispatchEvent(new Event('mouseenter'));
+    rerender();
+    expect(img()).toBe('https://media.giphy.com/media/gif42/giphy.webp');
+
+    button.dispatchEvent(new Event('mouseleave'));
+    rerender();
+    expect(img()).toBe('https://media.giphy.com/media/gif42/giphy_s.gif');
+
+    button.click(); // tap on touch screens
+    rerender();
+    expect(img()).toBe('https://media.giphy.com/media/gif42/giphy.webp');
+  });
+
   it('never embeds an id that is not a YouTube id', () => {
     const el = render({
       type: 'YOUTUBE',

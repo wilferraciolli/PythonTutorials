@@ -41,5 +41,13 @@ export class PostMedia {
   });
   protected readonly showPlayer = computed(() => !this.deferVideo() || this.playing());
 
+  // GIFs show Giphy's full-size still frame and only animate while hovered,
+  // focused or tapped (quieter feeds, less data, kinder to motion-sensitive users).
+  protected readonly animating = signal(false);
+  protected readonly gifStillUrl = computed(() => {
+    const media = this.media();
+    return media.type === 'GIPHY' ? `https://media.giphy.com/media/${media.id}/giphy_s.gif` : null;
+  });
+
   protected readonly unsplashUrl = 'https://unsplash.com/?utm_source=wiltech&utm_medium=referral';
 }

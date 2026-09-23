@@ -25,12 +25,36 @@
         </button>
       }
     }
+    @case ('GIPHY') {
+      <!-- Still frame until hovered, focused or tapped; then the animated GIF. -->
+      <button
+        class="PostMedia-gif"
+        type="button"
+        [attr.aria-label]="animating() ? 'Pause GIF' : 'Play GIF'"
+        [attr.aria-pressed]="animating()"
+        (mouseenter)="animating.set(true)"
+        (mouseleave)="animating.set(false)"
+        (focus)="animating.set(true)"
+        (blur)="animating.set(false)"
+        (click)="animating.set(!animating())"
+      >
+        <img
+          class="PostMedia-image"
+          [src]="animating() ? item.url : gifStillUrl()"
+          [alt]="item.title ?? 'GIF'"
+          loading="lazy"
+        />
+        @if (!animating()) {
+          <span class="PostMedia-gifBadge" aria-hidden="true">GIF</span>
+        }
+      </button>
+    }
     @default {
       @if (item.url) {
         <img
           class="PostMedia-image"
           [src]="item.url"
-          [alt]="item.title ?? (item.type === 'GIPHY' ? 'GIF' : 'Photo')"
+          [alt]="item.title ?? 'Photo'"
           loading="lazy"
         />
       }
