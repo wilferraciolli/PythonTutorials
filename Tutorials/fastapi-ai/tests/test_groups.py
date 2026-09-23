@@ -232,6 +232,21 @@ async def test_roles_are_resynced_from_clerk(env):
     assert (await me.get_or_create_current_user(promoted))["roleIds"] == ["ADMIN"]
 
 
+async def test_clerk_roles_match_case_insensitively(env):
+    # Clerk metadata is free text: `"roles": ["admin"]` must make an admin, not a standard user.
+    _, _, users, _ = env
+    me = MeService(users)
+    for index, claim in enumerate(["admin", "Admin", " ADMIN "]):
+        clerk = AuthenticatedUser(id=f"clerk-{index}", name="Wil", email="w@x.io", role_ids=[claim], claims={})
+        assert (await me.get_or_create_current_user(clerk))["roleIds"] == ["ADMIN"]
+
+    # and an existing standard user is upgraded on their next request
+    clerk = AuthenticatedUser(id="clerk-9", name="Wil", email="w9@x.io", role_ids=[], claims={})
+    assert (await me.get_or_create_current_user(clerk))["roleIds"] == ["STANDARD"]
+    clerk = AuthenticatedUser(id="clerk-9", name="Wil", email="w9@x.io", role_ids=["admin"], claims={})
+    assert (await me.get_or_create_current_user(clerk))["roleIds"] == ["ADMIN"]
+
+
 # --- API wiring
 
 

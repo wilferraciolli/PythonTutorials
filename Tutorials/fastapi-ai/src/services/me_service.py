@@ -45,8 +45,10 @@ class MeService:
         return list(dict.fromkeys(normalised)) or [UserRole.STANDARD]
 
     def _to_role(self, role_id: str) -> UserRole | None:
+        # Case-insensitive: Clerk metadata is free text, so "admin", "Admin"
+        # and "ADMIN" all mean the ADMIN role.
         try:
-            return UserRole(role_id)
+            return UserRole(str(role_id).strip().upper())
         except ValueError:
             return None
 
