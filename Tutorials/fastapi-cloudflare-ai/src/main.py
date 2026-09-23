@@ -4,7 +4,7 @@ from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from auth import get_authenticated_user
-from routers import health, me, user_profile
+from routers import health, me, user_profile, users
 
 
 
