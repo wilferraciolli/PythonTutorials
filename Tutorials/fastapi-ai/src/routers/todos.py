@@ -3,11 +3,12 @@ from typing import Any, Dict, Optional
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from database import get_database
-from routers.deps import get_current_user_id
+from routers.deps import get_current_user_id, get_todo_search_service
 from models import Todo, TodoCreate, TodoState, TodoUpdate
 from repositories.tag_repository import TagRepository
 from repositories.todo_repository import TodoRepository
 from services.tag_service import TagService
+from services.todo_search_service import DEFAULT_LIMIT, TodoSearchService
 from services.todo_service import TodoService
 
 router = APIRouter(prefix="/users/{user_id}/todos", tags=["todos"], dependencies=[Depends(get_current_user_id)])
@@ -22,7 +23,32 @@ def get_todo_service(request: Request) -> TodoService:
     """
     db = get_database(request)
     tag_service = TagService(TagRepository(db))
-    return TodoService(TodoRepository(db), tag_service)
+    return TodoService(TodoRepository(db), tag_service, get_todo_search_service(request))
+
+
+@router.get("/search")
+async def search_todos(
+    user_id: str,
+    q: str,
+    state: Optional[TodoState] = None,
+    limit: int = DEFAULT_LIMIT,
+    search: TodoSearchService = Depends(get_todo_search_service),
+    service: TodoService = Depends(get_todo_service),
+) -> Dict[str, Any]:
+    """Find todos by meaning (embeddings) and keyword, best first."""
+    hits = await search.search(user_id, q, state.value if state else None, limit)
+    return service.build_response("todos", hits, user_id)
+
+
+@router.post("/search/reindex")
+async def reindex_todos(
+    user_id: str,
+    search: TodoSearchService = Depends(get_todo_search_service),
+    service: TodoService = Depends(get_todo_service),
+) -> Dict[str, Any]:
+    """Backfill: embed this user's todos that aren't indexed yet."""
+    indexed = await search.reindex_user(user_id)
+    return service.build_response("reindex", {"indexed": indexed}, user_id)
 
 
 @router.get("/template", status_code=200)

@@ -95,3 +95,28 @@ class TodoRepository:
             "SELECT * FROM todos WHERE user_id = ? ORDER BY complete_by ASC",
             (user_id,),
         )
+
+    async def search_by_keyword(self, user_id: str, term: str, limit: int) -> List[Dict[str, Any]]:
+        like = f"%{term}%"
+        return await self.db.fetch_all(
+            "SELECT * FROM todos WHERE user_id = ? AND (title LIKE ? OR description LIKE ?) "
+            "ORDER BY complete_by ASC LIMIT ?",
+            (user_id, like, like, limit),
+        )
+
+    async def ids_with_tag(self, user_id: str, tag: str) -> set[str]:
+        """Ids of the user's todos carrying `tag` (case-insensitive)."""
+        rows = await self.db.fetch_all(
+            "SELECT todos.id AS id FROM todos JOIN tags ON tags.resource_id = todos.id "
+            "WHERE todos.user_id = ? AND LOWER(tags.tag) = LOWER(?)",
+            (user_id, tag),
+        )
+        return {row["id"] for row in rows}
+
+    async def tag_counts(self, user_id: str) -> List[Dict[str, Any]]:
+        """Each tag on the user's todos with how many todos carry it."""
+        return await self.db.fetch_all(
+            "SELECT tags.tag AS tag, COUNT(*) AS count FROM todos JOIN tags ON tags.resource_id = todos.id "
+            "WHERE todos.user_id = ? GROUP BY tags.tag ORDER BY count DESC, tags.tag ASC",
+            (user_id,),
+        )

@@ -326,6 +326,8 @@ above) except `/api/health`, `/docs`, and `/openapi.json`.
 | POST | `/api/users/{user_id}/chats/search/reindex` | Embed any of the user's messages that aren't indexed yet (backfill) |
 | GET / POST | `/api/users/{user_id}/todos` | List (`?state=NEW`) / create todos. Also `/todos/template`, `/todos/{id}` (GET, PUT, DELETE) and `PATCH /todos/{id}/state/{state}` — copied from `fastapi-cloudflare-d1` |
 | GET / POST | `/api/tags` | List / create tags. Also `/tags/search?tag=`, `/tags/template`, `DELETE /tags/{id}` — copied from `fastapi-cloudflare-d1` |
+| GET | `/api/users/{user_id}/todos/search` | Search todos by meaning and keyword: `?q=tax return&state=NEW` |
+| POST | `/api/users/{user_id}/todos/search/reindex` | Embed any of the user's todos that aren't indexed yet (backfill) |
 | POST | `/api/users/{user_id}/assistant/ask` | Ask a question about your own data in plain English (`{"question": "...", "provider": "groq"}`); the model calls read-only tools (todos, chat search) and returns the answer plus the tools it used |
 | GET | `/api/users/{user_id}/chats/{chat_id}` | Get one chat with its full message history |
 | PUT | `/api/users/{user_id}/chats/{chat_id}` | Rename a chat (`{"title": "..."}`, 1–60 characters) |

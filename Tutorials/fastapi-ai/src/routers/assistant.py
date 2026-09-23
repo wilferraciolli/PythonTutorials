@@ -3,14 +3,15 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from assistant.chat_tools import build_chat_tools
-from assistant.todo_tools import build_todo_tools
+from assistant.date_tools import build_date_tools
+from assistant.todo_tools import build_todo_tools, utc_now
 from config import get_config
 from database import get_database
 from llm import OpenAICompatibleLlm
 from models import AssistantAsk
 from repositories.todo_repository import TodoRepository
 from routers.chats import get_search_service
-from routers.deps import get_current_user_id
+from routers.deps import get_current_user_id, get_todo_search_service
 from services.assistant_service import AssistantService
 
 router = APIRouter(prefix="/users/{user_id}/assistant", tags=["assistant"])
@@ -38,7 +39,8 @@ def get_assistant_service(request: Request, provider: str) -> AssistantService:
 
     db = get_database(request)
     tools = [
-        *build_todo_tools(TodoRepository(db)),
+        *build_todo_tools(TodoRepository(db), search=get_todo_search_service(request)),
+        *build_date_tools(utc_now),
         *build_chat_tools(get_search_service(request)),
     ]
     return AssistantService(llm, model, provider, tools)

@@ -20,6 +20,9 @@ would be making it up. So there are two kinds of question and two kinds of tool:
 | "where did I ask about java?" | `search_chats` | embeddings + keyword ([details](how-ai-search-works.md)) |
 | "how many todos are overdue?" | `count_todos` | a plain query; the database does the counting |
 | "what's due first?" | `list_todos` | a plain query, sorted |
+| "how many did I create last quarter?" | `date_range` then `count_todos` | dates worked out in code, then a plain query |
+| "how many are tagged important?" | `count_todos(tag=...)` | a join on the tags table |
+| "todos about the tax return" | `search_todos` | embeddings + keyword, like chats |
 
 The LLM's job is only to **pick the tools and write the answer**; the numbers always
 come from the database.
@@ -73,8 +76,9 @@ colleague. Words like "overdue" are turned into arguments by the model; the *mea
 overdue (past `complete_by` and not `CLOSED`) is fixed in code, so it is always
 consistent.
 
-Embeddings are used in exactly one place: the `search_chats` tool, to rank chat messages
-against the search text. Todos and tags are **not** embedded; they are queried directly.
+Embeddings are used by the tools that match by *meaning*: `search_chats` (chat messages)
+and `search_todos` (todo title + description). Counting, states, dates and tags are always
+plain queries.
 
 ### When would a resource need embedding?
 
@@ -85,9 +89,47 @@ against the search text. Todos and tags are **not** embedded; they are queried d
 | Both | Both, in one tool | "overdue todos about tax" |
 
 Embed a resource only if it has free text worth matching by meaning (a todo's title and
-description, a note). Reuse the same pieces as chats: a row in `message_embeddings`-style
-table per resource, written when it is created or edited and removed when it is deleted,
-searched by a `search_todos` tool. Counting and filtering stay in SQL either way.
+description, a note). Todos already are: one row per todo in `resource_embeddings`
+(`resource_type = "todo"`), written when it is created or edited and removed when it is
+deleted. A new searchable resource is a new `resource_type`, a search service and a tool.
+Counting and filtering stay in SQL either way.
+
+## Worked examples
+
+### "How many todos have I created last quarter?"
+
+A model is bad at calendar arithmetic and "last quarter" is ambiguous, so the model does
+not work the dates out. It calls `date_range(period="last_quarter")`, which the server
+answers from code (calendar quarters), then passes those dates to `count_todos`.
+
+```mermaid
+sequenceDiagram
+    participant L as LLM
+    participant S as Server
+    L->>S: date_range(period="last_quarter")
+    S-->>L: from 2026-01-01, to 2026-03-31 (today is 2026-06-15)
+    L->>S: count_todos(created_from="2026-01-01", created_to="2026-03-31")
+    S-->>L: {"count": 12}
+    L-->>L: "You created 12 todos last quarter."
+```
+
+Supported periods: today, yesterday, last_7_days, last_30_days, this/last week, month,
+quarter and year. Quarters are calendar quarters; if you use fiscal quarters, change
+`assistant/date_tools.py` once and every question follows.
+
+### "How many todos have the tag important?"
+
+`count_todos(tag="important")`. Tags live in their own table, so the server joins
+`todos` to `tags` (case-insensitive) for that user. If the model isn't sure a tag exists
+it can call `list_tags` first. Filters combine: "important todos created last quarter
+that are still open" is one `count_todos` call with `tag`, `created_from`, `created_to`
+and `state`.
+
+### "Todos about the tax return"
+
+`search_todos(query="tax return")`: the todo's title and description are embedded
+(`resource_embeddings`) when it is created or edited, removed when deleted, so it can find
+"HMRC self-assessment". It is combined with a keyword match, like chat search.
 
 ## Adding a new data source
 

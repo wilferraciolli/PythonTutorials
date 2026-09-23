@@ -3,7 +3,6 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 
 from ai import get_ai
-from embeddings import DEFAULT_EMBEDDING_MODEL, embed
 from auth import AuthenticatedUser, get_authenticated_user
 from config import get_config
 from database import get_database
@@ -11,7 +10,7 @@ from models import ChatCreate, ChatMessageCreate, ChatProvider, ChatTitleUpdate
 from repositories.chat_repository import ChatRepository
 from repositories.user_repository import UserRepository
 from services.chat_service import ChatService
-from routers.deps import get_current_user_id
+from routers.deps import get_current_user_id, get_embedder
 from services.me_service import MeService
 from services.search_service import DEFAULT_LIMIT, SearchService
 from vector_store import DatabaseVectorStore
@@ -42,12 +41,7 @@ def get_chat_service(request: Request) -> ChatService:
 
 def get_search_service(request: Request) -> SearchService:
     db = get_database(request)
-    embedding_model = get_config(request, "CF_EMBEDDING_MODEL", DEFAULT_EMBEDDING_MODEL) or DEFAULT_EMBEDDING_MODEL
-    # Embeddings always come from Workers AI, whichever provider answers a chat.
-    ai = get_ai(request, "cloudflare")
-
-    async def embed_texts(texts: list[str]) -> list[list[float]]:
-        return await embed(ai, embedding_model, texts)
+    embed_texts, embedding_model = get_embedder(request)
 
     return SearchService(
         ChatRepository(db),

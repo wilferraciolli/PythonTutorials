@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
@@ -6,7 +7,10 @@ from api_response import API_PREFIX, envelope
 from models import Link, Todo, TodoCreate, TodoState, TodoUpdate, format_utc_datetime
 from repositories.todo_repository import TodoRepository
 from services.tag_service import TagService
+from services.todo_search_service import TodoSearchService
 from utils import TodoUtils
+
+logger = logging.getLogger(__name__)
 
 OVERDUE_TAG = "overdue"
 NOT_STARTED_TAG = "not-started"
@@ -15,9 +19,25 @@ NOT_STARTED_TAG = "not-started"
 class TodoService:
     """Business logic for TODOs, sitting between the router and the D1 repository."""
 
-    def __init__(self, repository: TodoRepository, tag_service: TagService):
+    def __init__(
+        self,
+        repository: TodoRepository,
+        tag_service: TagService,
+        search_service: Optional[TodoSearchService] = None,
+    ):
         self.repository = repository
         self.tag_service = tag_service
+        self.search_service = search_service
+
+    async def _index(self, row: Dict[str, Any]) -> None:
+        # Best effort: search indexing must never fail a todo write. Anything
+        # missed is picked up by POST .../todos/search/reindex.
+        if not self.search_service:
+            return
+        try:
+            await self.search_service.index_todos([row])
+        except Exception:
+            logger.exception("failed to index todo %s for search", row.get("id"))
 
     def build_template_response(self, user_id: str) -> Dict[str, Any]:
         """
@@ -54,6 +74,7 @@ class TodoService:
         )
         todo = self._row_to_todo(row)
         await self._sync_auto_tags(todo)
+        await self._index(row)
         return todo
 
     async def get_todo(self, user_id: str, todo_id: str) -> Optional[Todo]:
@@ -85,6 +106,7 @@ class TodoService:
 
         todo = self._row_to_todo(row)
         await self._sync_auto_tags(todo)
+        await self._index(row)
         return todo
 
     async def update_todo_state(self, user_id: str, todo_id: str, new_state: TodoState) -> Optional[Todo]:
@@ -100,6 +122,8 @@ class TodoService:
         deleted = await self.repository.delete(todo_id, user_id)
         if deleted:
             await self.tag_service.delete_all_tags_for_resource(todo_id)
+            if self.search_service:
+                await self.search_service.remove_todo(todo_id)
         return deleted
 
     def build_response(
