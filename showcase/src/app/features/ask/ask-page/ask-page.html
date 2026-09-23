@@ -1,0 +1,89 @@
+<div class="AskPage App-page">
+  <header class="AskPage-header">
+    <h1 class="AskPage-title">Ask your data</h1>
+    <p class="AskPage-lead">
+      Ask in plain English about your todos and past chats. The answer shows how it was worked out.
+    </p>
+  </header>
+
+  @if (!store.assistantLink()) {
+    <p class="AskPage-error" role="alert">
+      The assistant isn't available on this API. Run <strong>fastapi-ai</strong> to use it.
+    </p>
+  }
+
+  <div class="AskPage-thread" aria-live="polite">
+    @for (entry of store.entries(); track entry.id) {
+      <section class="AskPage-entry">
+        <p class="AskPage-question">{{ entry.question }}</p>
+
+        @if (entry.error; as errorMessage) {
+          <p class="AskPage-error" role="alert">{{ errorMessage }}</p>
+        } @else if (entry.answer; as result) {
+          <p class="AskPage-answer">{{ result.answer }}</p>
+          @if (result.toolCalls.length) {
+            <details class="AskPage-how">
+              <summary>How I found this ({{ result.toolCalls.length }})</summary>
+              <ul class="AskPage-tools">
+                @for (call of result.toolCalls; track $index) {
+                  <li>
+                    <code>{{ call.name }}({{ call.arguments | json }})</code>
+                    <code class="AskPage-result">{{ call.result | json }}</code>
+                  </li>
+                }
+              </ul>
+              <p class="AskPage-model">{{ result.provider }} · {{ result.model }}</p>
+            </details>
+          }
+        } @else {
+          <p class="AskPage-answer AskPage-answer--pending">Thinking…</p>
+        }
+      </section>
+    } @empty {
+      <div class="AskPage-suggestions">
+        @for (suggestion of suggestions; track suggestion) {
+          <button
+            matButton="outlined"
+            type="button"
+            [disabled]="!store.assistantLink()"
+            (click)="submit(suggestion)"
+          >
+            {{ suggestion }}
+          </button>
+        }
+      </div>
+    }
+  </div>
+
+  <form class="AskPage-composer" (submit)="$event.preventDefault(); submit()">
+    <mat-form-field class="AskPage-input" appearance="outline" subscriptSizing="dynamic">
+      <mat-label>Ask a question</mat-label>
+      <input
+        matInput
+        [value]="draft()"
+        (input)="draft.set($any($event.target).value)"
+        [disabled]="store.isPending() || !store.assistantLink()"
+      />
+    </mat-form-field>
+    <select
+      class="AskPage-provider"
+      aria-label="AI provider"
+      (change)="selectProvider($any($event.target).value)"
+    >
+      <option value="groq" [selected]="store.provider() === 'groq'">Groq</option>
+      <option value="cloudflare" [selected]="store.provider() === 'cloudflare'">
+        Cloudflare AI
+      </option>
+    </select>
+    <button
+      matButton="filled"
+      type="submit"
+      [disabled]="store.isPending() || !draft().trim() || !store.assistantLink()"
+    >
+      <mat-icon aria-hidden="true">send</mat-icon>
+    </button>
+    @if (store.entries().length) {
+      <button matButton type="button" (click)="store.clear()">Clear</button>
+    }
+  </form>
+</div>

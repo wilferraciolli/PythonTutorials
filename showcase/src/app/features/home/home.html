@@ -51,5 +51,18 @@
         }
       </mat-card-content>
     </mat-card>
+
+    <mat-card class="Home-nav-card" appearance="outlined">
+      <mat-card-content class="Home-content Home-content-nav">
+        <mat-icon class="Home-nav-icon" aria-hidden="true">question_answer</mat-icon>
+        <h2 class="Home-nav-title">Ask your data</h2>
+        <p class="Home-lead">Ask questions about your todos and past chats in plain English.</p>
+        @if (askError(); as errorMessage) {
+          <p class="Home-card-error" role="alert">{{ errorMessage }}</p>
+        } @else {
+          <a matButton="filled" routerLink="/ask">Go to Ask</a>
+        }
+      </mat-card-content>
+    </mat-card>
   </div>
 </main>

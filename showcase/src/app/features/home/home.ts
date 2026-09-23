@@ -32,6 +32,7 @@ export class Home {
   protected readonly cloudflareAiError = computed(() => this.missingLink(this.currentUser.link('cloudflareChats')));
   protected readonly groqAiError = computed(() => this.missingLink(this.currentUser.link('groqChats')));
   protected readonly aiError = computed(() => this.missingLink(this.currentUser.link('aiChats')));
+  protected readonly askError = computed(() => this.missingLink(this.currentUser.link('aiAssistant')));
 
   private missingLink(link: ILink | undefined): string | null {
     if (!this.auth.isSignedIn()) return null;

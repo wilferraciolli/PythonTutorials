@@ -1,0 +1,125 @@
+.AskPage {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  max-width: 52rem;
+  margin: 0 auto;
+  width: 100%;
+
+  &-header {
+    margin-bottom: 1rem;
+  }
+
+  &-title {
+    margin: 0;
+    font: var(--mat-sys-headline-small);
+  }
+
+  &-lead {
+    margin: 0.25rem 0 0;
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  &-error {
+    margin: 0 0 0.5rem;
+    font: var(--mat-sys-body-medium);
+    color: var(--mat-sys-error);
+  }
+
+  &-thread {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    padding: 0.25rem 0 0.75rem;
+  }
+
+  &-suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  &-entry {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  // The question hugs the right like a user chat bubble; the answer sits
+  // left and plain, so it reads as the thing to copy.
+  &-question {
+    align-self: flex-end;
+    margin: 0;
+    max-width: min(75%, 40rem);
+    padding: 0.5rem 0.875rem;
+    border-radius: 1rem;
+    background: var(--mat-sys-primary-container);
+    color: var(--mat-sys-on-primary-container);
+    overflow-wrap: anywhere;
+  }
+
+  &-answer {
+    margin: 0;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+
+    &--pending {
+      opacity: 0.6;
+    }
+  }
+
+  &-how {
+    font: var(--mat-sys-body-small);
+    color: var(--mat-sys-on-surface-variant);
+
+    summary {
+      cursor: pointer;
+    }
+  }
+
+  &-tools {
+    margin: 0.5rem 0 0;
+    padding-left: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+
+    code {
+      display: block;
+      overflow-wrap: anywhere;
+      white-space: pre-wrap;
+    }
+  }
+
+  &-result {
+    color: var(--mat-sys-on-surface);
+  }
+
+  &-model {
+    margin: 0.5rem 0 0;
+  }
+
+  &-composer {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding-top: 0.5rem;
+  }
+
+  &-input {
+    flex: 1 1 auto;
+  }
+
+  &-provider {
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--mat-sys-outline);
+    background: var(--mat-sys-surface);
+    color: var(--mat-sys-on-surface);
+    font: var(--mat-sys-body-medium);
+  }
+}

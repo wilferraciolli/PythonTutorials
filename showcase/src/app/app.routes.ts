@@ -31,5 +31,10 @@ export const routes: Routes = [
     canActivate: [authGuard],
     loadChildren: () => import('./features/workers-ai/workers-ai.routes').then((m) => m.workersAiRoutes),
   },
+  {
+    path: 'ask',
+    canActivate: [authGuard],
+    loadChildren: () => import('./features/ask/ask.routes').then((m) => m.askRoutes),
+  },
   { path: '**', redirectTo: '' },
 ];
