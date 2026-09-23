@@ -123,6 +123,11 @@ class UserRepository:
             (user_id,),
         )
 
+        # Groups they owned carry on without an owner (docs/social-groups.md).
+        from repositories.group_repository import GroupRepository
+
+        await GroupRepository(self.db).forget_user(user_id)
+
         await self.db.execute(
             "DELETE FROM users WHERE id = ?",
             (user_id,),

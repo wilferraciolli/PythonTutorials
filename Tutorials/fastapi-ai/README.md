@@ -328,6 +328,11 @@ above) except `/api/health`, `/docs`, and `/openapi.json`.
 | GET / POST | `/api/tags` | List / create tags. Also `/tags/search?tag=`, `/tags/template`, `DELETE /tags/{id}` — copied from `fastapi-cloudflare-d1` |
 | GET | `/api/users/{user_id}/todos/search` | Search todos by meaning and keyword: `?q=tax return&state=NEW` |
 | POST | `/api/users/{user_id}/todos/search/reindex` | Embed any of the user's todos that aren't indexed yet (backfill) |
+| GET / POST | `/api/groups` | Social groups you can see (`?q=`, `?following=true`, `?mine=true`) / create one (you become owner, member, follower). See [`docs/social-groups.md`](docs/social-groups.md) |
+| GET / PUT / DELETE | `/api/groups/{id}` | Read (404 if private and you're not a member), edit and delete (owner or admin) |
+| PUT | `/api/groups/{id}/owner` | Assign a new owner `{"userId"}` (must be a member; owner or admin) |
+| GET | `/api/groups/{id}/members` | Members; `PUT/DELETE /members/me` join or leave, `PUT/DELETE /members/{userId}` add (any member) or remove (owner or admin) |
+| GET | `/api/groups/{id}/followers` | Followers; `PUT/DELETE /followers/me` follow or unfollow |
 | POST | `/api/users/{user_id}/assistant/ask` | Ask a question about your own data in plain English (`{"question": "...", "provider": "groq"}`); the model calls read-only tools (todos, chat search) and returns the answer plus the tools it used |
 | GET | `/api/users/{user_id}/chats/{chat_id}` | Get one chat with its full message history |
 | PUT | `/api/users/{user_id}/chats/{chat_id}` | Rename a chat (`{"title": "..."}`, 1–60 characters) |

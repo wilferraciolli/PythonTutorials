@@ -66,6 +66,8 @@ class UserProfileService:
             "tags": Link(href=f"{API_PREFIX}/tags", method="GET"),
             "createTag": Link(href=f"{API_PREFIX}/tags", method="POST"),
             "tagTemplate": Link(href=f"{API_PREFIX}/tags/template", method="GET"),
+            "groups": Link(href=f"{API_PREFIX}/groups", method="GET"),
+            "createGroup": Link(href=f"{API_PREFIX}/groups", method="POST"),
             "aiChats": Link(href=f"{API_PREFIX}/users/{user_id}/chats", method="GET"),
             "aiChatSearch": Link(href=f"{API_PREFIX}/users/{user_id}/chats/search", method="GET"),
             "aiAssistant": Link(href=f"{API_PREFIX}/users/{user_id}/assistant/ask", method="POST"),

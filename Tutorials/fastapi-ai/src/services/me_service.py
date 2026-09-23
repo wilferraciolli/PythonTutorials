@@ -23,6 +23,12 @@ class MeService:
     async def get_or_create_current_user(self, current_user: AuthenticatedUser) -> Dict[str, Any]:
         existing = await self.user_repository.get_by_external_id(current_user.id)
         if existing:
+            # Clerk is the source of truth for roles: re-sync them when the token's
+            # `roles` claim no longer matches what we stored (e.g. made ADMIN later).
+            role_ids = self._normalise_role_ids(current_user.role_ids)
+            if sorted(existing["roleIds"]) != sorted(role.value for role in role_ids):
+                await self.user_repository.replace_roles(existing["id"], role_ids)
+                existing = await self.user_repository.get_by_id(existing["id"]) or existing
             return existing
 
         return await self.user_repository.create(

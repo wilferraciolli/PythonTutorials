@@ -51,3 +51,14 @@ def get_todo_search_service(request: Request):
     db = get_database(request)
     embed_texts, model = get_embedder(request)
     return TodoSearchService(TodoRepository(db), ResourceVectorStore(db, "todo"), embed_texts, model)
+
+
+async def get_caller(
+    request: Request,
+    current_user: AuthenticatedUser = Depends(get_authenticated_user),
+):
+    """The signed-in user as a permissions Caller (our users.id + whether they are a system ADMIN)."""
+    from group_permissions import Caller
+
+    db = get_database(request)
+    return Caller.from_user_row(await MeService(UserRepository(db)).get_or_create_current_user(current_user))

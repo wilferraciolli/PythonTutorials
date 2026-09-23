@@ -4,8 +4,8 @@ Users create **groups** (public or private), post to them, and other people like
 posts and reply to comments. Users can **be a member** of a group or just **follow** it, and each
 user has a **timeline** built from the groups they can see.
 
-> **Status:** design for review (revision 4), no code yet. Items marked **(decision)** are
-> defaults I chose; change them before building.
+> **Status:** revision 5. **Step 1 built** (groups, members, owner, followers, role re-sync;
+> `tests/test_groups.py`). Steps 2-6 not yet. Items marked **(decision)** can still be changed.
 
 ## Roles: two different things
 
@@ -41,7 +41,7 @@ flowchart LR
     G -->|creator becomes| Owner[Owner + member + follower]
     Anyone -->|follows public group| F[Follower]
     Anyone -->|joins public group| M[Member + auto follower]
-    Owner -->|adds people to a private group| M
+    Owner -->|owner or any member adds people| M
     M -->|can unfollow any time| F2[Still a member, no longer follows]
     Admin[System ADMIN] -.->|sees and manages everything| G
 ```
@@ -58,15 +58,20 @@ flowchart LR
    Users can unfollow at any time; unfollowing does not end membership, it only drops the group
    from their FOLLOWING timeline. Leaving a public group does not unfollow it.
 5. **Private groups are invisible to outsiders.** A non-member gets `404 Group not found`
-   (not 403, so its existence isn't leaked). **(decision)** Leaving or being removed from a
-   private group also removes the follower row.
-6. **Joining:** public groups, anyone can join. **(decision)** Private groups, the owner or an
-   admin adds the member; join requests can come later.
-7. **Admins bypass group security.** They can see every group, post and comment (public or
+   (not 403, so its existence isn't leaked).
+6. **Joining and adding people:** anyone can join a public group themselves. A private group is
+   only visible to its owner and members, so **only the owner or an existing member** (or an
+   admin) can add someone to it. The same applies to adding someone to a public group.
+   **(decision)** Removing someone else stays with the owner or an admin.
+7. **Being added works like joining:** the new member automatically follows the group and can
+   unfollow at any time. **Leaving or being removed ends membership and also removes the
+   follower row**, for private groups. **(decision)** For public groups a leaver keeps
+   following, since they could follow it anyway.
+8. **Admins bypass group security.** They can see every group, post and comment (public or
    private), post, comment and like anywhere, delete any group, post or comment and assign
    owners, all without being a member.
-8. **Posts need a title and a body.** Both are required.
-9. **Posts are ordered by creation date and time, newest first.**
+9. **Posts need a title and a body.** Both are required.
+10. **Posts are ordered by creation date and time, newest first.**
 
 ## Who can do what
 
@@ -80,7 +85,8 @@ flowchart LR
 | Edit own post or comment | | | yes | yes | yes |
 | Delete own post or comment | | | yes | yes | yes |
 | Delete anyone's post or comment | no | no | no | yes | **yes** |
-| Add / remove members | no | no | no | yes | **yes** |
+| Add a member | no | no | yes | yes | **yes** |
+| Remove another member | no | no | no | yes | **yes** |
 | Edit group, change visibility | no | no | no | yes | **yes** |
 | Assign a different owner | no | no | no | yes | **yes** |
 | Delete the group | no | no | no | yes | **yes** |
@@ -264,8 +270,8 @@ without going through its group.
 | GET | `/api/groups/{groupId}/members` | Members, with who is owner |
 | PUT | `/api/groups/{groupId}/members/me` | Join a public group |
 | DELETE | `/api/groups/{groupId}/members/me` | Leave |
-| PUT | `/api/groups/{groupId}/members/{userId}` | Add a member (owner or admin) |
-| DELETE | `/api/groups/{groupId}/members/{userId}` | Remove a member (owner or admin) |
+| PUT | `/api/groups/{groupId}/members/{userId}` | Add a member; they also start following (owner, member or admin) |
+| DELETE | `/api/groups/{groupId}/members/{userId}` | Remove a member; a private group also unfollows them (owner or admin) |
 
 ### Followers
 
@@ -367,5 +373,4 @@ Each step is independently shippable.
 
 ## Open questions
 
-1. **Joining a private group.** I assumed the owner or an admin adds people. Do you want
-   people to be able to request to join?
+None for now. Items marked **(decision)** can still be changed.
