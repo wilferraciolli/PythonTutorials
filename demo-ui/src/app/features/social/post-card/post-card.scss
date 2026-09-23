@@ -1,71 +1,99 @@
 @use 'ui';
+@use 'breakpoints' as bp;
 
-// A tonal (filled) card: the feed is read, not operated, so it sits on the
-// same surface-container-low as the app's lists instead of adding outlines.
+// An M3 filled card: byline, a clear title and a short description, the
+// media, then actions. The title link stretches over the whole card (its
+// ::after), so anywhere on the card opens the post; the controls inside it
+// (group link, like, comments, video and GIF players) sit above that layer.
 .PostCard {
-  --mat-card-filled-container-color: var(--mat-sys-surface-container-low);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px 16px 8px;
+  border-radius: var(--mat-sys-corner-large);
+  background: var(--mat-sys-surface-container-low);
+  color: var(--mat-sys-on-surface);
+  transition: background-color var(--app-duration-short) var(--app-ease-standard);
 
-  &-content {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
+  @include bp.up(sm) {
+    padding: 20px 24px 8px;
   }
 
-  &-meta {
-    margin: 0;
-    font: var(--mat-sys-label-large);
-    letter-spacing: var(--mat-sys-label-large-tracking);
-    font-weight: 400;
-    color: var(--mat-sys-on-surface-variant);
-  }
-
-  &-group {
-    color: var(--mat-sys-primary);
-    text-decoration: none;
-    font-weight: 500;
-    border-radius: var(--mat-sys-corner-extra-small);
-
-    &:hover {
-      text-decoration: underline;
-    }
-
-    @include ui.focus-ring;
+  &-heading {
+    margin: 12px 0 0;
+    font: var(--mat-sys-title-large);
+    letter-spacing: var(--mat-sys-title-large-tracking);
+    overflow-wrap: anywhere;
   }
 
   &-title {
-    font: var(--mat-sys-title-large);
-    letter-spacing: var(--mat-sys-title-large-tracking);
-    color: var(--mat-sys-on-surface);
+    color: inherit;
     text-decoration: none;
-    border-radius: var(--mat-sys-corner-extra-small);
+    outline: none;
 
-    &:hover {
-      text-decoration: underline;
+    &::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: var(--mat-sys-corner-large);
     }
-
-    @include ui.focus-ring;
   }
 
   // Preview only: three lines, the full text is on the post page.
   &-body {
     margin: 0;
+    max-width: 65ch;
     display: -webkit-box;
     -webkit-line-clamp: 3;
     line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
-    white-space: pre-wrap;
+    white-space: pre-line;
     overflow-wrap: anywhere;
-    max-width: 65ch;
+    font: var(--mat-sys-body-medium);
+    letter-spacing: var(--mat-sys-body-medium-tracking);
+    color: var(--mat-sys-on-surface-variant);
   }
 
+  &-media {
+    display: block;
+    margin-top: 12px;
+  }
+
+  // The row lets clicks through to the card; only the buttons catch them.
   &-actions {
+    position: relative;
+    z-index: 1;
     display: flex;
     gap: 4px;
-    margin: 4px 0 -4px -12px;
+    margin: 8px 0 0 -12px;
+    pointer-events: none;
+  }
+
+  &-actions > * {
+    pointer-events: auto;
   }
 
   &-error {
     @include ui.banner(error);
+
+    position: relative;
+    z-index: 1;
+    margin: 4px 0 8px;
   }
+}
+
+// Hovering or focusing the card is hovering or focusing its title link.
+.PostCard:has(.PostCard-title:hover) {
+  background: color-mix(
+    in srgb,
+    var(--mat-sys-on-surface) 8%,
+    var(--mat-sys-surface-container-low)
+  );
+}
+
+.PostCard:has(.PostCard-title:focus-visible) {
+  outline: 3px solid var(--mat-sys-secondary);
+  outline-offset: 2px;
 }

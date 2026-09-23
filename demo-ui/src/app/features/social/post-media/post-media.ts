@@ -17,6 +17,8 @@ import { PostMedia as Media, YOUTUBE_ID } from '../social.models';
 export class PostMedia {
   readonly media = input.required<Media>();
   readonly deferVideo = input(false);
+  /** Fill the width at 16:9, cropping to fit — the shape a feed card wants. */
+  readonly fill = input(false);
 
   private readonly sanitizer = inject(DomSanitizer);
   protected readonly playing = signal(false);

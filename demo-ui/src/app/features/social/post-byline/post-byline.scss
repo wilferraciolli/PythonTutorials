@@ -1,0 +1,56 @@
+@use 'ui';
+
+.PostByline {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+
+  &-avatar {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: var(--mat-sys-corner-full);
+    background: var(--mat-sys-secondary-container);
+    color: var(--mat-sys-on-secondary-container);
+    font: var(--mat-sys-title-medium);
+    text-transform: uppercase;
+  }
+
+  &-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  &-author {
+    font: var(--mat-sys-title-small);
+    letter-spacing: var(--mat-sys-title-small-tracking);
+    color: var(--mat-sys-on-surface);
+  }
+
+  &-meta {
+    font: var(--mat-sys-body-small);
+    letter-spacing: var(--mat-sys-body-small-tracking);
+    color: var(--mat-sys-on-surface-variant);
+    overflow-wrap: anywhere;
+  }
+
+  // Sits above a card's stretched title link, so it stays its own target.
+  &-group {
+    position: relative;
+    z-index: 1;
+    color: var(--mat-sys-primary);
+    font-weight: 500;
+    text-decoration: none;
+    border-radius: var(--mat-sys-corner-extra-small);
+
+    &:hover {
+      text-decoration: underline;
+    }
+
+    @include ui.focus-ring;
+  }
+}

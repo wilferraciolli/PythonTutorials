@@ -1,44 +1,49 @@
-<mat-card class="PostCard" appearance="filled">
-  <mat-card-content class="PostCard-content">
-    <p class="PostCard-meta">
-      @if (showGroup()) {
-        <a class="PostCard-group" [routerLink]="['/groups', post().groupId]">{{
-          post().groupName
-        }}</a>
-        ·
-      }
-      {{ post().authorName ?? 'Unknown' }} · {{ post().created_date | date: 'medium' }}
-    </p>
-    <a class="PostCard-title" [routerLink]="['/groups', post().groupId, 'posts', post().id]">
-      {{ post().title }}
-    </a>
+<article class="PostCard">
+  <app-post-byline
+    [author]="post().authorName"
+    [date]="post().created_date"
+    [groupId]="showGroup() ? post().groupId : null"
+    [groupName]="showGroup() ? post().groupName : null"
+  />
+
+  <h2 class="PostCard-heading">
+    <a class="PostCard-title" [routerLink]="['/groups', post().groupId, 'posts', post().id]">{{
+      post().title
+    }}</a>
+  </h2>
+  @if (post().body) {
     <p class="PostCard-body">{{ post().body }}</p>
-    @if (post().media; as media) {
-      <app-post-media [media]="media" [deferVideo]="true" />
-    }
+  }
 
-    <div class="PostCard-actions">
-      <button
-        matButton
-        type="button"
-        [disabled]="!canLike() || busy()"
-        [attr.aria-pressed]="post().likedByMe"
-        [title]="
-          canLike() ? (post().likedByMe ? 'Unlike' : 'Like') : 'Join the group to like posts'
-        "
-        (click)="toggleLike()"
-      >
-        <mat-icon aria-hidden="true" [class.is-filled]="post().likedByMe">favorite</mat-icon>
-        {{ post().likeCount }}
-      </button>
-      <a matButton [routerLink]="['/groups', post().groupId, 'posts', post().id]">
-        <mat-icon aria-hidden="true">chat_bubble</mat-icon>
-        {{ post().commentCount }}
-      </a>
-    </div>
+  @if (post().media; as media) {
+    <app-post-media class="PostCard-media" [media]="media" [deferVideo]="true" [fill]="true" />
+  }
 
-    @if (error(); as message) {
-      <p class="PostCard-error" role="alert">{{ message }}</p>
-    }
-  </mat-card-content>
-</mat-card>
+  <div class="PostCard-actions">
+    <button
+      matButton
+      type="button"
+      [disabled]="!canLike() || busy()"
+      [attr.aria-pressed]="post().likedByMe"
+      [attr.aria-label]="'Like (' + post().likeCount + ')'"
+      [title]="canLike() ? (post().likedByMe ? 'Unlike' : 'Like') : 'Join the group to like posts'"
+      (click)="toggleLike()"
+    >
+      <mat-icon aria-hidden="true" [class.is-filled]="post().likedByMe">favorite</mat-icon>
+      {{ post().likeCount }}
+    </button>
+    <a
+      matButton
+      [routerLink]="['/groups', post().groupId, 'posts', post().id]"
+      [attr.aria-label]="'Comments (' + post().commentCount + ')'"
+      title="Comments"
+    >
+      <mat-icon aria-hidden="true">chat_bubble</mat-icon>
+      {{ post().commentCount }}
+    </a>
+  </div>
+
+  @if (error(); as message) {
+    <p class="PostCard-error" role="alert">{{ message }}</p>
+  }
+</article>

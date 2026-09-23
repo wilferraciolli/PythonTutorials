@@ -1,20 +1,20 @@
-import { DatePipe } from '@angular/common';
 import { Component, input, output, signal, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { RouterLink } from '@angular/router';
 
 import { describeApiError } from '../../../core/api/api-error';
+import { PostByline } from '../post-byline/post-byline';
 import { PostMedia } from '../post-media/post-media';
 import { SocialActions } from '../social-actions';
 import { Post } from '../social.models';
 
-// One post in a list (timeline or group page): title, a preview of the body,
-// counts, and a like toggle. Emits `changed` so the owning list reloads.
+// One post in a list (timeline or group page), as a card: byline, title, a
+// preview of the body, media, counts and a like toggle. The whole card opens
+// the post. Emits `changed` so the owning list reloads.
 @Component({
   selector: 'app-post-card',
-  imports: [DatePipe, RouterLink, MatButtonModule, MatCardModule, MatIconModule, PostMedia],
+  imports: [RouterLink, MatButtonModule, MatIconModule, PostByline, PostMedia],
   templateUrl: './post-card.html',
   styleUrl: './post-card.scss',
 })

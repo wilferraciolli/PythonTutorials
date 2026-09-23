@@ -14,9 +14,12 @@
     background: var(--mat-sys-surface-container);
   }
 
+  // Players and credit links sit above a card's stretched title link, so
+  // they stay their own targets; a plain photo lets the click through.
   &-poster,
   &-gif {
     position: relative;
+    z-index: 1;
     align-self: flex-start;
     max-width: 100%;
     padding: 0;
@@ -59,6 +62,7 @@
   // 16:9 player that shrinks with the column.
   &-video {
     position: relative;
+    z-index: 1;
     width: 100%;
     aspect-ratio: 16 / 9;
 
@@ -73,6 +77,9 @@
   }
 
   &-credit {
+    position: relative;
+    z-index: 1;
+    align-self: flex-start;
     font: var(--mat-sys-body-small);
     color: var(--mat-sys-on-surface-variant);
 
@@ -80,4 +87,18 @@
       color: inherit;
     }
   }
+}
+
+// Fill mode (feed cards): every kind of media spans the card at 16:9.
+.PostMedia.is-fill .PostMedia-image,
+.PostMedia.is-fill .PostMedia-poster img {
+  width: 100%;
+  max-height: none;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
+
+.PostMedia.is-fill .PostMedia-poster,
+.PostMedia.is-fill .PostMedia-gif {
+  align-self: stretch;
 }

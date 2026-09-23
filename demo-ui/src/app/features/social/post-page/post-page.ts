@@ -15,7 +15,9 @@ import {
 
 import { describeApiError } from '../../../core/api/api-error';
 import { CurrentUserStore } from '../../../core/user/current-user.store';
+import { RelativeTimePipe } from '../../../shared/relative-time.pipe';
 import { MediaPicker } from '../media-picker/media-picker';
+import { PostByline } from '../post-byline/post-byline';
 import { PostMedia } from '../post-media/post-media';
 import { SocialActions } from '../social-actions';
 import { Group, MediaSelection, Post, PostComment, threadComments } from '../social.models';
@@ -34,6 +36,8 @@ const MAX_INDENT = 6;
     MatInputModule,
     MatMenuModule,
     MediaPicker,
+    PostByline,
+    RelativeTimePipe,
     PostMedia,
   ],
   templateUrl: './post-page.html',
