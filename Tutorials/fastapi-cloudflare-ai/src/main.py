@@ -36,8 +36,10 @@ app.add_middleware(
 )
 
 
-# Register routers
-app.include_router(health.router)
-app.include_router(me.router, dependencies=[Depends(get_authenticated_user)])
-app.include_router(user_profile.router, dependencies=[Depends(get_authenticated_user)])
-app.include_router(users.router, dependencies=[Depends(get_authenticated_user)])
+# Register routers under /api (e.g. /api/health, /api/me, /api/users) —
+# leaves room for the Worker to serve non-API paths (static assets, etc.)
+# from the same origin later without colliding with these routes.
+app.include_router(health.router, prefix="/api")
+app.include_router(me.router, prefix="/api", dependencies=[Depends(get_authenticated_user)])
+app.include_router(user_profile.router, prefix="/api", dependencies=[Depends(get_authenticated_user)])
+app.include_router(users.router, prefix="/api", dependencies=[Depends(get_authenticated_user)])

@@ -2,6 +2,10 @@ from typing import Any, Dict, List, Optional
 
 from models import Link
 
+# Must match the prefix main.py mounts every router under, so hrefs built
+# here are actually followable rather than 404ing against the unprefixed path.
+API_PREFIX = "/api"
+
 
 def envelope(
     data_name: str,

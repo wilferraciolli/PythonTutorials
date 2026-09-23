@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict
 from uuid import uuid4
 
-from api_response import envelope
+from api_response import API_PREFIX, envelope
 from auth import AuthenticatedUser
 from models import Link, Me, UserRole
 from repositories.user_repository import UserRepository
@@ -51,8 +51,8 @@ class MeService:
             email=user_row["email"],
             roleIds=user_row["roleIds"],
             links={
-                "self": Link(href="/me", method="GET"),
-                "userProfile": Link(href=f"/users/{user_row['id']}/todos", method="GET"),
+                "self": Link(href=f"{API_PREFIX}/me", method="GET"),
+                "userProfile": Link(href=f"{API_PREFIX}/users/{user_row['id']}/profile", method="GET"),
             },
         )
 

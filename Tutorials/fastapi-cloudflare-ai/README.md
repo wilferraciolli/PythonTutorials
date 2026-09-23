@@ -42,9 +42,9 @@ fastapi-cloudflare-ai/
 │   ├── repositories/
 │   │   └── user_repository.py
 │   ├── services/
-│   │   ├── user_service.py          # /users CRUD
-│   │   ├── user_profile_service.py  # /users/{id}/profile navigation hub
-│   │   └── me_service.py            # /me — maps the Clerk identity to a users row
+│   │   ├── user_service.py          # /api/users CRUD
+│   │   ├── user_profile_service.py  # /api/users/{id}/profile navigation hub
+│   │   └── me_service.py            # /api/me — maps the Clerk identity to a users row
 │   └── routers/
 │       ├── health.py
 │       ├── me.py
@@ -84,7 +84,7 @@ fastapi-cloudflare-ai/
 
 ## Authentication
 
-Every endpoint except `/health` requires a Clerk-issued JWT:
+Every endpoint except `/api/health` requires a Clerk-issued JWT:
 `Authorization: Bearer <token>`. `auth.py` verifies it against
 `CLERK_JWKS_URL`/`CLERK_AUDIENCE` (from `.env` or `wrangler.jsonc` `vars`) —
 there is no dev bypass, so a plain `curl` with no header gets `401 Unauthorized`
@@ -167,7 +167,7 @@ uv run pywrangler dev
 
 Server runs at `http://127.0.0.1:8787`. Try it:
 ```powershell
-curl.exe http://127.0.0.1:8787/health
+curl.exe http://127.0.0.1:8787/api/health
 curl.exe http://127.0.0.1:8787/docs        # Swagger UI in a browser
 ```
 
@@ -204,26 +204,26 @@ npx wrangler deploy
 
 ### Verifying the live deployment
 ```powershell
-curl.exe --ssl-no-revoke https://fastapi-cloudflare-ai.<your-subdomain>.workers.dev/health
+curl.exe --ssl-no-revoke https://fastapi-cloudflare-ai.<your-subdomain>.workers.dev/api/health
 curl.exe --ssl-no-revoke https://fastapi-cloudflare-ai.<your-subdomain>.workers.dev/docs
 ```
 
 ## API Reference
 
-All paths require a bearer token (see "Authentication" above) except
-`/health`, `/docs`, and `/openapi.json`.
+All paths are under `/api` and require a bearer token (see "Authentication"
+above) except `/api/health`, `/docs`, and `/openapi.json`.
 
 | Method | Path | Description |
 |---|---|---|
-| GET | `/health` | Health check |
-| GET | `/me` | Current user — upserted from the Clerk token's identity on first call |
-| GET | `/users` | List users |
-| GET | `/users/template` | Create-template payload for users |
-| GET | `/users/{id}` | Get one user |
-| POST | `/users` | Create a user |
-| PUT | `/users/{id}` | Update a user |
-| DELETE | `/users/{id}` | Delete a user (returns `204 No Content`) |
-| GET | `/users/{id}/profile` | Navigation hub — links to that user's related resources |
+| GET | `/api/health` | Health check |
+| GET | `/api/me` | Current user — upserted from the Clerk token's identity on first call |
+| GET | `/api/users` | List users |
+| GET | `/api/users/template` | Create-template payload for users |
+| GET | `/api/users/{id}` | Get one user |
+| POST | `/api/users` | Create a user |
+| PUT | `/api/users/{id}` | Update a user |
+| DELETE | `/api/users/{id}` | Delete a user (returns `204 No Content`) |
+| GET | `/api/users/{id}/profile` | Navigation hub — links to that user's related resources |
 | GET | `/docs` | Interactive Swagger UI |
 | GET | `/openapi.json` | OpenAPI schema |
 

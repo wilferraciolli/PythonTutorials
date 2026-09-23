@@ -1,6 +1,6 @@
 from typing import Any, Optional
 
-from api_response import envelope
+from api_response import API_PREFIX, envelope
 from models import Link, UserProfile, UserRole
 from repositories.user_repository import UserRepository
 
@@ -35,10 +35,10 @@ class UserProfileService:
         # POSTed to blind. Clients GET `todoTemplate` (its field metadata
         # says what's mandatory) and derive the create URL from that link.
         return {
-            "self": Link(href=f"/users/{user_id}/profile", method="GET"),
-            "user": Link(href=f"/users/{user_id}", method="GET"),
-            "users": Link(href="/users", method="GET"),
-            "userTemplate": Link(href="/users/template", method="GET"),
+            "self": Link(href=f"{API_PREFIX}/users/{user_id}/profile", method="GET"),
+            "user": Link(href=f"{API_PREFIX}/users/{user_id}", method="GET"),
+            "users": Link(href=f"{API_PREFIX}/users", method="GET"),
+            "userTemplate": Link(href=f"{API_PREFIX}/users/template", method="GET"),
         }
 
     def build_metadata(self) -> dict[str, Any]:

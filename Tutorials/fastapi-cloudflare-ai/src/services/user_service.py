@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
-from api_response import envelope
+from api_response import API_PREFIX, envelope
 from models import Link, User, UserCreate, UserRole, UserUpdate
 from repositories.user_repository import UserRepository
 
@@ -88,9 +88,9 @@ class UserService:
 
     def build_user_links(self, user_id: str) -> dict[str, Link]:
         return {
-            "self": Link(href=f"/users/{user_id}", method="GET"),
-            "updateUser": Link(href=f"/users/{user_id}", method="PUT"),
-            "deleteUser": Link(href=f"/users/{user_id}", method="DELETE"),
+            "self": Link(href=f"{API_PREFIX}/users/{user_id}", method="GET"),
+            "updateUser": Link(href=f"{API_PREFIX}/users/{user_id}", method="PUT"),
+            "deleteUser": Link(href=f"{API_PREFIX}/users/{user_id}", method="DELETE"),
         }
 
     def build_metadata(self) -> dict[str, Any]:
@@ -129,8 +129,8 @@ class UserService:
 
     def build_meta_links(self) -> dict[str, Link]:
         return {
-            "createUser": Link(href="/users", method="POST"),
-            "userTemplate": Link(href="/users/template", method="GET"),
+            "createUser": Link(href=f"{API_PREFIX}/users", method="POST"),
+            "userTemplate": Link(href=f"{API_PREFIX}/users/template", method="GET"),
         }
 
     def build_response(
@@ -177,6 +177,6 @@ class UserService:
                 },
             },
             meta_links={
-                "createUser": Link(href="/users", method="POST"),
+                "createUser": Link(href=f"{API_PREFIX}/users", method="POST"),
             },
         )
