@@ -59,7 +59,14 @@ export class TodosStore {
     return state ? `${url}?state=${state}` : url;
   });
 
-  readonly todos = computed(() => this.listResource.value()?._data['todos'] ?? []);
+  // `value()` throws while the resource is in its error state, so every read
+  // goes through here: no value (still loading, or failed) reads as undefined
+  // and the page falls through to its own error message instead of crashing.
+  private readonly data = computed(() =>
+    this.listResource.hasValue() ? this.listResource.value() : undefined,
+  );
+
+  readonly todos = computed(() => this.data()?._data['todos'] ?? []);
   readonly isLoading = computed(() => this.listResource.isLoading());
   readonly loadError = computed(() => this.listResource.error());
   readonly loadErrorMessage = computed(() => {
@@ -72,14 +79,14 @@ export class TodosStore {
   // MetadataService.resolveMetadataIdValues turns {id, value}[] into the
   // {value, viewValue}[] shape a <select> renders.
   readonly stateOptions = computed(() =>
-    this.metadata.resolveMetadataIdValues(this.listResource.value()?._metadata?.['state']?.values ?? []),
+    this.metadata.resolveMetadataIdValues(this.data()?._metadata?.['state']?.values ?? []),
   );
 
   // The "new todo" screen's own resource, fetched via the collection's
   // `todoTemplate` link — gives the create form real server-side defaults
   // (e.g. `complete_by` defaulting to now) instead of the UI guessing them.
   private readonly templateResource = this.api.resource<'todo', TodoPayload>('todo', () => {
-    const link = this.listResource.value()?._metaLinks?.['todoTemplate'];
+    const link = this.data()?._metaLinks?.['todoTemplate'];
     return link ? this.api.resolve(link) : undefined;
   });
 
@@ -91,7 +98,7 @@ export class TodosStore {
     // — it's derived from the same `todoTemplate` link the form used to
     // load its defaults, via LinkService.getCreateUrlFromTemplateUrl()
     // (strips the trailing "/template" segment).
-    const templateLink = this.listResource.value()?._metaLinks?.['todoTemplate'];
+    const templateLink = this.data()?._metaLinks?.['todoTemplate'];
     const templateUrl = this.api.requireLink(
       templateLink,
       'No todo template link available yet — try again.',
@@ -107,14 +114,20 @@ export class TodosStore {
   }
 
   async updateTodo(todo: Todo, payload: TodoPayload): Promise<Todo> {
-    const url = this.api.requireLink(todo.links['update'], `Not permitted to update todo ${todo.id}`);
+    const url = this.api.requireLink(
+      todo.links['update'],
+      `Not permitted to update todo ${todo.id}`,
+    );
     const updated = await this.api.put<'todo', Todo, TodoPayload>('todo', url, payload);
     this.listResource.reload();
     return updated;
   }
 
   async deleteTodo(todo: Todo): Promise<void> {
-    const url = this.api.requireLink(todo.links['delete'], `Not permitted to delete todo ${todo.id}`);
+    const url = this.api.requireLink(
+      todo.links['delete'],
+      `Not permitted to delete todo ${todo.id}`,
+    );
     await this.api.delete(url);
     this.listResource.reload();
   }
