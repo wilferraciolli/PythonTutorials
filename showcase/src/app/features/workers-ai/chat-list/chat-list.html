@@ -1,0 +1,26 @@
+<div class="ChatList">
+  <button matButton="filled" type="button" class="ChatList-new" (click)="newChat()" [disabled]="creating()">
+    <mat-icon aria-hidden="true">add</mat-icon>
+    {{ creating() ? 'Creating…' : 'New chat' }}
+  </button>
+
+  @if (store.loadErrorMessage(); as errorMessage) {
+    <p class="ChatList-error">{{ errorMessage }}</p>
+  } @else if (store.isLoading() && store.chats().length === 0) {
+    <p class="ChatList-loading">Loading…</p>
+  } @else if (store.chats().length === 0) {
+    <p class="ChatList-empty">No chats yet — start one above.</p>
+  } @else {
+    <ul class="ChatList-items">
+      @for (chat of store.chats(); track chat.id) {
+        <li>
+          <a
+            [routerLink]="['/workers-ai', chat.id]"
+            routerLinkActive="ChatList-item--active"
+            class="ChatList-item"
+          >{{ chat.title }}</a>
+        </li>
+      }
+    </ul>
+  }
+</div>

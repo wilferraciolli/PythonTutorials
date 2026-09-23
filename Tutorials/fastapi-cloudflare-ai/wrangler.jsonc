@@ -11,5 +11,12 @@
 	},
 	"ai": {
 		"binding": "AI"
-	}
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "wiltech-db",
+			"database_id": "1160bc57-4a89-42cb-88ec-a8aea4ba6585"
+		}
+	]
 }

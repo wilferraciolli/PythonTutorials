@@ -1,16 +1,16 @@
 import { TestBed } from '@angular/core/testing';
 
-import { WorkersAiPage } from './workers-ai-page';
+import { ChatEmptyState } from './chat-empty-state';
 
-describe('WorkersAiPage', () => {
+describe('ChatEmptyState', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [WorkersAiPage],
+      imports: [ChatEmptyState],
     }).compileComponents();
   });
 
   it('creates', () => {
-    const fixture = TestBed.createComponent(WorkersAiPage);
+    const fixture = TestBed.createComponent(ChatEmptyState);
     expect(fixture.componentInstance).toBeTruthy();
   });
 });

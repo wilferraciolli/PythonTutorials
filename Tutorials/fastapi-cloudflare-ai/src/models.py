@@ -79,3 +79,41 @@ class Me(LinkedResource):
     name: str
     email: Optional[str] = None
     roleIds: list[str]
+
+
+class ChatMessageRole(str, Enum):
+    USER = "user"
+    ASSISTANT = "assistant"
+
+
+class ChatMessageCreate(BaseModel):
+    content: str
+
+
+class ChatMessage(BaseModel):
+    id: str
+    chat_id: str
+    role: ChatMessageRole
+    content: str
+    created_date: datetime
+
+    @field_serializer("created_date")
+    def serialize_created_date(self, value: datetime) -> str:
+        return format_utc_datetime(value)
+
+
+class Chat(LinkedResource):
+    id: str
+    user_id: str
+    title: str
+    created_date: datetime
+    updated_date: datetime
+    messages: list[ChatMessage] = Field(default_factory=list)
+
+    @field_serializer("created_date")
+    def serialize_created_date(self, value: datetime) -> str:
+        return format_utc_datetime(value)
+
+    @field_serializer("updated_date")
+    def serialize_updated_date(self, value: datetime) -> str:
+        return format_utc_datetime(value)

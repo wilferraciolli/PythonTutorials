@@ -4,7 +4,7 @@ from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from auth import get_authenticated_user
-from routers import health, me, user_profile, users
+from routers import chats, health, me, user_profile, users
 
 
 
@@ -43,3 +43,4 @@ app.include_router(health.router, prefix="/api")
 app.include_router(me.router, prefix="/api", dependencies=[Depends(get_authenticated_user)])
 app.include_router(user_profile.router, prefix="/api", dependencies=[Depends(get_authenticated_user)])
 app.include_router(users.router, prefix="/api", dependencies=[Depends(get_authenticated_user)])
+app.include_router(chats.router, prefix="/api", dependencies=[Depends(get_authenticated_user)])
