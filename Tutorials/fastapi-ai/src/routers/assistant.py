@@ -9,7 +9,8 @@ from database import get_database
 from llm import OpenAICompatibleLlm
 from models import AssistantAsk
 from repositories.todo_repository import TodoRepository
-from routers.chats import get_current_user_id, get_search_service
+from routers.chats import get_search_service
+from routers.deps import get_current_user_id
 from services.assistant_service import AssistantService
 
 router = APIRouter(prefix="/users/{user_id}/assistant", tags=["assistant"])

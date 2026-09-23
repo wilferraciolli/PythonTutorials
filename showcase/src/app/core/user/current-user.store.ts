@@ -24,6 +24,8 @@ export interface UserProfile {
   links: Record<string, ILink>;
 }
 
+// The only URL built by hand: everything else is a link handed out from here
+// (the API mounts its routes under /api — see fastapi-ai main.py).
 // App-wide state (like AuthStore) — every route needs the caller's role
 // and the links on their user profile, not just one feature. Backed directly by
 // ApiClientService.resource(): the URL depends on auth.isSignedIn(), so
@@ -36,7 +38,7 @@ export class CurrentUserStore {
   private readonly auth = inject(AuthStore);
 
   private readonly meResource = this.api.resource<'me', Me>('me', () =>
-    this.auth.isSignedIn() ? `${environment.apiUrl}/me` : undefined,
+    this.auth.isSignedIn() ? `${environment.apiUrl}/api/me` : undefined,
   );
 
   readonly me = this.meResource.value;

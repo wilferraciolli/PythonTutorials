@@ -54,6 +54,41 @@ sequenceDiagram
 The loop repeats while the model keeps asking for tools (up to 5 steps), so
 "how many are new **and** which is due first?" becomes two tool calls in one answer.
 
+## How a question is mapped to data (no embedding of the question involved)
+
+Choosing what to look at is **not** done by embeddings or keyword rules. It is done by
+the LLM through *tool calling*:
+
+1. Every request sends the model the list of tools: each has a **name, a plain-English
+   description and a JSON schema** for its arguments (see `assistant/todo_tools.py`).
+2. The model reads the question and those descriptions and replies, instead of text,
+   with "call `count_todos` with `{"overdue": true}`". That is a structured request,
+   not free text, so the server can validate it.
+3. The server runs the matching handler with the user id from the URL and sends the
+   result back; the model either asks for more tools or writes the final answer.
+
+So the descriptions **are** the mapping: they are the only thing telling the model that
+"overdue" means `count_todos(overdue=true)`. Write them like documentation for a new
+colleague. Words like "overdue" are turned into arguments by the model; the *meaning* of
+overdue (past `complete_by` and not `CLOSED`) is fixed in code, so it is always
+consistent.
+
+Embeddings are used in exactly one place: the `search_chats` tool, to rank chat messages
+against the search text. Todos and tags are **not** embedded; they are queried directly.
+
+### When would a resource need embedding?
+
+| The question is about... | Use | Example |
+|---|---|---|
+| Exact fields: counts, states, dates | A query tool | "how many are overdue?" |
+| Free text you must match by meaning | Embeddings | "todos about the tax return" when titles say "HMRC self-assessment" |
+| Both | Both, in one tool | "overdue todos about tax" |
+
+Embed a resource only if it has free text worth matching by meaning (a todo's title and
+description, a note). Reuse the same pieces as chats: a row in `message_embeddings`-style
+table per resource, written when it is created or edited and removed when it is deleted,
+searched by a `search_todos` tool. Counting and filtering stay in SQL either way.
+
 ## Adding a new data source
 
 A source is just a `Tool`: a name, a description the model reads, a JSON schema for the

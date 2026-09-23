@@ -11,32 +11,12 @@ from models import ChatCreate, ChatMessageCreate, ChatProvider, ChatTitleUpdate
 from repositories.chat_repository import ChatRepository
 from repositories.user_repository import UserRepository
 from services.chat_service import ChatService
+from routers.deps import get_current_user_id
 from services.me_service import MeService
 from services.search_service import DEFAULT_LIMIT, SearchService
 from vector_store import DatabaseVectorStore
 
 router = APIRouter(prefix="/users/{user_id}/chats", tags=["chats"])
-
-
-async def get_current_user_id(
-    user_id: str,
-    request: Request,
-    current_user: AuthenticatedUser = Depends(get_authenticated_user),
-) -> str:
-    """
-    The user whose chats are being addressed: the `{user_id}` in the path.
-
-    The caller (Clerk identity -> our `users` row, the same mapping /me uses)
-    is resolved separately and compared with it. Business-logic seam: today
-    only the owner may touch their chats; loosen it here (e.g. admins, or
-    users who share a chat) once those rules exist.
-    """
-    db = get_database(request)
-    me_service = MeService(UserRepository(db))
-    caller = await me_service.get_or_create_current_user(current_user)
-    if caller["id"] != user_id:
-        raise HTTPException(status_code=403, detail="Not allowed to access this user's chats")
-    return user_id
 
 
 def _required_config(request: Request, key: str) -> str:

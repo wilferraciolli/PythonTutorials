@@ -4,26 +4,27 @@ import { ApiClientService, CollectionEnvelope } from '@wiliamferraciolli/ngx-api
 
 import { describeApiError } from '../../core/api/api-error';
 import { Tag } from '../../core/api/tags-api';
-import { environment } from '../../../environments/environment';
+import { CurrentUserStore } from '../../core/user/current-user.store';
 
 type TagsEnvelope = CollectionEnvelope<'tags', Tag>;
 
 // Feature-local state — a plain injectable, per docs/frontend-conventions.md.
 // Provided on TagsPage. Tags aren't user-scoped in the API (unlike
-// /users/{id}/todos), so this browses every tag rather than following a
-// link off /me — there's no collection link to resolve, just the
-// well-known /tags and /tags/search endpoints.
+// /users/{id}/todos), so this browses every tag. The collection URL is the
+// `tags` link on the user profile; search is `<tags>/search?tag=`.
 @Injectable()
 export class TagsStore {
   private readonly api = inject(ApiClientService);
+  private readonly currentUser = inject(CurrentUserStore);
 
   readonly search = signal('');
 
   private readonly listResource = httpResource<TagsEnvelope>(() => {
+    const tagsUrl = this.api.resolve(this.currentUser.link('tags'));
+    if (!tagsUrl) return undefined;
+
     const term = this.search().trim();
-    return term
-      ? `${environment.apiUrl}/tags/search?tag=${encodeURIComponent(term)}`
-      : `${environment.apiUrl}/tags`;
+    return term ? `${tagsUrl}/search?tag=${encodeURIComponent(term)}` : tagsUrl;
   });
 
   readonly tags = computed(() => this.listResource.value()?._data['tags'] ?? []);

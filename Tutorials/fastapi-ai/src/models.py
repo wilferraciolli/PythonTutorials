@@ -168,3 +168,65 @@ class Chat(LinkedResource):
     @field_serializer("updated_date")
     def serialize_updated_date(self, value: datetime) -> str:
         return format_utc_datetime(value)
+
+
+# Enum for todo state
+class TodoState(str, Enum):
+    NEW = "NEW"
+    ACTIVE = "ACTIVE"
+    CLOSED = "CLOSED"
+
+# Request model for creating
+class TodoCreate(BaseModel):
+    """Model for creating a new TODO"""
+    title: str = Field(..., min_length=1, max_length=80)
+    description: Optional[str] = Field(None)
+    complete_by: datetime
+    state: TodoState = Field(default=TodoState.NEW)
+
+# Request model for updating
+class TodoUpdate(BaseModel):
+    """Model for updating a TODO"""
+    title: Optional[str] = Field(None, min_length=1, max_length=80)
+    description: Optional[str] = Field(None)
+    complete_by: Optional[datetime] = None
+    state: Optional[TodoState] = None
+
+# Response model
+class Todo(LinkedResource):
+    """Complete TODO object returned by API"""
+    id: str
+    user_id: str
+    title: str
+    description: Optional[str] = None
+    complete_by: datetime
+    state: TodoState
+    created_date: datetime
+
+    class Config:
+        from_attributes = True
+
+    @field_serializer("complete_by", "created_date")
+    def serialize_datetime(self, value: datetime) -> str:
+        return format_utc_datetime(value)
+
+
+# Response model
+class TagCreate(BaseModel):
+    resource_id: str = Field(..., min_length=1)
+    tag: str = Field(..., min_length=1, max_length=50)
+
+class Tag(LinkedResource):
+    id: str
+    resource_id: str
+    # The resource_id's display name, embedded from tag_resource_view —
+    # None when the resource can't be resolved (e.g. it's been deleted).
+    resource: Optional[EmbeddedRef] = None
+    tag: str
+    created_date: datetime
+    class Config:
+        from_attributes = True
+
+    @field_serializer("created_date")
+    def serialize_datetime(self, value: datetime) -> str:
+        return format_utc_datetime(value)
