@@ -32,7 +32,7 @@ works when the API exposes its link.
 | `/ask` | Ask questions about your todos and chats in plain English |
 | `/timeline` | Posts from your groups: all, following, popular |
 | `/groups`, `/groups/:id`, `/groups/:id/posts/:postId` | Groups, members, followers, posts and threaded comments |
-| `/admin` | Admin tools (admins only) |
+| `/admin` | Admin (admins only): social engagement insights (totals and daily charts for groups, posts, comments, likes) and maintenance tools |
 
 ## Design
 

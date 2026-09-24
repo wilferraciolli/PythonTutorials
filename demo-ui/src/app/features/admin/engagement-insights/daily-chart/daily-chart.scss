@@ -1,0 +1,83 @@
+@use 'ui';
+
+// Marks wear --app-chart-1 (validated for both modes, see styles.scss);
+// text, grid and the hover band wear the ordinary text/surface tokens.
+.DailyChart {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+
+  &-title {
+    font: var(--mat-sys-title-small);
+    letter-spacing: var(--mat-sys-title-small-tracking);
+    color: var(--mat-sys-on-surface);
+  }
+
+  &-plot {
+    position: relative;
+    height: 176px;
+    border-radius: var(--mat-sys-corner-small);
+    outline: none;
+    touch-action: pan-y;
+
+    @include ui.focus-ring;
+  }
+
+  &-svg {
+    display: block;
+    overflow: visible;
+  }
+
+  &-grid {
+    stroke: var(--mat-sys-outline-variant);
+    stroke-width: 1;
+    shape-rendering: crispEdges;
+  }
+
+  &-axis {
+    font: var(--mat-sys-label-small);
+    font-variant-numeric: tabular-nums;
+    fill: var(--mat-sys-on-surface-variant);
+  }
+
+  &-bar {
+    fill: var(--app-chart-1);
+  }
+
+  &-peak {
+    font: var(--mat-sys-label-medium);
+    fill: var(--mat-sys-on-surface);
+  }
+
+  // The hovered day: a ghost column behind the bar.
+  &-band {
+    fill: var(--mat-sys-on-surface);
+    opacity: 0.06;
+  }
+
+  // Value leads, date follows.
+  &-tooltip {
+    position: absolute;
+    transform: translate(-50%, -100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 4px 8px;
+    border-radius: var(--mat-sys-corner-extra-small);
+    background: var(--mat-sys-inverse-surface);
+    color: var(--mat-sys-inverse-on-surface);
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 1;
+  }
+
+  &-tooltip-value {
+    font: var(--mat-sys-label-large);
+  }
+
+  &-tooltip-date {
+    font: var(--mat-sys-label-small);
+  }
+}

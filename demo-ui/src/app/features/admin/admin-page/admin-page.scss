@@ -4,10 +4,15 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  max-width: 48rem;
 
   &-title {
     @include ui.page-title;
+  }
+
+  &-section {
+    @include ui.section-title;
+
+    margin-top: 16px;
   }
 
   // Each tool is a row: what it does on the left, the one button that

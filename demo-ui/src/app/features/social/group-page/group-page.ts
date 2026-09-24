@@ -10,6 +10,7 @@ import { Router, RouterLink } from '@angular/router';
 import {
   ApiClientService,
   CollectionEnvelope,
+  IdValue,
   SingleEnvelope,
 } from '@wiliamferraciolli/ngx-api-client';
 
@@ -17,6 +18,7 @@ import { describeApiError } from '../../../core/api/api-error';
 import { CurrentUserStore } from '../../../core/user/current-user.store';
 import { MediaPicker } from '../media-picker/media-picker';
 import { PostCard } from '../post-card/post-card';
+import { PeoplePicker } from '../people-picker/people-picker';
 import { GroupFollowers } from './group-followers/group-followers';
 import { GroupMembers } from './group-members/group-members';
 import { SocialActions } from '../social-actions';
@@ -36,6 +38,7 @@ import { Group, GroupVisibility, MediaSelection, Post } from '../social.models';
     MatTabsModule,
     MediaPicker,
     PostCard,
+    PeoplePicker,
     GroupMembers,
     GroupFollowers,
   ],
@@ -67,6 +70,11 @@ export class GroupPage {
     this.api.resolve(this.group()?.links['posts']),
   );
   protected readonly posts = computed(() => this.postsResource.value()?._data['posts'] ?? []);
+  protected readonly people = computed(() =>
+    this.postsResource.hasValue()
+      ? (this.postsResource.value()._metadata?.['taggedUserIds']?.values ?? [])
+      : [],
+  );
   protected readonly postsLoading = computed(() => this.postsResource.isLoading());
 
   protected readonly busy = signal(false);
@@ -83,6 +91,7 @@ export class GroupPage {
   protected readonly body = signal('');
   protected readonly media = signal<MediaSelection | null>(null);
   protected readonly pickingMedia = signal(false);
+  protected readonly tagged = signal<IdValue[]>([]);
 
   protected async run(name: 'join' | 'leave' | 'follow' | 'unfollow'): Promise<void> {
     const group = this.group();
@@ -102,7 +111,9 @@ export class GroupPage {
         title: this.title().trim(),
         body: this.body().trim(),
         media: this.media()?.ref ?? null,
+        taggedUserIds: this.tagged().map((person) => person.id),
       });
+      this.tagged.set([]);
       this.title.set('');
       this.body.set('');
       this.media.set(null);

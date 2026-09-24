@@ -7,6 +7,7 @@ from routers import (
     admin,
     assistant,
     chats,
+    engagement_analytics,
     groups,
     health,
     me,
@@ -50,5 +51,8 @@ app.include_router(post_comments.router, prefix="/api", dependencies=[Depends(ge
 app.include_router(media.router, prefix="/api", dependencies=[Depends(get_authenticated_user)])
 app.include_router(timeline.router, prefix="/api", dependencies=[Depends(get_authenticated_user)])
 app.include_router(admin.router, prefix="/api", dependencies=[Depends(get_authenticated_user)])
+app.include_router(
+    engagement_analytics.router, prefix="/api", dependencies=[Depends(get_authenticated_user)]
+)
 
 register_error_handlers(app)

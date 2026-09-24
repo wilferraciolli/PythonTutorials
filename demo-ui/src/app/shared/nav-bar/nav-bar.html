@@ -1,22 +1,24 @@
 <header class="NavBar" [class.is-scrolled]="scrolled()">
-  @if (showMenuButton()) {
-    <button
-      matIconButton
-      type="button"
-      class="NavBar-menu"
-      aria-label="Open navigation menu"
-      (click)="menuRequested.emit()"
-    >
-      <mat-icon>menu</mat-icon>
-    </button>
-  }
+  <div class="NavBar-inner">
+    @if (showMenuButton()) {
+      <button
+        matIconButton
+        type="button"
+        class="NavBar-menu"
+        aria-label="Open navigation menu"
+        (click)="menuRequested.emit()"
+      >
+        <mat-icon>menu</mat-icon>
+      </button>
+    }
 
-  <a class="NavBar-brand" routerLink="/">Showcase</a>
-  <span class="App-spacer"></span>
+    <a class="NavBar-brand" routerLink="/">Showcase</a>
+    <span class="App-spacer"></span>
 
-  @if (auth.isSignedIn()) {
-    <app-profile-menu />
-  } @else {
-    <button matButton="tonal" type="button" (click)="signIn()">Sign in</button>
-  }
+    @if (auth.isSignedIn()) {
+      <app-profile-menu />
+    } @else {
+      <button matButton="tonal" type="button" (click)="signIn()">Sign in</button>
+    }
+  </div>
 </header>

@@ -1,4 +1,5 @@
 @use 'ui';
+@use 'breakpoints' as bp;
 
 .PostPage {
   display: flex;
@@ -13,14 +14,24 @@
     margin-left: -12px;
   }
 
+  // The post is a card (same surface as the feed's), comments follow it.
   &-post {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 12px;
+    padding: 16px 16px 8px;
+    border-radius: var(--mat-sys-corner-large);
+    background: var(--mat-sys-surface-container-low);
+
+    @include bp.up(sm) {
+      padding: 24px 24px 8px;
+    }
   }
 
   &-title {
     @include ui.page-title;
+
+    overflow-wrap: anywhere;
   }
 
   &-body,
@@ -29,6 +40,20 @@
     max-width: 65ch;
     white-space: pre-line;
     overflow-wrap: anywhere;
+  }
+
+  &-people {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    font: var(--mat-sys-label-large);
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  &-commentAuthor {
+    font-weight: 500;
+    color: var(--mat-sys-on-surface);
   }
 
   &-meta {

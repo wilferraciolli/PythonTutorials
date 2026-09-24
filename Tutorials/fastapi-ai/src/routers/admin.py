@@ -30,6 +30,8 @@ def admin_links() -> dict[str, Link]:
         "self": Link(href=f"{API_PREFIX}/admin", method="GET"),
         "rebuildPostStats": Link(href=f"{API_PREFIX}/admin/post-stats/rebuild", method="POST"),
         "reindexPostSearch": Link(href=f"{API_PREFIX}/admin/post-search/reindex", method="POST"),
+        # Insights, not a tool: routers/engagement_analytics.py.
+        "engagementAnalytics": Link(href=f"{API_PREFIX}/admin/analytics/engagement", method="GET"),
     }
 
 

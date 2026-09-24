@@ -27,7 +27,14 @@ export class TagsStore {
     return term ? `${tagsUrl}/search?tag=${encodeURIComponent(term)}` : tagsUrl;
   });
 
-  readonly tags = computed(() => this.listResource.value()?._data['tags'] ?? []);
+  // `value()` throws while the resource is in its error state, so every read
+  // goes through here: no value (still loading, or failed) reads as undefined
+  // and the page falls through to its own error message instead of crashing.
+  private readonly data = computed(() =>
+    this.listResource.hasValue() ? this.listResource.value() : undefined,
+  );
+
+  readonly tags = computed(() => this.data()?._data['tags'] ?? []);
   readonly isLoading = computed(() => this.listResource.isLoading());
   readonly loadError = computed(() => this.listResource.error());
   readonly loadErrorMessage = computed(() => {
@@ -41,9 +48,13 @@ export class TagsStore {
   // freeform), so this is the direct-POST shape the todos flow moved away
   // from.
   async createTag(payload: { tag: string; resource_id: string }): Promise<Tag> {
-    const link = this.listResource.value()?._metaLinks?.['createTag'];
+    const link = this.data()?._metaLinks?.['createTag'];
     const url = this.api.requireLink(link, 'No create-tag link available yet — try again.');
-    const created = await this.api.post<'tag', Tag, { tag: string; resource_id: string }>('tag', url, payload);
+    const created = await this.api.post<'tag', Tag, { tag: string; resource_id: string }>(
+      'tag',
+      url,
+      payload,
+    );
     this.listResource.reload();
     return created;
   }

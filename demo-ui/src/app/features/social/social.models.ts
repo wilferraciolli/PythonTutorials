@@ -87,6 +87,8 @@ export interface Post {
   title: string;
   body: string;
   media?: PostMedia | null;
+  /** Ids of the people tagged in the post; names are in the response's _metadata.taggedUserIds. */
+  taggedUserIds?: string[];
   isDeleted: boolean;
   likeCount: number;
   commentCount: number;
@@ -122,6 +124,27 @@ export interface GroupFollower {
   userId: string;
   name: string | null;
   created_date: string;
+}
+
+/** The most people a post can tag (the API's limit too). */
+export const MAX_TAGGED_PEOPLE = 20;
+
+/**
+ * "With Olive", "With Olive and Sam", "With Olive, Sam and Ana",
+ * "With Olive, Sam and 3 others". Empty for nobody.
+ */
+export function formatPeople(names: string[]): string {
+  if (names.length === 0) return '';
+  if (names.length === 1) return `With ${names[0]}`;
+  if (names.length <= 3) return `With ${names.slice(0, -1).join(', ')} and ${names.at(-1)}`;
+  const others = names.length - 2;
+  return `With ${names[0]}, ${names[1]} and ${others} others`;
+}
+
+/** The tagged people's names, resolved from the response metadata (ids it can't name are skipped). */
+export function taggedNames(post: Post, people: { id: string; value: string }[]): string[] {
+  const names = new Map(people.map((person) => [person.id, person.value]));
+  return (post.taggedUserIds ?? []).flatMap((id) => (names.has(id) ? [names.get(id)!] : []));
 }
 
 export interface UserSummary {

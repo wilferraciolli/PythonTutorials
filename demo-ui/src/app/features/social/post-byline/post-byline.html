@@ -1,0 +1,18 @@
+<div class="PostByline">
+  <span class="PostByline-avatar" aria-hidden="true">{{ initial() }}</span>
+  <div class="PostByline-text">
+    <span class="PostByline-author">{{ name() }}</span>
+    <span class="PostByline-meta">
+      @if (groupId() && groupName()) {
+        <a class="PostByline-group" [routerLink]="['/groups', groupId()]">{{ groupName() }}</a>
+        ·
+      }
+      <time [attr.datetime]="date()" [title]="date() | date: 'medium'">{{
+        date() | relativeTime
+      }}</time>
+      @if (editedDate(); as edited) {
+        · <span [title]="'Edited ' + (edited | date: 'medium')">Edited</span>
+      }
+    </span>
+  </div>
+</div>

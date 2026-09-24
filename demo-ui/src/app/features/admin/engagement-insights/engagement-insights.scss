@@ -1,0 +1,188 @@
+@use 'ui';
+@use 'breakpoints' as bp;
+
+.EngagementInsights {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  // Filters in one row above everything they scope.
+  &-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px 16px;
+  }
+
+  &-title {
+    @include ui.section-title;
+  }
+
+  &-range,
+  &-muted {
+    @include ui.supporting-text;
+  }
+
+  &-error {
+    @include ui.banner(error);
+  }
+
+  &-body {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    transition: opacity var(--app-duration-short) var(--app-ease-standard);
+
+    &.is-refreshing {
+      opacity: 0.55;
+    }
+  }
+
+  // KPI row: two per row on a phone, four across from medium up.
+  &-tiles {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+
+    @include bp.up(md) {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+
+  &-tile {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 16px;
+    border-radius: var(--mat-sys-corner-large);
+    background: var(--mat-sys-surface-container-low);
+    min-width: 0;
+  }
+
+  &-tile-label {
+    font: var(--mat-sys-label-large);
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  &-tile-value {
+    font: var(--mat-sys-headline-medium);
+    letter-spacing: var(--mat-sys-headline-medium-tracking);
+    color: var(--mat-sys-on-surface);
+  }
+
+  // Direction carries an icon and words, never colour alone.
+  &-tile-delta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 2px 4px;
+    font: var(--mat-sys-label-medium);
+    color: var(--mat-sys-on-surface-variant);
+
+    mat-icon {
+      width: 18px;
+      height: 18px;
+      font-size: 18px;
+    }
+
+    &.is-up {
+      color: var(--mat-sys-primary);
+    }
+
+    &.is-down {
+      color: var(--mat-sys-error);
+    }
+  }
+
+  &-tile-vs {
+    flex-basis: 100%;
+    font: var(--mat-sys-label-small);
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  // Small multiples: one metric each, never two scales on one axis.
+  &-charts {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+    padding: 16px;
+    border-radius: var(--mat-sys-corner-large);
+    background: var(--mat-sys-surface-container-low);
+
+    @include bp.up(md) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 24px 32px;
+      padding: 20px 24px;
+    }
+  }
+
+  &-chart {
+    display: block;
+    min-width: 0;
+  }
+
+  &-table {
+    font: var(--mat-sys-body-medium);
+
+    summary {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      height: 32px;
+      padding: 0 12px 0 8px;
+      border-radius: var(--mat-sys-corner-small);
+      font: var(--mat-sys-label-large);
+      color: var(--mat-sys-on-surface-variant);
+      cursor: pointer;
+      list-style: none;
+
+      &::-webkit-details-marker {
+        display: none;
+      }
+
+      &:hover {
+        background: color-mix(in srgb, var(--mat-sys-on-surface-variant) 8%, transparent);
+      }
+    }
+
+    table {
+      width: 100%;
+      margin-top: 8px;
+      border-collapse: collapse;
+      font-variant-numeric: tabular-nums;
+    }
+
+    th,
+    td {
+      padding: 6px 12px;
+      text-align: right;
+      border-bottom: 1px solid var(--mat-sys-outline-variant);
+    }
+
+    th:first-child {
+      text-align: left;
+    }
+
+    thead th {
+      font: var(--mat-sys-label-large);
+      color: var(--mat-sys-on-surface-variant);
+    }
+
+    tbody th {
+      font-weight: 400;
+    }
+  }
+
+  &-table-scroll {
+    max-height: 22rem;
+    overflow: auto;
+  }
+}
+
+.EngagementInsights-table[open] summary mat-icon {
+  transform: rotate(180deg);
+}

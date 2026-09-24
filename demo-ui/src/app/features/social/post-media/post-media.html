@@ -1,5 +1,5 @@
 @let item = media();
-<figure class="PostMedia">
+<figure class="PostMedia" [class.is-fill]="fill()">
   @switch (item.type) {
     @case ('YOUTUBE') {
       @if (showPlayer() && embedUrl(); as src) {

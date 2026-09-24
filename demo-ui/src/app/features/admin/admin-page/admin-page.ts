@@ -5,6 +5,7 @@ import { ApiClientService, SingleEnvelope } from '@wiliamferraciolli/ngx-api-cli
 
 import { describeApiError } from '../../../core/api/api-error';
 import { CurrentUserStore } from '../../../core/user/current-user.store';
+import { EngagementInsights } from '../engagement-insights/engagement-insights';
 
 interface AdminTool {
   id: string;
@@ -20,7 +21,7 @@ type AdminEnvelope = SingleEnvelope<'admin', { tools: AdminTool[] }>;
 // API shows up here without UI changes.
 @Component({
   selector: 'app-admin-page',
-  imports: [MatButtonModule],
+  imports: [MatButtonModule, EngagementInsights],
   templateUrl: './admin-page.html',
   styleUrl: './admin-page.scss',
 })
@@ -33,6 +34,9 @@ export class AdminPage {
 
   private readonly hub = httpResource<AdminEnvelope>(() => this.api.resolve(this.adminLink()));
   protected readonly tools = computed(() => this.hub.value()?._data['admin'].tools ?? []);
+  protected readonly insightsLink = computed(() =>
+    this.hub.hasValue() ? this.hub.value()._metaLinks?.['engagementAnalytics'] : undefined,
+  );
   protected readonly loadError = computed(() => {
     const error = this.hub.error();
     return error ? describeApiError(error, "Couldn't load the admin area.") : null;

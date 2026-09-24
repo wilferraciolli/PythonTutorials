@@ -52,6 +52,11 @@ html {
   // instead of each picking its own number. M3 margins: 16 on compact
   // windows, 24 from medium up.
   --app-page-max-width: 900px;
+  // The whole shell (app bar contents, rail and page) sits in one centred
+  // column no wider than this, so on a big monitor the menu and the account
+  // button don't drift to opposite edges of the screen. Backgrounds still
+  // run edge to edge.
+  --app-shell-max-width: 1280px;
   --app-gutter: 16px;
   --app-bar-height: 64px;
   --app-rail-width: 80px;
@@ -63,6 +68,12 @@ html {
   --app-ease-accelerate: cubic-bezier(0.3, 0, 0.8, 0.15);
   --app-duration-short: 200ms;
   --app-duration-medium: 300ms;
+
+  // Chart marks. M3's tonal steps are too muted for a data mark (they read
+  // grey next to the grid), so charts get one validated teal per mode, near
+  // the brand seed: >= 3:1 on surface-container-low, in the lightness band,
+  // above the chroma floor (dataviz validator). Text never wears it.
+  --app-chart-1: light-dark(#00897b, #12a3a8);
 
   @include bp.up(sm) {
     --app-gutter: 24px;

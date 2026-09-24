@@ -24,6 +24,12 @@ class ConflictError(AppError):
     status_code = 409
 
 
+class InvalidInputError(AppError):
+    """Well-formed input that refers to something that doesn't exist (e.g. an unknown user id)."""
+
+    status_code = 422
+
+
 class UpstreamError(AppError):
     """A third-party API (Unsplash, Giphy) failed."""
 
