@@ -6,18 +6,18 @@ Service tests on a real temp SQLite file, plus a few API tests for the wiring
 import pytest
 from fastapi.testclient import TestClient
 
-from core.security.auth import AuthenticatedUser, get_authenticated_user
-from core.config.database import SQLiteDatabase
 from core.common.errors import ConflictError, ForbiddenError, NotFoundError
+from core.config.database import SQLiteDatabase
+from core.security.auth import AuthenticatedUser, get_authenticated_user
 from core.security.authorization import Caller
 from core.security.roles import UserRole
 from groups.enums import GroupVisibility
-from groups.schemas import GroupCreateRequest, GroupUpdateRequest
 from groups.group_repository import GroupRepository
-from users.user_repository import UserRepository
 from groups.group_service import GroupService
-from users.profiles.me_service import MeService
 from groups.posts.post_stats_repository import PostStatsRepository
+from groups.schemas import GroupCreateRequest, GroupUpdateRequest
+from users.profiles.me_service import MeService
+from users.user_repository import UserRepository
 from users.user_service import UserService
 
 OWNER = Caller(external_id="owner", user_id="owner", role_ids=[])

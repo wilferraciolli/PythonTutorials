@@ -5,18 +5,18 @@ from core.config.database import SQLiteDatabase
 from core.security.authorization import Caller
 from core.security.roles import UserRole
 from groups.enums import GroupVisibility
-from groups.posts.comments.schemas import CommentCreateRequest
-from groups.posts.schemas import PostCreateRequest
-from groups.schemas import GroupCreateRequest
 from groups.group_repository import GroupRepository
+from groups.group_service import GroupService
 from groups.posts.comments.comment_repository import CommentRepository
+from groups.posts.comments.comment_service import CommentService
+from groups.posts.comments.schemas import CommentCreateRequest
 from groups.posts.post_repository import PostRepository
+from groups.posts.post_service import PostService
 from groups.posts.post_stats_repository import PostStatsRepository
 from groups.posts.reaction_repository import ReactionRepository
+from groups.posts.schemas import PostCreateRequest
+from groups.schemas import GroupCreateRequest
 from users.user_repository import UserRepository
-from groups.group_service import GroupService
-from groups.posts.comments.comment_service import CommentService
-from groups.posts.post_service import PostService
 
 OWNER = Caller(external_id="owner", user_id="owner", role_ids=[])
 MEMBER = Caller(external_id="member", user_id="member", role_ids=[])

@@ -2,13 +2,17 @@ from enum import Enum
 from typing import Type
 
 from core.common.api_response import API_PREFIX
-from core.common.base_dto import Link, FieldMetadata, EmbeddedRef
+from core.common.base_dto import EmbeddedRef, FieldMetadata, Link
 from shared.settings.region.constants import LINK_SELF, LINK_UPDATE_SETTINGS, SYSTEM_SETTINGS_DATA_NAME
-from shared.settings.region.enums import SupportedTimeZones, SupportedLanguages, SupportedCurrencies, SupportedThemes
+from shared.settings.region.enums import SupportedCurrencies, SupportedLanguages, SupportedThemes, SupportedTimeZones
 from shared.settings.region.models import RegionSettingModel
 from shared.settings.region.region_settings_repository import RegionSettingsRepository
-from shared.settings.region.schemas import SystemSettingsDTO, SystemSettingsMetadata, SystemSettingsResponse, \
-    SystemSettingsUpdateRequest
+from shared.settings.region.schemas import (
+    SystemSettingsDTO,
+    SystemSettingsMetadata,
+    SystemSettingsResponse,
+    SystemSettingsUpdateRequest,
+)
 
 
 class SystemSettingsService:

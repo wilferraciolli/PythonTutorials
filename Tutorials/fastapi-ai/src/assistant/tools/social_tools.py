@@ -4,9 +4,9 @@ from typing import Any, Dict, List, Optional
 from assistant.tools.tool import Tool
 from core.common.serializers import format_utc_datetime
 from core.security.authorization import Caller
+from groups.posts.post_search_service import PostSearchService
 from groups.posts.post_service import display_author
 from groups.social_query_repository import SocialQueryRepository
-from groups.posts.post_search_service import PostSearchService
 
 MAX_LIST = 25
 

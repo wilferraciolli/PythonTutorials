@@ -8,8 +8,8 @@ def no_real_post_indexing():
     live credentials). Post/comment search indexing is switched off for the
     app here; test_post_search.py covers it with a fake embedder.
     """
-    from main import app
     from groups.posts.post_router import get_post_search_service
+    from main import app
 
     app.dependency_overrides[get_post_search_service] = lambda: None
     yield

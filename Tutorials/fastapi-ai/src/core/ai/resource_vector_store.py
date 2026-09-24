@@ -1,7 +1,7 @@
 import json
 
-from core.config.database import Database
 from core.ai.vector_store import normalise
+from core.config.database import Database
 
 
 class ResourceVectorStore:

@@ -1,10 +1,10 @@
 """Social groups: comments and replies on posts (docs/social-groups.md)."""
 import pytest
+from social import ADMIN, MEMBER, OUTSIDER, OWNER, make_social
 
 from core.common.errors import ConflictError, ForbiddenError, NotFoundError
 from groups.enums import GroupVisibility
 from groups.posts.comments.schemas import CommentCreateRequest, CommentUpdateRequest
-from social import ADMIN, MEMBER, OUTSIDER, OWNER, make_social
 
 
 @pytest.fixture

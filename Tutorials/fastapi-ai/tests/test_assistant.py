@@ -8,14 +8,14 @@ from datetime import datetime, timezone
 
 import pytest
 
+from assistant.assistant_service import MAX_STEPS, AssistantService
 from assistant.tools.chat_tools import build_chat_tools
 from assistant.tools.todo_tools import build_todo_tools
-from core.config.database import SQLiteDatabase
 from chats.chat_repository import ChatRepository
-from todos.todo_repository import TodoRepository
-from assistant.assistant_service import MAX_STEPS, AssistantService
 from chats.chat_search_service import ChatSearchService
 from core.ai.vector_store import DatabaseVectorStore
+from core.config.database import SQLiteDatabase
+from todos.todo_repository import TodoRepository
 
 NOW = datetime(2026, 6, 15, 12, 0, tzinfo=timezone.utc)
 

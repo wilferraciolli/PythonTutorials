@@ -10,8 +10,9 @@ from shared.settings.region.enums import (
     SupportedThemes,
     SupportedTimeZones,
 )
-from shared.settings.region.region_settings_repository import RegionSettingsRepository
 from shared.settings.region.models import RegionSettingModel
+from shared.settings.region.region_settings_repository import RegionSettingsRepository
+from users.exceptions import NotOwnerError
 from users.settings.constants import (
     LINK_RESET_SETTINGS,
     LINK_SELF,
@@ -24,7 +25,6 @@ from users.settings.schemas import (
     UserSettingsResponse,
     UserSettingsUpdateRequest,
 )
-from users.exceptions import NotOwnerError
 
 
 class UserSettingsService:

@@ -8,16 +8,16 @@ import json
 
 import pytest
 from fastapi.testclient import TestClient
+from social import ADMIN, MEMBER, NEWS_ID, OUTSIDER, OWNER, make_social
 
+from assistant.assistant_service import AssistantService
 from assistant.tools.social_tools import build_social_tools
 from core.security.auth import AuthenticatedUser, get_authenticated_user
 from groups.enums import GroupVisibility
+from groups.posts.post_search_service import PostSearchService
 from groups.posts.schemas import PostUpdateRequest
 from groups.schemas import GroupUpdateRequest
 from groups.social_query_repository import SocialQueryRepository
-from assistant.assistant_service import AssistantService
-from groups.posts.post_search_service import PostSearchService
-from social import ADMIN, MEMBER, NEWS_ID, OUTSIDER, OWNER, make_social
 
 AXES = [("bike", "cycle", "lane"), ("pizza", "recipe", "cook"), ("rain", "storm", "weather")]
 
@@ -245,8 +245,8 @@ def test_admin_reindex_endpoint(tmp_path, monkeypatch):
     monkeypatch.setenv("DATABASE_MODE", "sqlite")
     monkeypatch.setenv("DATABASE_PATH", str(tmp_path / "api.db"))
     from core.config.database import SQLiteDatabase
-    from main import app
     from groups.posts.post_router import get_post_search_service
+    from main import app
 
     db = SQLiteDatabase(str(tmp_path / "api.db"))
     who = {"user": AuthenticatedUser(id="clerk-a", name="Alice", email="a@x.io", role_ids=[], claims={})}

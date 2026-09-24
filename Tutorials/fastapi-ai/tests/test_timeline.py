@@ -2,12 +2,12 @@
 from datetime import datetime, timedelta, timezone
 
 import pytest
+from social import ADMIN, MEMBER, NEWS_ID, OUTSIDER, OWNER, make_social
 
 from groups.enums import GroupVisibility
-from timeline.timeline_repository import TimelineRepository
 from timeline.enums import TimelineType
+from timeline.timeline_repository import TimelineRepository
 from timeline.timeline_service import TimelineService
-from social import ADMIN, MEMBER, NEWS_ID, OUTSIDER, OWNER, make_social
 
 ALL, FOLLOWING, POPULAR = TimelineType.ALL, TimelineType.FOLLOWING, TimelineType.POPULAR
 

@@ -7,10 +7,10 @@ from datetime import date
 import pytest
 from fastapi.testclient import TestClient
 
-from core.security.auth import AuthenticatedUser, get_authenticated_user
-from core.config.database import SQLiteDatabase
 from admin.analytics.engagement_repository import EngagementRepository
 from admin.analytics.engagement_service import EngagementAnalyticsService
+from core.config.database import SQLiteDatabase
+from core.security.auth import AuthenticatedUser, get_authenticated_user
 
 TODAY = date(2026, 9, 24)
 

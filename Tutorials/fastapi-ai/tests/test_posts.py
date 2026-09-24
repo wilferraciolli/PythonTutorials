@@ -5,13 +5,13 @@ Comments are in test_post_comments.py, likes and stats in test_likes.py.
 import pytest
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
+from social import ADMIN, MEMBER, NEWS_ID, OUTSIDER, OWNER, make_social
 
-from core.security.auth import AuthenticatedUser, get_authenticated_user
 from core.common.errors import ForbiddenError, NotFoundError
+from core.security.auth import AuthenticatedUser, get_authenticated_user
 from groups.enums import GroupVisibility
 from groups.posts.schemas import PostCreateRequest, PostUpdateRequest
 from users.user_repository import UserRepository
-from social import ADMIN, MEMBER, NEWS_ID, OUTSIDER, OWNER, make_social
 
 
 @pytest.fixture
