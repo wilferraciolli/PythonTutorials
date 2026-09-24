@@ -45,7 +45,7 @@ sequenceDiagram
     participant API as chats router
     participant CS as ChatService
     participant LLM as Chat model<br/>(Workers AI or Groq)
-    participant SS as SearchService
+    participant SS as ChatSearchService
     participant AI as Workers AI<br/>(embeddings)
     participant VS as VectorStore<br/>(message_embeddings)
 
@@ -77,7 +77,7 @@ sequenceDiagram
 sequenceDiagram
     actor U as User
     participant API as chats router
-    participant SS as SearchService
+    participant SS as ChatSearchService
     participant AI as Workers AI
     participant VS as VectorStore
     participant DB as chat_messages
@@ -157,14 +157,14 @@ normalised, so cosine similarity is a plain dot product.
 
 ```mermaid
 flowchart TD
-    R[routers/chats.py<br/>GET /chats/search<br/>POST /chats/search/reindex] --> SS[services/search_service.py<br/>index, reindex, search, RRF]
-    CS[services/chat_service.py<br/>indexes after a reply,<br/>removes on delete] --> SS
-    SS --> EMB[embeddings.py<br/>embed() via Workers AI]
-    SS --> VS[vector_store.py<br/>VectorStore protocol]
-    SS --> CR[repositories/chat_repository.py<br/>keyword search, message loading]
+    R[chats/chat_router.py<br/>GET /chats/search<br/>POST /chats/search/reindex] --> SS[chats/chat_search_service.py<br/>index, reindex, search, RRF]
+    CS[chats/chat_service.py<br/>indexes after a reply,<br/>removes on delete] --> SS
+    SS --> EMB[core/ai/embeddings.py<br/>embed() via Workers AI]
+    SS --> VS[core/ai/vector_store.py<br/>VectorStore protocol]
+    SS --> CR[chats/chat_repository.py<br/>keyword search, message loading]
     VS --> DVS[DatabaseVectorStore<br/>SQLite / D1]
     VS -.future.-> VEC[Cloudflare Vectorize adapter]
-    EMB --> AI[ai.py AI protocol]
+    EMB --> AI[core/ai/ai.py AI protocol]
 ```
 
 `VectorStore` is a protocol, the same pattern as `Database` and `AI`: the search

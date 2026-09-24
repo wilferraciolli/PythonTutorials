@@ -1,3 +1,9 @@
+-- Snapshot of migrations 001-015 in order, for Cloudflare D1 (local SQLite
+-- applies the migrations themselves). Safe to re-run: everything is
+-- IF NOT EXISTS and seed rows use INSERT OR IGNORE. The News seed (010) is
+-- data, applied separately (see the note at the end). tests/test_schema.py
+-- fails if this file drifts from the migrations.
+
 CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
     external_user_id TEXT UNIQUE,

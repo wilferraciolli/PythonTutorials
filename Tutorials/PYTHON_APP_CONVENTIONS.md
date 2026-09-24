@@ -53,10 +53,11 @@ my-python-api/
 │   │   ├── config/
 │   │   │   ├── config.py          # Runtime config from env / .env / Worker env
 │   │   │   └── database.py        # Database protocol, adapters, migration runner
-│   │   └── security/
-│   │       ├── auth.py            # Token verification -> AuthenticatedUser
-│   │       ├── authorization.py   # Caller, get_caller, require_admin
-│   │       └── roles.py           # UserRole, role labels/options
+│   │   ├── security/
+│   │   │   ├── auth.py            # Token verification -> AuthenticatedUser
+│   │   │   ├── authorization.py   # Caller, get_caller, require_admin, require_owner
+│   │   │   └── roles.py           # UserRole, role labels/options
+│   │   └── ai/                    # Optional: AI/LLM adapters, embeddings, vector stores
 │   ├── shared/                    # Data owned by several domains (e.g. settings)
 │   └── {domain}/                  # e.g. users/, todos/ — one package per bounded context
 │       ├── {domain}_router.py     # HTTP only
@@ -89,7 +90,10 @@ Rules:
   and Metadata classes, and the `{Name}Response` aliases, go in `schemas.py`
   (see "Model, Request, DTO and Response conventions").
 - A sub-resource (`/users/{id}/settings`) gets its own sub-package with the
-  same layout.
+  same layout. Nest as deep as the URL does: `groups/posts/comments/` for
+  `/groups/{id}/posts/{id}/comments`.
+- A `{domain}/dependencies.py` holds FastAPI dependencies other packages use
+  (e.g. `users/dependencies.py`, see "Guarding routes").
 
 Choose one structure and stay consistent.
 
@@ -421,9 +425,13 @@ Rules:
   defaulting to `./migrations` relative to the working directory. Do not
   compute it from `__file__` (`parents[3]`): that breaks whenever files move.
   Docker sets `MIGRATIONS_DIR=/app/migrations` in both the `Dockerfile` and
-  `docker-compose.yml`.
-- Fail at startup if the folder does not exist. A missing folder must never
-  silently mean "no migrations to run".
+  `docker-compose.yml`. The same goes for `.env`: read `./.env` from the
+  working directory.
+- Fail if the folder does not exist. A missing folder must never silently
+  mean "no migrations to run". Check it when SQLite applies migrations
+  (`migrations_dir()` in `database.py`), not at import: a Cloudflare Worker
+  ships only `src/` and uses D1, so an import-time check would stop it from
+  starting.
 - `schema.sql` is a snapshot of every migration in order, with a header naming
   the migrations it covers. Update it in the same change as a new migration.
 - Seed rows in `schema.sql` use `INSERT OR IGNORE`, so re-running the file
@@ -601,6 +609,9 @@ Repositories should:
   (`update(user_id, name=None, email=None, role_ids=None)`), not `**fields`.
 - Read through a view when one model spans several tables (e.g. a user plus
   their roles), rather than one extra query per row.
+- A read that joins in other tables' columns (a post with its author's name,
+  its group and its like count) returns one model holding them all
+  (`PostModel`), not a dict with extra keys.
 - Use parameterized SQL only.
 
 Repositories should not:
@@ -1029,7 +1040,11 @@ their display labels. Do not copy the labels into each service.
 
 Type metadata with a per-resource `{Resource}Metadata` class whose fields are
 the shared `FieldMetadata` from `core/common/base_dto.py`. Use `EmbeddedRef`
-(`{id, value}`) for each option in `values`:
+(`{id, value}`) for each option in `values`. A response with no field rules
+uses `NoMetadata`, which serializes to `{}`. A project may add more optional
+flags to `FieldMetadata` when its clients need them (fastapi-ai adds
+`maxLength`, `maxItems`, `min`, `max` and `default`); unset ones are dropped
+like the rest:
 
 ```python
 class FieldMetadata(BaseModel):
@@ -1261,7 +1276,19 @@ Rules:
   (`_to_model`). The service converts `Model` to `DTO` in one method
   (`to_dto`), which is where links are added.
 - Put reusable building blocks in `core/common/base_dto.py`, not in a domain:
-  `Link`, `LinkedResource`, `EmbeddedRef`, `FieldMetadata`.
+  `Link`, `LinkedResource`, `EmbeddedRef`, `FieldMetadata`, `NoMetadata`.
+- Type dates in a `Model` as `UtcDateTime` (`core/common/serializers.py`):
+  stored ISO strings may or may not carry an offset, and comparing a naive
+  datetime with an aware one raises. DTOs format them with
+  `format_utc_datetime`.
+- A value the service fills in for the caller rather than reads from a
+  column (a post's `liked_by_me`) may live on the model with a default, under
+  a comment saying so. Don't put it in a dict next to the model.
+- A template whose create request has validation (`min_length=1`) is built
+  with `{Name}CreateRequest.model_construct(...)`, since its blank defaults
+  would fail that validation.
+- A field named after a Python keyword gets an alias: `from_: date =
+  Field(alias="from")`, with `populate_by_name=True` on the class.
 
 ```python
 from datetime import datetime
@@ -1385,8 +1412,44 @@ except SelfLockoutError as exc:
     raise HTTPException(status_code=400, detail=str(exc)) from exc
 ```
 
-"Not found" is not an exception: services return `None` (or `False` for
-delete) and the router returns `404`. A missing row that the migrations seed,
+When many services share the same failures (fastapi-ai: a group the caller
+can't see is `404` for groups, posts, comments and the timeline alike), use
+one exception hierarchy and one handler instead of `try/except` in every
+router:
+
+```python
+# core/common/errors.py
+class AppError(Exception):
+    status_code = 400
+
+    def __init__(self, detail: str) -> None:
+        super().__init__(detail)
+        self.detail = detail
+
+
+class NotFoundError(AppError):
+    status_code = 404
+
+
+class ForbiddenError(AppError):
+    status_code = 403
+
+
+def register_error_handlers(app: FastAPI) -> None:
+    @app.exception_handler(AppError)
+    async def handle_app_error(request: Request, exc: AppError) -> JSONResponse:
+        return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+
+
+# users/exceptions.py: domain exceptions subclass them
+class NotOwnerError(ForbiddenError): ...
+```
+
+Pick one style per project. Either way, services never raise
+`HTTPException`.
+
+"Not found" for a single lookup is not an exception: services return `None`
+(or `False` for delete) and the router returns `404`. A missing row that the migrations seed,
 like the SYSTEM settings row, is a server error (`RuntimeError`, so `500`),
 not a `404`.
 
@@ -1696,7 +1759,8 @@ Authentication (who is calling) and authorization (what they may do) live in
 
 - **Clerk seeds roles.** `/me` creates the user with the roles in the token.
   On every later call it **adds** any token role the user lacks, and never
-  removes one.
+  removes one. Match role names case-insensitively (`to_role` in
+  `roles.py`): Clerk metadata is free text, and `"admin"` must mean `ADMIN`.
 - **Our database is the source of truth after that.** Permission checks read
   saved roles, never the token. An admin granted through the API stays an
   admin even if Clerk stops sending the role, and revoking is done through
@@ -1715,6 +1779,15 @@ Authentication (who is calling) and authorization (what they may do) live in
   the route or `include_router` when the caller isn't needed.
 - Read endpoints take `caller: Caller = Depends(get_caller)` whenever links
   depend on permissions.
+- A router whose every route is personal (`/users/{user_id}/todos`) guards
+  them all at once with `dependencies=[Depends(require_owner)]`: `403` unless
+  the path's `user_id` is the caller's.
+- If routes need the caller's own user id before the client has called
+  `/me` (every social route in fastapi-ai does), create the user there too:
+  `main.py` adds a router dependency (`users/dependencies.py`,
+  `ensure_current_user`) that does what `/me` does. Router dependencies run
+  before the route's own, so `get_caller` then always finds the user. It
+  lives in the users package, not `core/`, because it writes users.
 - Only offer links for what the caller may do (see "Link conventions").
 
 ### Personal resources
@@ -1810,6 +1883,10 @@ For guarded resources, also verify with a non-admin and an admin caller:
 - A non-admin gets no write links or write meta links.
 - The lockout rules return `400`.
 - Roles granted through the API survive a `/me` call whose token lacks them.
+
+When restructuring an existing app, the clients must not notice. Run the same
+API flow against the old commit and the new code, with ids and dates masked,
+and diff the JSON. Every difference should be one you meant to make.
 
 ## Final design summary
 
