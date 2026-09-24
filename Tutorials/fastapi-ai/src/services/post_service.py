@@ -4,10 +4,11 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional
 from uuid import uuid4
 
 from api_response import API_PREFIX, envelope
-from errors import ConflictError, ForbiddenError, NotFoundError
+from errors import ConflictError, ForbiddenError, InvalidInputError, NotFoundError
 from group_permissions import Caller, GroupAccess, GroupPermissions
 from media_providers import MediaLookup
-from models import Link, MediaRef, MediaType, Post, PostCreate, PostMedia, PostUpdate
+from models import MAX_TAGGED_PEOPLE, Link, MediaRef, MediaType, Post, PostCreate, PostMedia, PostUpdate
+from repositories.post_people_tag_repository import PostPeopleTagRepository
 from repositories.post_repository import PostRepository
 from repositories.post_stats_repository import PostStatsRepository
 from repositories.reaction_repository import ReactionRepository
@@ -59,6 +60,7 @@ class PostService:
         media: Optional[MediaLookup] = None,
         search: Optional["PostSearchService"] = None,
         permissions: Optional[GroupPermissions] = None,
+        people: Optional[PostPeopleTagRepository] = None,
     ) -> None:
         self.posts = posts
         self.stats = stats
@@ -67,6 +69,7 @@ class PostService:
         self.media = media
         self.search = search
         self.permissions = permissions or GroupPermissions()
+        self.people = people or PostPeopleTagRepository(posts.db)
 
     async def reindex(self, post: Dict[str, Any]) -> None:
         """Best effort: search indexing never fails a write. Admin reindex picks up anything missed."""
@@ -91,8 +94,16 @@ class PostService:
         post = await self.posts.get(group_id, post_id)
         if post is None:
             raise NotFoundError(POST_NOT_FOUND)
-        await self.mark_liked(caller, [post])
+        await self.load_details(caller, [post])
         return access, post
+
+    async def load_details(self, caller: Caller, rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """What each post row needs for a response beyond the posts table: likes and tagged people."""
+        await self.mark_liked(caller, rows)
+        tagged = await self.people.for_posts(row["id"] for row in rows)
+        for row in rows:
+            row["tagged_people"] = tagged.get(row["id"], [])
+        return rows
 
     async def mark_liked(self, caller: Caller, rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         liked = await self.reactions.liked_ids(caller.id, "post", (row["id"] for row in rows))
@@ -103,7 +114,7 @@ class PostService:
     async def list_posts(self, caller: Caller, group_id: str, limit: int = DEFAULT_LIMIT):
         access = await self.group_service.get_visible(caller, group_id)
         rows = await self.posts.list_for_group(group_id, max(1, min(limit, MAX_LIMIT)))
-        return access, await self.mark_liked(caller, rows)
+        return access, await self.load_details(caller, rows)
 
     async def create_post(self, caller: Caller, group_id: str, payload: PostCreate):
         access = await self.group_service.get_visible(caller, group_id)
@@ -111,12 +122,15 @@ class PostService:
             raise ForbiddenError("Only members can post in this group")
         # Looked up before anything is saved, so a bad media id doesn't leave a post behind.
         media = await self._resolve(payload.media) if payload.media else None
+        people = await self._known_people(payload.taggedUserIds)
 
         post_id = str(uuid4())
         now = now_iso()
         await self.posts.create(post_id, group_id, caller.id, payload.title.strip(), payload.body.strip(), now)
         if media:
             await self.posts.set_media(post_id, media, now)
+        if people:
+            await self.people.replace(post_id, people, now)
         await self.stats.refresh(post_id, now)
         access, row = await self.get_post(caller, group_id, post_id)
         await self.reindex(row)
@@ -124,12 +138,16 @@ class PostService:
 
     async def update_post(self, caller: Caller, group_id: str, post_id: str, payload: PostUpdate):
         await self._own_post(caller, group_id, post_id)
+        people = await self._known_people(payload.taggedUserIds) if payload.taggedUserIds is not None else None
+        now = now_iso()
         await self.posts.update(
             post_id,
-            now_iso(),
+            now,
             title=payload.title.strip() if payload.title is not None else None,
             body=payload.body.strip() if payload.body is not None else None,
         )
+        if people is not None:
+            await self.people.replace(post_id, people, now)
         access, row = await self.get_post(caller, group_id, post_id)
         await self.reindex(row)
         return access, row
@@ -154,6 +172,15 @@ class PostService:
         await self._own_post(caller, group_id, post_id)
         await self.posts.set_media(post_id, None, now_iso())
         return await self.get_post(caller, group_id, post_id)
+
+    async def _known_people(self, user_ids: List[str]) -> List[str]:
+        """The ids in order without duplicates, or InvalidInputError naming the ones that aren't users."""
+        unique = list(dict.fromkeys(user_id.strip() for user_id in user_ids if user_id.strip()))
+        known = await self.people.existing_user_ids(unique)
+        unknown = [user_id for user_id in unique if user_id not in known]
+        if unknown:
+            raise InvalidInputError(f"Can't tag unknown users: {', '.join(unknown)}")
+        return unique
 
     async def _resolve(self, ref: MediaRef):
         if self.media is None:
@@ -204,6 +231,7 @@ class PostService:
             title=DELETED if deleted else row["title"],
             body=DELETED if deleted else row["body"],
             media=None if deleted else self.to_media(row),
+            taggedUserIds=[] if deleted else [person["user_id"] for person in row.get("tagged_people", [])],
             isDeleted=deleted,
             likeCount=row.get("like_count", 0),
             commentCount=row.get("comment_count", 0),
@@ -253,7 +281,9 @@ class PostService:
         return links
 
     def build_post_response(self, caller: Caller, access: GroupAccess, row: Dict[str, Any]) -> Dict[str, Any]:
-        return envelope(data_name="post", data=self.to_post(caller, access, row), metadata=self._metadata(), meta_links={})
+        return envelope(
+            data_name="post", data=self.to_post(caller, access, row), metadata=self._metadata([row]), meta_links={}
+        )
 
     def build_posts_response(self, caller: Caller, access: GroupAccess, rows: List[Dict[str, Any]]) -> Dict[str, Any]:
         meta_links = {}
@@ -262,12 +292,28 @@ class PostService:
         return envelope(
             data_name="posts",
             data=[self.to_post(caller, access, row) for row in rows],
-            metadata=self._metadata(),
+            metadata=self._metadata(rows),
             meta_links=meta_links,
         )
 
-    def _metadata(self) -> Dict[str, Any]:
+    @staticmethod
+    def people_metadata(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Every person tagged in these posts as {id, value: full name}, for resolving taggedUserIds."""
+        people: Dict[str, str] = {}
+        for row in rows:
+            if row.get("deleted_date"):
+                continue
+            for person in row.get("tagged_people", []):
+                people.setdefault(person["user_id"], person["name"])
         return {
+            "mandatory": False,
+            "maxItems": MAX_TAGGED_PEOPLE,
+            "values": [{"id": user_id, "value": name} for user_id, name in people.items()],
+        }
+
+    def _metadata(self, rows: List[Dict[str, Any]]) -> Dict[str, Any]:
+        return {
+            "taggedUserIds": self.people_metadata(rows),
             "title": {"mandatory": True, "maxLength": 200},
             "body": {"mandatory": True, "maxLength": 10000},
             "media": {

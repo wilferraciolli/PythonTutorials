@@ -209,6 +209,16 @@ CREATE TABLE IF NOT EXISTS post_stats (
 
 CREATE INDEX IF NOT EXISTS idx_post_stats_score ON post_stats(score);
 
+-- People tagged in a post (migrations/013).
+CREATE TABLE IF NOT EXISTS post_people_tags (
+    post_id      TEXT NOT NULL,
+    user_id      TEXT NOT NULL,
+    created_date TEXT NOT NULL,
+    PRIMARY KEY (post_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_post_people_tags_user ON post_people_tags(user_id);
+
 -- Seed data (the News group and its dummy posts) lives in migrations/010_seed_news_group.sql;
 -- on D1 run it once: npx wrangler d1 execute wiltech-db --remote --file=./migrations/010_seed_news_group.sql
 -- then, as an admin, call POST /api/admin/post-stats/rebuild so the seeded posts get their comment counts.

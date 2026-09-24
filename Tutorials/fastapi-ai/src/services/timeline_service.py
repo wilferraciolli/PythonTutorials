@@ -55,7 +55,7 @@ class TimelineService:
             order_by_score=timeline_type == TimelineType.POPULAR,
             limit=max(1, min(limit, MAX_LIMIT)),
         )
-        return await self.post_service.mark_liked(caller, rows)
+        return await self.post_service.load_details(caller, rows)
 
     async def build_response(
         self, caller: Caller, timeline_type: TimelineType, rows: List[Dict[str, Any]]
@@ -71,7 +71,10 @@ class TimelineService:
         return envelope(
             data_name="posts",
             data=posts,
-            metadata={"type": {"values": [{"id": t.value, "value": t.value.title()} for t in TimelineType]}},
+            metadata={
+                "type": {"values": [{"id": t.value, "value": t.value.title()} for t in TimelineType]},
+                "taggedUserIds": self.post_service.people_metadata(rows),
+            },
             meta_links={**self.links(), "self": Link(href=self._href(timeline_type), method="GET")},
         )
 

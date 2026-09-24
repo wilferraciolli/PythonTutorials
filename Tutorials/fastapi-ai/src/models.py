@@ -1,6 +1,6 @@
 from enum import Enum
 from datetime import datetime, timezone
-from typing import Any, Dict, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional
 from pydantic import BaseModel, Field, field_serializer
 
 
@@ -332,16 +332,23 @@ class MediaSearchResult(BaseModel):
     authorUrl: Optional[str] = None
 
 
+MAX_TAGGED_PEOPLE = 20
+
+
 class PostCreate(BaseModel):
     title: str = Field(min_length=1, max_length=200)
     body: str = Field(min_length=1, max_length=10000)
     media: Optional[MediaRef] = None
+    # User ids of the people tagged in the post; names come back in _metadata.
+    taggedUserIds: List[str] = Field(default_factory=list, max_length=MAX_TAGGED_PEOPLE)
 
 
 class PostUpdate(BaseModel):
     # Media isn't edited here: remove it and add another (PUT/DELETE .../media).
     title: Optional[str] = Field(None, min_length=1, max_length=200)
     body: Optional[str] = Field(None, min_length=1, max_length=10000)
+    # None leaves the tagged people as they are; [] removes them all.
+    taggedUserIds: Optional[List[str]] = Field(None, max_length=MAX_TAGGED_PEOPLE)
 
 
 class Post(LinkedResource):
@@ -353,6 +360,8 @@ class Post(LinkedResource):
     title: str
     body: str
     media: Optional[PostMedia] = None
+    # Ids of the people tagged in the post; their names are in _metadata.taggedUserIds.values.
+    taggedUserIds: List[str] = Field(default_factory=list)
     isDeleted: bool = False
     likeCount: int = 0
     commentCount: int = 0

@@ -423,6 +423,27 @@ keystroke. The group page's new-post form has **Add media**, and the post page h
 - A D1 database created before this feature needs `migrations/012_add_post_media.sql` run once:
   `npx wrangler d1 execute wiltech-db --remote --file migrations/012_add_post_media.sql`.
 
+## Tagging people
+
+A post can tag up to **20 people** (any existing user), like "with Sam and Ana".
+
+- **Stored** in `post_people_tags (post_id, user_id, created_date)`, migration 013; one row per
+  post per person, in the order they were tagged.
+- **Sent** as `taggedUserIds: string[]` on create (`POST .../posts`) and edit
+  (`PUT .../posts/{postId}`). On edit, leaving it out keeps the tags; `[]` removes them all.
+  Only the author sets them (the same rule as editing the post). Duplicates are dropped; an id
+  that isn't a user is a **422** and nothing is saved.
+- **Returned** the same way the API returns any id-with-a-label: the post carries the ids
+  (`"taggedUserIds": ["u3", "u5"]`) and the response metadata names them, once per page —
+  `"_metadata": {"taggedUserIds": {"values": [{"id": "u3", "value": "Sam Rivera"}, ...]}}`.
+  Single posts, a group's posts and the timeline all do this.
+- Someone whose account is deleted drops out of the tags. A deleted post shows no tags.
+- Tagging doesn't notify anyone or grant access: tagging a non-member in a private group
+  doesn't let them see the post.
+
+In `demo-ui` the post composer and the post editor have a **Tag people** field (chips with a
+name/email search over `GET /api/users/search`), and cards show "With Sam Rivera and Ana Lens".
+
 ## How it plugs into AI search and Ask
 
 Post titles, bodies and comments are free text, so this follows the README checklist
