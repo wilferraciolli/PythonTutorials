@@ -4,8 +4,8 @@ import json
 import httpx
 import pytest
 
-from ai import GroqAdapter
-from llm import OpenAICompatibleLlm
+from core.ai.ai import GroqAdapter
+from core.ai.llm import OpenAICompatibleLlm
 
 TOOLS = [{"type": "function", "function": {"name": "count_todos", "parameters": {"type": "object"}}}]
 
@@ -52,7 +52,7 @@ async def test_errors_are_raised_with_the_status():
 
 
 async def test_groq_chat_adapter_returns_the_reply_text(monkeypatch):
-    import llm as llm_module
+    import core.ai.llm as llm_module
 
     real = llm_module.chat_completion
 

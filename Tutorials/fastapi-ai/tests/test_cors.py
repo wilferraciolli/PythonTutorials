@@ -3,7 +3,7 @@ from types import SimpleNamespace
 
 from fastapi.testclient import TestClient
 
-from cors import allowed_origins
+from core.config.cors import allowed_origins
 
 PAGES = "https://demo-ui-2pk.pages.dev"
 
@@ -20,7 +20,7 @@ def test_a_crash_is_a_500_the_browser_can_read(monkeypatch):
     # Without this the 500 has no CORS headers and the UI says "can't reach the server".
     from fastapi import FastAPI
 
-    from cors import EnvCORSMiddleware
+    from core.config.cors import EnvCORSMiddleware
 
     monkeypatch.setenv("CORS_ORIGINS", PAGES)
     app = FastAPI()

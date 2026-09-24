@@ -1,10 +1,10 @@
 """Social groups: likes and post_stats (score = comments x 2 + likes)."""
 import pytest
 
-from errors import ConflictError, ForbiddenError, NotFoundError
-from models import GroupVisibility
-from repositories.post_stats_repository import PostStatsRepository
-from repositories.user_repository import UserRepository
+from core.common.errors import ConflictError, ForbiddenError, NotFoundError
+from groups.enums import GroupVisibility
+from groups.posts.post_stats_repository import PostStatsRepository
+from users.user_repository import UserRepository
 from social import ADMIN, MEMBER, OUTSIDER, OWNER, make_social
 
 

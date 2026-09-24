@@ -1,18 +1,22 @@
 """Shared setup for the social-groups tests (not a test module itself)."""
 from dataclasses import dataclass
 
-from database import SQLiteDatabase
-from group_permissions import Caller
-from models import CommentCreate, GroupCreate, GroupVisibility, PostCreate, UserRole
-from repositories.group_repository import GroupRepository
-from repositories.post_comment_repository import PostCommentRepository
-from repositories.post_repository import PostRepository
-from repositories.post_stats_repository import PostStatsRepository
-from repositories.reaction_repository import ReactionRepository
-from repositories.user_repository import UserRepository
-from services.group_service import GroupService
-from services.post_comment_service import PostCommentService
-from services.post_service import PostService
+from core.config.database import SQLiteDatabase
+from groups.group_permissions import Caller
+from core.security.roles import UserRole
+from groups.enums import GroupVisibility
+from groups.posts.comments.schemas import CommentCreate
+from groups.posts.schemas import PostCreate
+from groups.schemas import GroupCreate
+from groups.group_repository import GroupRepository
+from groups.posts.comments.comment_repository import PostCommentRepository
+from groups.posts.post_repository import PostRepository
+from groups.posts.post_stats_repository import PostStatsRepository
+from groups.posts.reaction_repository import ReactionRepository
+from users.user_repository import UserRepository
+from groups.group_service import GroupService
+from groups.posts.comments.comment_service import PostCommentService
+from groups.posts.post_service import PostService
 
 OWNER = Caller("owner", False)
 MEMBER = Caller("member", False)

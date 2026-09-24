@@ -1,8 +1,9 @@
 """Social groups: comments and replies on posts (docs/social-groups.md)."""
 import pytest
 
-from errors import ConflictError, ForbiddenError, NotFoundError
-from models import CommentCreate, CommentUpdate, GroupVisibility
+from core.common.errors import ConflictError, ForbiddenError, NotFoundError
+from groups.enums import GroupVisibility
+from groups.posts.comments.schemas import CommentCreate, CommentUpdate
 from social import ADMIN, MEMBER, OUTSIDER, OWNER, make_social
 
 

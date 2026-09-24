@@ -9,12 +9,14 @@ import json
 import pytest
 from fastapi.testclient import TestClient
 
-from assistant.social_tools import build_social_tools
-from auth import AuthenticatedUser, get_authenticated_user
-from models import GroupUpdate, GroupVisibility, PostUpdate
-from repositories.social_query_repository import SocialQueryRepository
-from services.assistant_service import AssistantService
-from services.post_search_service import PostSearchService
+from assistant.tools.social_tools import build_social_tools
+from core.security.auth import AuthenticatedUser, get_authenticated_user
+from groups.enums import GroupVisibility
+from groups.posts.schemas import PostUpdate
+from groups.schemas import GroupUpdate
+from groups.social_query_repository import SocialQueryRepository
+from assistant.assistant_service import AssistantService
+from groups.posts.post_search_service import PostSearchService
 from social import ADMIN, MEMBER, NEWS_ID, OUTSIDER, OWNER, make_social
 
 AXES = [("bike", "cycle", "lane"), ("pizza", "recipe", "cook"), ("rain", "storm", "weather")]
@@ -242,9 +244,9 @@ async def test_assistant_answers_a_social_question(s):
 def test_admin_reindex_endpoint(tmp_path, monkeypatch):
     monkeypatch.setenv("DATABASE_MODE", "sqlite")
     monkeypatch.setenv("DATABASE_PATH", str(tmp_path / "api.db"))
-    from database import SQLiteDatabase
+    from core.config.database import SQLiteDatabase
     from main import app
-    from routers.deps import get_post_search_service
+    from groups.posts.post_router import get_post_search_service
 
     db = SQLiteDatabase(str(tmp_path / "api.db"))
     who = {"user": AuthenticatedUser(id="clerk-a", name="Alice", email="a@x.io", role_ids=[], claims={})}

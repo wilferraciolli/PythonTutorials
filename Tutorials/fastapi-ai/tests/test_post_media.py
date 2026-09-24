@@ -7,10 +7,12 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 
-from auth import AuthenticatedUser, get_authenticated_user
-from errors import AppError, ForbiddenError, NotConfiguredError, UpstreamError
-from media_providers import MediaProviders
-from models import MediaRef, MediaType, PostCreate
+from core.security.auth import AuthenticatedUser, get_authenticated_user
+from core.common.errors import AppError, ForbiddenError, NotConfiguredError, UpstreamError
+from media.media_providers import MediaProviders
+from groups.posts.schemas import PostCreate
+from media.enums import MediaType
+from media.schemas import MediaRef
 from social import MEMBER, OWNER, make_social
 
 PHOTO = {
@@ -202,7 +204,7 @@ def api(tmp_path, monkeypatch, fake):
     monkeypatch.setenv("DATABASE_MODE", "sqlite")
     monkeypatch.setenv("DATABASE_PATH", str(tmp_path / "api.db"))
     from main import app
-    from routers.deps import get_media_providers
+    from media.media_router import get_media_providers
 
     user = AuthenticatedUser(id="clerk-a", name="Alice", email="a@x.io", role_ids=[], claims={})
     app.dependency_overrides[get_authenticated_user] = lambda: user

@@ -5,10 +5,10 @@ carries taggedUserIds, the response metadata resolves them to full names.
 import pytest
 from pydantic import ValidationError
 
-from errors import ForbiddenError, InvalidInputError
-from models import PostCreate, PostUpdate
-from repositories.timeline_repository import TimelineRepository
-from services.timeline_service import TimelineService, TimelineType
+from core.common.errors import ForbiddenError, InvalidInputError
+from groups.posts.schemas import PostCreate, PostUpdate
+from timeline.timeline_repository import TimelineRepository
+from timeline.timeline_service import TimelineService, TimelineType
 from social import MEMBER, OWNER, make_social
 
 

@@ -9,7 +9,7 @@ def no_real_post_indexing():
     app here; test_post_search.py covers it with a fake embedder.
     """
     from main import app
-    from routers.deps import get_post_search_service
+    from groups.posts.post_router import get_post_search_service
 
     app.dependency_overrides[get_post_search_service] = lambda: None
     yield

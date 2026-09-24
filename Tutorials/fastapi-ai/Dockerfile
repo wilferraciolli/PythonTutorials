@@ -10,4 +10,7 @@ RUN uv sync --frozen || uv sync
 COPY src ./src
 COPY migrations ./migrations
 
+# Found through the env, never computed from a source file's location.
+ENV MIGRATIONS_DIR=/app/migrations
+
 CMD ["uv", "run", "uvicorn", "main:app", "--app-dir", "src", "--host", "0.0.0.0", "--port", "8001"]

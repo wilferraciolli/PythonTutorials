@@ -9,17 +9,17 @@ from datetime import date, datetime, timezone
 
 import pytest
 
-from assistant.date_tools import build_date_tools, resolve_period
-from assistant.todo_tools import build_todo_tools
-from database import SQLiteDatabase
-from repositories.tag_repository import TagRepository
-from repositories.todo_repository import TodoRepository
-from resource_vector_store import ResourceVectorStore
-from services.assistant_service import AssistantService
-from services.tag_service import TagService
-from services.todo_search_service import TodoSearchService
-from services.todo_service import TodoService
-from models import TodoCreate
+from assistant.tools.date_tools import build_date_tools, resolve_period
+from assistant.tools.todo_tools import build_todo_tools
+from core.config.database import SQLiteDatabase
+from tags.tag_repository import TagRepository
+from todos.todo_repository import TodoRepository
+from core.ai.resource_vector_store import ResourceVectorStore
+from assistant.assistant_service import AssistantService
+from tags.tag_service import TagService
+from todos.todo_search_service import TodoSearchService
+from todos.todo_service import TodoService
+from todos.schemas import TodoCreate
 
 NOW = datetime(2026, 6, 15, 12, 0, tzinfo=timezone.utc)  # Q2 2026
 

@@ -10,10 +10,10 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from database import SQLiteDatabase  # noqa: E402
-from repositories.chat_repository import ChatRepository  # noqa: E402
-from services.search_service import SearchService  # noqa: E402
-from vector_store import DatabaseVectorStore  # noqa: E402
+from core.config.database import SQLiteDatabase  # noqa: E402
+from chats.chat_repository import ChatRepository  # noqa: E402
+from chats.chat_search_service import SearchService  # noqa: E402
+from core.ai.vector_store import DatabaseVectorStore  # noqa: E402
 
 TOPICS = [
     ("jvm", "java", "spring", "kotlin"),

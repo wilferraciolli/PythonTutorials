@@ -9,6 +9,7 @@ services:
     environment:
       DATABASE_MODE: sqlite
       DATABASE_PATH: /data/local.db
+      MIGRATIONS_DIR: /app/migrations
     volumes:
       - ./src:/app/src
       - ./migrations:/app/migrations

@@ -6,10 +6,11 @@ import pytest
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
-from auth import AuthenticatedUser, get_authenticated_user
-from errors import ForbiddenError, NotFoundError
-from models import GroupVisibility, PostCreate, PostUpdate
-from repositories.user_repository import UserRepository
+from core.security.auth import AuthenticatedUser, get_authenticated_user
+from core.common.errors import ForbiddenError, NotFoundError
+from groups.enums import GroupVisibility
+from groups.posts.schemas import PostCreate, PostUpdate
+from users.user_repository import UserRepository
 from social import ADMIN, MEMBER, NEWS_ID, OUTSIDER, OWNER, make_social
 
 
