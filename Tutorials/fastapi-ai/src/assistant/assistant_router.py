@@ -8,7 +8,7 @@ from assistant.tools.social_tools import build_social_tools
 from assistant.tools.todo_tools import build_todo_tools, utc_now
 from core.config.config import get_config
 from core.config.database import get_database
-from groups.group_permissions import Caller
+from core.security.authorization import Caller
 from core.ai.llm import OpenAICompatibleLlm
 from assistant.schemas import AssistantAsk
 from groups.social_query_repository import SocialQueryRepository
@@ -16,7 +16,7 @@ from todos.todo_repository import TodoRepository
 from chats.chat_router import get_search_service
 from groups.posts.post_router import get_post_search_service
 from todos.todo_router import get_todo_search_service
-from users.dependencies import get_caller, get_current_user_id
+from core.security.authorization import get_caller, require_owner
 from assistant.assistant_service import AssistantService
 
 router = APIRouter(prefix="/users/{user_id}/assistant", tags=["assistant"])
@@ -57,11 +57,11 @@ def get_assistant_service(request: Request, provider: str, caller: Caller) -> As
 async def ask(
     payload: AssistantAsk,
     request: Request,
-    user_id: str = Depends(get_current_user_id),
+    user_id: str = Depends(require_owner),
     caller: Caller = Depends(get_caller),
 ) -> dict[str, Any]:
     """Ask a question about your data (todos, chats) and the groups you can see, in plain English."""
-    # get_current_user_id already checked the path user is the caller.
+    # require_owner already checked the path user is the caller.
     service = get_assistant_service(request, payload.provider, caller)
     answer = await service.ask(user_id, payload.question)
     return service.build_response(answer)

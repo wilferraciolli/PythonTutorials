@@ -144,7 +144,7 @@ def tools_for(s, caller):
 
 
 async def run(s, caller, name, **args):
-    return await tools_for(s, caller)[name].handler(caller.id, args)
+    return await tools_for(s, caller)[name].handler(caller.user_id, args)
 
 
 async def test_count_and_list_posts_respect_visibility(s):
@@ -211,7 +211,7 @@ async def test_search_posts_tool_is_scoped(s):
 
 async def test_tools_refuse_another_user_id(s):
     tool = tools_for(s, MEMBER)["count_posts"]
-    assert await tool.handler(OUTSIDER.id, {}) == {"error": "not allowed"}
+    assert await tool.handler(OUTSIDER.user_id, {}) == {"error": "not allowed"}
 
 
 class Scripted:
@@ -233,7 +233,7 @@ async def test_assistant_answers_a_social_question(s):
         ]
     )
     service = AssistantService(llm, "m", "groq", build_social_tools(MEMBER, SocialQueryRepository(s.db)))
-    answer = await service.ask(MEMBER.id, "how many posts have I written?")
+    answer = await service.ask(MEMBER.user_id, "how many posts have I written?")
     assert answer.answer == "You have written 2 posts."
     assert answer.toolCalls[0].result == {"count": 2}
 

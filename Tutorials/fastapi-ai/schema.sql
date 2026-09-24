@@ -222,3 +222,17 @@ CREATE INDEX IF NOT EXISTS idx_post_people_tags_user ON post_people_tags(user_id
 -- Seed data (the News group and its dummy posts) lives in migrations/010_seed_news_group.sql;
 -- on D1 run it once: npx wrangler d1 execute demo-db --remote --file=./migrations/010_seed_news_group.sql
 -- then, as an admin, call POST /api/admin/post-stats/rebuild so the seeded posts get their comment counts.
+
+-- Migration 014: each user with their roles in one row (core/security reads
+-- the caller's roles through it).
+CREATE VIEW IF NOT EXISTS user_detail_view AS
+SELECT
+    u.id,
+    u.external_user_id,
+    u.name,
+    u.email,
+    u.created_date,
+    GROUP_CONCAT(r.role_id) AS role_ids
+FROM users u
+LEFT JOIN user_roles r ON r.user_id = u.id
+GROUP BY u.id;

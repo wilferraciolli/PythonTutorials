@@ -1,17 +1,7 @@
 from dataclasses import dataclass
 from typing import Any, Dict, Optional
 
-
-@dataclass(frozen=True)
-class Caller:
-    """The signed-in user, as far as permissions care: our users.id and the system role."""
-
-    id: str
-    is_admin: bool
-
-    @classmethod
-    def from_user_row(cls, row: Dict[str, Any]) -> "Caller":
-        return cls(id=row["id"], is_admin="ADMIN" in (row.get("roleIds") or []))
+from core.security.authorization import Caller
 
 
 @dataclass(frozen=True)
@@ -27,7 +17,7 @@ class GroupAccess:
         return self.group["visibility"] == "PUBLIC"
 
     def is_owner(self, caller: Caller) -> bool:
-        return self.group.get("owner_id") is not None and self.group["owner_id"] == caller.id
+        return self.group.get("owner_id") is not None and self.group["owner_id"] == caller.user_id
 
 
 class GroupPermissions:
@@ -56,7 +46,7 @@ class GroupPermissions:
         return caller.is_admin or access.is_member or access.is_owner(caller)
 
     def can_remove_member(self, caller: Caller, access: GroupAccess, target_user_id: str) -> bool:
-        return target_user_id == caller.id or self.can_manage(caller, access)
+        return target_user_id == caller.user_id or self.can_manage(caller, access)
 
     def can_follow(self, caller: Caller, access: GroupAccess) -> bool:
         return not access.is_following and self.can_view(caller, access)
@@ -66,4 +56,4 @@ class GroupPermissions:
 
     def can_delete_content(self, caller: Caller, access: GroupAccess, author_id: Optional[str]) -> bool:
         """Delete a post or comment: its author, the group owner, or an admin."""
-        return (author_id is not None and author_id == caller.id) or self.can_manage(caller, access)
+        return (author_id is not None and author_id == caller.user_id) or self.can_manage(caller, access)

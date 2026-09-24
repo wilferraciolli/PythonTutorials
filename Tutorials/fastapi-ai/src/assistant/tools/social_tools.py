@@ -2,7 +2,7 @@ from datetime import date, datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
 from assistant.tools.tool import Tool
-from groups.group_permissions import Caller
+from core.security.authorization import Caller
 from groups.social_query_repository import SocialQueryRepository
 from groups.posts.post_search_service import PostSearchService
 
@@ -35,16 +35,16 @@ def build_social_tools(
     """
 
     async def _filters(user_id: str, args: Dict[str, Any]) -> Dict[str, Any]:
-        if user_id != caller.id:  # tools are built per request for exactly this user
+        if user_id != caller.user_id:  # tools are built per request for exactly this user
             return {"error": "not allowed"}
         filters: Dict[str, Any] = {"group_id": None, "author_id": None, "created_from": None, "created_to": None}
         if args.get("group"):
-            group = await queries.find_visible_group(caller.id, caller.is_admin, str(args["group"]).strip())
+            group = await queries.find_visible_group(caller.user_id, caller.is_admin, str(args["group"]).strip())
             if group is None:
                 return {"error": f"no group called {args['group']!r} that you can see; call my_groups"}
             filters["group_id"] = group["id"]
         if args.get("mine") is True:
-            filters["author_id"] = caller.id
+            filters["author_id"] = caller.user_id
         try:
             if args.get("created_from"):
                 filters["created_from"] = _day(args["created_from"])
@@ -60,7 +60,7 @@ def build_social_tools(
         filters = await _filters(user_id, args)
         if "error" in filters:
             return filters
-        return {"count": await queries.count_posts(caller.id, caller.is_admin, **filters)}
+        return {"count": await queries.count_posts(caller.user_id, caller.is_admin, **filters)}
 
     async def list_posts(user_id: str, args: Dict[str, Any]) -> Any:
         filters = await _filters(user_id, args)
@@ -70,7 +70,7 @@ def build_social_tools(
         if sort not in ("newest", "popular"):
             return {"error": "sort must be newest or popular"}
         limit = max(1, min(int(args.get("limit") or 10), MAX_LIST))
-        rows = await queries.list_posts(caller.id, caller.is_admin, sort == "popular", limit, **filters)
+        rows = await queries.list_posts(caller.user_id, caller.is_admin, sort == "popular", limit, **filters)
         return {
             "posts": [
                 {
@@ -90,12 +90,12 @@ def build_social_tools(
         filters = await _filters(user_id, args)
         if "error" in filters:
             return filters
-        return {"count": await queries.count_comments(caller.id, caller.is_admin, **filters)}
+        return {"count": await queries.count_comments(caller.user_id, caller.is_admin, **filters)}
 
     async def my_groups(user_id: str, args: Dict[str, Any]) -> Any:
-        if user_id != caller.id:
+        if user_id != caller.user_id:
             return {"error": "not allowed"}
-        rows = await queries.my_groups(caller.id, caller.is_admin)
+        rows = await queries.my_groups(caller.user_id, caller.is_admin)
         return {
             "groups": [
                 {
@@ -162,14 +162,14 @@ def build_social_tools(
     if search:
 
         async def search_posts(user_id: str, args: Dict[str, Any]) -> Any:
-            if user_id != caller.id:
+            if user_id != caller.user_id:
                 return {"error": "not allowed"}
             query = str(args.get("query") or "").strip()
             if not query:
                 return {"error": "query is required"}
             group_id = None
             if args.get("group"):
-                group = await queries.find_visible_group(caller.id, caller.is_admin, str(args["group"]).strip())
+                group = await queries.find_visible_group(caller.user_id, caller.is_admin, str(args["group"]).strip())
                 if group is None:
                     return {"error": f"no group called {args['group']!r} that you can see; call my_groups"}
                 group_id = group["id"]

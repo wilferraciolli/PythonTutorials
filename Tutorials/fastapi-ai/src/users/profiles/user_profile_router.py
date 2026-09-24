@@ -1,12 +1,10 @@
-from typing import Any
-
 from fastapi import APIRouter, Depends, HTTPException, Request
 
-from core.security.auth import AuthenticatedUser, get_authenticated_user
 from core.config.database import get_database
-from users.user_repository import UserRepository
-from users.profiles.me_service import MeService
+from core.security.authorization import Caller, get_caller
+from users.profiles.schemas import UserProfileResponse
 from users.profiles.user_profile_service import UserProfileService
+from users.user_repository import UserRepository
 
 router = APIRouter(prefix="/users", tags=["userprofiles"])
 
@@ -16,23 +14,12 @@ def get_user_profile_service(request: Request) -> UserProfileService:
     return UserProfileService(UserRepository(db))
 
 
-async def get_current_user_row(
-    request: Request,
-    current_user: AuthenticatedUser = Depends(get_authenticated_user),
-) -> dict[str, Any]:
-    # The caller's own `users` row — same identity-to-row mapping /me uses.
-    # The profile is asked for by {user_id} in the path, which may or may
-    # not be the caller; the service compares the two.
-    db = get_database(request)
-    return await MeService(UserRepository(db)).get_or_create_current_user(current_user)
-
-
 @router.get("/{user_id}/profile")
 async def get_user_profile(
     user_id: str,
-    caller: dict[str, Any] = Depends(get_current_user_row),
+    caller: Caller = Depends(get_caller),
     service: UserProfileService = Depends(get_user_profile_service),
-) -> dict[str, Any]:
+) -> UserProfileResponse:
     try:
         user_profile = await service.get_user_profile(user_id, caller)
     except PermissionError:

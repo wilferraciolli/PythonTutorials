@@ -3,9 +3,9 @@ from typing import Any
 from fastapi import APIRouter, Depends, Request
 
 from core.config.database import get_database
-from groups.group_permissions import Caller
+from core.security.authorization import Caller
 from timeline.timeline_repository import TimelineRepository
-from users.dependencies import get_caller
+from core.security.authorization import get_caller
 from groups.posts.post_router import get_post_service
 from timeline.timeline_service import DEFAULT_LIMIT, TimelineService, TimelineType
 

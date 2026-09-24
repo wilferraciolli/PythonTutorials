@@ -2,7 +2,7 @@
 from dataclasses import dataclass
 
 from core.config.database import SQLiteDatabase
-from groups.group_permissions import Caller
+from core.security.authorization import Caller
 from core.security.roles import UserRole
 from groups.enums import GroupVisibility
 from groups.posts.comments.schemas import CommentCreate
@@ -18,10 +18,10 @@ from groups.group_service import GroupService
 from groups.posts.comments.comment_service import PostCommentService
 from groups.posts.post_service import PostService
 
-OWNER = Caller("owner", False)
-MEMBER = Caller("member", False)
-OUTSIDER = Caller("outsider", False)
-ADMIN = Caller("admin", True)
+OWNER = Caller(external_id="owner", user_id="owner", role_ids=[])
+MEMBER = Caller(external_id="member", user_id="member", role_ids=[])
+OUTSIDER = Caller(external_id="outsider", user_id="outsider", role_ids=[])
+ADMIN = Caller(external_id="admin", user_id="admin", role_ids=["ADMIN"])
 
 NEWS_ID = "00000000-0000-4000-8000-000000000001"
 

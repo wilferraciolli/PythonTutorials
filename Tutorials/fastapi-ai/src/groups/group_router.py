@@ -3,11 +3,11 @@ from typing import Any, Optional
 from fastapi import APIRouter, Depends, Request, Response
 
 from core.config.database import get_database
-from groups.group_permissions import Caller
+from core.security.authorization import Caller
 from groups.schemas import GroupCreate, GroupOwnerUpdate, GroupUpdate
 from groups.group_repository import GroupRepository
 from users.user_repository import UserRepository
-from users.dependencies import get_caller
+from core.security.authorization import get_caller
 from groups.group_service import GroupService
 
 # Groups are shared, not one person's data, so they are not under /users/{id}.
@@ -109,7 +109,7 @@ async def leave_group(
     caller: Caller = Depends(get_caller),
     service: GroupService = Depends(get_group_service),
 ) -> Response:
-    await service.remove_member(caller, group_id, caller.id)
+    await service.remove_member(caller, group_id, caller.user_id)
     return Response(status_code=204)
 
 

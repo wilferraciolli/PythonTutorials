@@ -4,7 +4,8 @@ from uuid import uuid4
 
 from core.common.api_response import API_PREFIX, envelope
 from core.common.errors import ConflictError, ForbiddenError, NotFoundError
-from groups.group_permissions import Caller, GroupAccess, GroupPermissions
+from core.security.authorization import Caller
+from groups.group_permissions import GroupAccess, GroupPermissions
 from core.common.base_dto import Link
 from groups.enums import GroupVisibility
 from groups.schemas import Group, GroupCreate, GroupFollower, GroupMember, GroupUpdate
@@ -41,8 +42,8 @@ class GroupService:
     async def _access(self, caller: Caller, group: Dict[str, Any]) -> GroupAccess:
         return GroupAccess(
             group=group,
-            is_member=await self.groups.is_member(group["id"], caller.id),
-            is_following=await self.groups.is_following(group["id"], caller.id),
+            is_member=await self.groups.is_member(group["id"], caller.user_id),
+            is_following=await self.groups.is_following(group["id"], caller.user_id),
         )
 
     async def get_visible(self, caller: Caller, group_id: str) -> GroupAccess:
@@ -64,7 +65,7 @@ class GroupService:
     async def list_groups(
         self, caller: Caller, term: Optional[str] = None, following: bool = False, mine: bool = False
     ) -> List[GroupAccess]:
-        rows = await self.groups.list_visible(caller.id, caller.is_admin, term, following, mine)
+        rows = await self.groups.list_visible(caller.user_id, caller.is_admin, term, following, mine)
         return [await self._access(caller, row) for row in rows]
 
     async def create_group(self, caller: Caller, payload: GroupCreate) -> GroupAccess:
@@ -74,10 +75,10 @@ class GroupService:
 
         now = _now()
         group = await self.groups.create(
-            str(uuid4()), name, payload.description, payload.visibility.value, caller.id, now
+            str(uuid4()), name, payload.description, payload.visibility.value, caller.user_id, now
         )
-        await self.groups.add_member(group["id"], caller.id, now)
-        await self.groups.add_follower(group["id"], caller.id, now)
+        await self.groups.add_member(group["id"], caller.user_id, now)
+        await self.groups.add_follower(group["id"], caller.user_id, now)
         return await self._reload(caller, group["id"])
 
     async def update_group(self, caller: Caller, group_id: str, payload: GroupUpdate) -> GroupAccess:
@@ -129,7 +130,7 @@ class GroupService:
         if not self.permissions.can_join(caller, access):
             raise ForbiddenError("Private groups can only be joined by being added by a member")
 
-        await self._make_member(group_id, caller.id)
+        await self._make_member(group_id, caller.user_id)
         return await self._reload(caller, group_id)
 
     async def add_member(self, caller: Caller, group_id: str, user_id: str) -> GroupAccess:
@@ -169,12 +170,12 @@ class GroupService:
     async def follow(self, caller: Caller, group_id: str) -> GroupAccess:
         # Seeing the group is enough: a private group is only visible to members (and admins).
         await self.get_visible(caller, group_id)
-        await self.groups.add_follower(group_id, caller.id, _now())
+        await self.groups.add_follower(group_id, caller.user_id, _now())
         return await self._reload(caller, group_id)
 
     async def unfollow(self, caller: Caller, group_id: str) -> GroupAccess:
         await self.get_visible(caller, group_id)
-        await self.groups.remove_follower(group_id, caller.id)
+        await self.groups.remove_follower(group_id, caller.user_id)
         return await self._reload(caller, group_id)
 
     # --- responses

@@ -1,13 +1,16 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, List, Mapping, Optional
 
 from core.config.database import Database
-
-from core.security.roles import UserRole
+from core.security.roles import UserRole, parse_role_ids
+from users.models import UserModel
 
 
 class UserRepository:
     """
     Repository for user database operations.
+
+    Reads go through `user_detail_view`, which returns each user with their
+    roles in one row, so listing users is one query rather than one per user.
 
     This repository depends on the portable Database protocol, not SQLite,
     Cloudflare D1, or any other concrete database runtime.
@@ -24,144 +27,115 @@ class UserRepository:
         role_ids: list[UserRole],
         created_date: str,
         external_user_id: Optional[str] = None,
-    ) -> Dict[str, Any]:
-        role_ids = self.normalise_role_ids(role_ids)
+    ) -> UserModel:
         await self.db.execute(
             "INSERT INTO users (id, external_user_id, name, email, created_date) VALUES (?, ?, ?, ?, ?)",
             (user_id, external_user_id, name, email, created_date),
         )
 
-        for role_id in role_ids:
-            await self.db.execute(
-                "INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)",
-                (user_id, role_id.value),
-            )
+        await self.add_roles(user_id, role_ids)
 
-        created = await self.get_by_id(user_id)
-        if created is None:
-            raise RuntimeError(f"created user was not found: {user_id}")
-        return created
+        return await self._get_saved(user_id)
 
-    async def get_by_id(self, user_id: str) -> Optional[Dict[str, Any]]:
-        user = await self.db.fetch_one(
-            "SELECT * FROM users WHERE id = ?",
+    async def get_by_id(self, user_id: str) -> Optional[UserModel]:
+        row = await self.db.fetch_one(
+            "SELECT * FROM user_detail_view WHERE id = ?",
             (user_id,),
         )
 
-        if not user:
-            return None
+        return self._to_model(row)
 
-        user["roleIds"] = await self.get_role_ids(user_id)
-        return user
-
-    async def get_by_external_id(self, external_user_id: str) -> Optional[Dict[str, Any]]:
-        user = await self.db.fetch_one(
-            "SELECT * FROM users WHERE external_user_id = ?",
+    async def get_by_external_id(self, external_user_id: str) -> Optional[UserModel]:
+        row = await self.db.fetch_one(
+            "SELECT * FROM user_detail_view WHERE external_user_id = ?",
             (external_user_id,),
         )
 
-        if not user:
-            return None
+        return self._to_model(row)
 
-        user["roleIds"] = await self.get_role_ids(user["id"])
-        return user
-
-    async def get_all(self) -> List[Dict[str, Any]]:
-        users = await self.db.fetch_all(
-            "SELECT * FROM users ORDER BY name",
+    async def get_all(self) -> List[UserModel]:
+        rows = await self.db.fetch_all(
+            "SELECT * FROM user_detail_view ORDER BY name",
         )
 
-        for user in users:
-            user["roleIds"] = await self.get_role_ids(user["id"])
+        return [self._to_model(row) for row in rows]
 
-        return users
-
-    async def search(self, term: Optional[str] = None) -> List[Dict[str, Any]]:
+    async def search(self, term: Optional[str] = None) -> List[UserModel]:
         # Case-insensitive match on name or email (SQLite LIKE and D1 both
         # are for ASCII). No term returns everyone, same as get_all().
         if not term:
             return await self.get_all()
 
         like = f"%{term}%"
-        users = await self.db.fetch_all(
-            "SELECT * FROM users WHERE name LIKE ? OR email LIKE ? ORDER BY name",
+        rows = await self.db.fetch_all(
+            "SELECT * FROM user_detail_view WHERE name LIKE ? OR email LIKE ? ORDER BY name",
             (like, like),
         )
 
-        for user in users:
-            user["roleIds"] = await self.get_role_ids(user["id"])
+        return [self._to_model(row) for row in rows]
 
-        return users
-
-    async def update(self, user_id: str, **fields: Any) -> Optional[Dict[str, Any]]:
-        role_ids = fields.pop("roleIds", None)
-
-        updatable = {key: value for key, value in fields.items() if value is not None}
+    async def update(
+        self,
+        user_id: str,
+        name: Optional[str] = None,
+        email: Optional[str] = None,
+        role_ids: Optional[list[UserRole]] = None,
+    ) -> UserModel:
+        """Change only the arguments that are not None."""
+        updatable = {key: value for key, value in (("name", name), ("email", email)) if value is not None}
 
         if updatable:
             set_clause = ", ".join(f"{key} = ?" for key in updatable)
-            values = list(updatable.values()) + [user_id]
 
             await self.db.execute(
                 f"UPDATE users SET {set_clause} WHERE id = ?",
-                tuple(values),
+                (*updatable.values(), user_id),
             )
 
         if role_ids is not None:
             await self.replace_roles(user_id, role_ids)
 
-        return await self.get_by_id(user_id)
+        return await self._get_saved(user_id)
 
-    async def delete(self, user_id: str) -> bool:
-        existing = await self.get_by_id(user_id)
-
-        if not existing:
-            return False
-
+    async def delete(self, user_id: str) -> None:
         await self.db.execute(
             "DELETE FROM user_roles WHERE user_id = ?",
             (user_id,),
         )
-
-        # Groups they owned carry on without an owner (docs/social-groups.md).
-        from groups.group_repository import GroupRepository
-
-        await GroupRepository(self.db).forget_user(user_id)
 
         await self.db.execute(
             "DELETE FROM users WHERE id = ?",
             (user_id,),
         )
 
-        return True
+    async def add_roles(self, user_id: str, role_ids: list[UserRole]) -> None:
+        """Add roles the user doesn't already have; never removes any."""
+        for role_id in role_ids:
+            await self.db.execute(
+                "INSERT OR IGNORE INTO user_roles (user_id, role_id) VALUES (?, ?)",
+                (user_id, role_id.value),
+            )
 
-    async def get_role_ids(self, user_id: str) -> list[str]:
-        rows = await self.db.fetch_all(
-            "SELECT role_id FROM user_roles WHERE user_id = ? ORDER BY role_id",
-            (user_id,),
-        )
-
-        return [row["role_id"] for row in rows]
-
-    async def replace_roles(
-        self,
-        user_id: str,
-        role_ids: list[UserRole],
-    ) -> None:
-        role_ids = self.normalise_role_ids(role_ids)
+    async def replace_roles(self, user_id: str, role_ids: list[UserRole]) -> None:
         await self.db.execute(
             "DELETE FROM user_roles WHERE user_id = ?",
             (user_id,),
         )
 
-        for role_id in role_ids:
-            await self.db.execute(
-                "INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)",
-                (user_id, role_id.value),
-            )
+        await self.add_roles(user_id, role_ids)
 
-    def normalise_role_ids(self, role_ids: list[UserRole]) -> list[UserRole]:
-        if not role_ids:
-            return [UserRole.STANDARD]
+    async def _get_saved(self, user_id: str) -> UserModel:
+        saved = await self.get_by_id(user_id)
+        if saved is None:
+            raise RuntimeError(f"saved user was not found: {user_id}")
+        return saved
 
-        return list(dict.fromkeys(role_ids))
+    @staticmethod
+    def _to_model(row: Optional[Mapping[str, Any]]) -> Optional[UserModel]:
+        if not row:
+            return None
+
+        return UserModel(
+            **{key: value for key, value in row.items() if key != "role_ids"},
+            role_ids=parse_role_ids(row["role_ids"]),
+        )

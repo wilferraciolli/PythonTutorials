@@ -3,13 +3,13 @@ from typing import Any, Optional
 from fastapi import APIRouter, Depends, Request, Response
 
 from core.config.database import get_database
-from groups.group_permissions import Caller
+from core.security.authorization import Caller
 from groups.posts.comments.schemas import CommentCreate, CommentUpdate
 from groups.posts.comments.comment_repository import PostCommentRepository
 from groups.posts.post_stats_repository import PostStatsRepository
 from groups.posts.reaction_repository import ReactionRepository
 from groups.posts.post_router import get_post_search_service
-from users.dependencies import get_caller
+from core.security.authorization import get_caller
 from groups.posts.post_router import get_post_service
 from groups.posts.comments.comment_service import PostCommentService
 from groups.posts.post_search_service import PostSearchService

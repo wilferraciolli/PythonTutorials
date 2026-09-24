@@ -3,7 +3,7 @@ from typing import Any, Optional
 from fastapi import APIRouter, Depends, Request, Response
 
 from core.config.database import get_database
-from groups.group_permissions import Caller
+from core.security.authorization import Caller
 from media.media_providers import MediaProviders
 from groups.posts.schemas import PostCreate, PostUpdate
 from media.schemas import MediaRef
@@ -12,7 +12,7 @@ from groups.posts.post_stats_repository import PostStatsRepository
 from groups.posts.reaction_repository import ReactionRepository
 from core.ai.embeddings import get_embedder
 from media.media_router import get_media_providers
-from users.dependencies import get_caller
+from core.security.authorization import get_caller
 from groups.group_router import get_group_service
 from groups.posts.post_search_service import PostSearchService
 from groups.posts.post_service import DEFAULT_LIMIT, PostService

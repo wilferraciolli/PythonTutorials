@@ -3,7 +3,8 @@ from enum import Enum
 from typing import Any, Callable, Dict, List
 
 from core.common.api_response import API_PREFIX, envelope
-from groups.group_permissions import Caller, GroupAccess
+from core.security.authorization import Caller
+from groups.group_permissions import GroupAccess
 from core.common.base_dto import Link
 from timeline.timeline_repository import TimelineRepository
 from groups.posts.post_service import PostService
@@ -48,7 +49,7 @@ class TimelineService:
     ) -> List[Dict[str, Any]]:
         since = (self.now() - WINDOW).astimezone(timezone.utc).isoformat()
         rows = await self.timeline.list_posts(
-            caller.id,
+            caller.user_id,
             caller.is_admin,
             since,
             following_only=timeline_type == TimelineType.FOLLOWING,
@@ -62,8 +63,8 @@ class TimelineService:
     ) -> Dict[str, Any]:
         # Each post's links depend on the caller's place in its group, so work that
         # out once for all groups on the page rather than per post.
-        members = await self.timeline.member_group_ids(caller.id)
-        followed = await self.timeline.followed_group_ids(caller.id)
+        members = await self.timeline.member_group_ids(caller.user_id)
+        followed = await self.timeline.followed_group_ids(caller.user_id)
 
         posts = [
             self.post_service.to_post(caller, self._access(row, members, followed), row) for row in rows

@@ -5,7 +5,8 @@ from uuid import uuid4
 
 from core.common.api_response import API_PREFIX, envelope
 from core.common.errors import ConflictError, ForbiddenError, InvalidInputError, NotFoundError
-from groups.group_permissions import Caller, GroupAccess, GroupPermissions
+from core.security.authorization import Caller
+from groups.group_permissions import GroupAccess, GroupPermissions
 from media.media_providers import MediaLookup
 from core.common.base_dto import Link
 from groups.posts.schemas import MAX_TAGGED_PEOPLE, Post, PostCreate, PostMedia, PostUpdate
@@ -109,7 +110,7 @@ class PostService:
         return rows
 
     async def mark_liked(self, caller: Caller, rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        liked = await self.reactions.liked_ids(caller.id, "post", (row["id"] for row in rows))
+        liked = await self.reactions.liked_ids(caller.user_id, "post", (row["id"] for row in rows))
         for row in rows:
             row["liked_by_me"] = row["id"] in liked
         return rows
@@ -129,7 +130,7 @@ class PostService:
 
         post_id = str(uuid4())
         now = now_iso()
-        await self.posts.create(post_id, group_id, caller.id, payload.title.strip(), payload.body.strip(), now)
+        await self.posts.create(post_id, group_id, caller.user_id, payload.title.strip(), payload.body.strip(), now)
         if media:
             await self.posts.set_media(post_id, media, now)
         if people:
@@ -194,7 +195,7 @@ class PostService:
         _, post = await self.get_post(caller, group_id, post_id)
         if post["deleted_date"]:
             raise NotFoundError(POST_NOT_FOUND)
-        if post["author_id"] != caller.id:  # nobody edits someone else's words, not even admins
+        if post["author_id"] != caller.user_id:  # nobody edits someone else's words, not even admins
             raise ForbiddenError("Only the author can edit a post")
         return post
 
@@ -203,13 +204,13 @@ class PostService:
     async def like(self, caller: Caller, group_id: str, post_id: str):
         access, post = await self._likeable(caller, group_id, post_id)
         now = now_iso()
-        await self.reactions.add(caller.id, "post", post_id, now)
+        await self.reactions.add(caller.user_id, "post", post_id, now)
         await self.stats.refresh(post_id, now)
         return await self.get_post(caller, group_id, post_id)
 
     async def unlike(self, caller: Caller, group_id: str, post_id: str):
         await self._likeable(caller, group_id, post_id)
-        await self.reactions.remove(caller.id, "post", post_id)
+        await self.reactions.remove(caller.user_id, "post", post_id)
         await self.stats.refresh(post_id, now_iso())
         return await self.get_post(caller, group_id, post_id)
 
@@ -273,7 +274,7 @@ class PostService:
                 links["unlike"] = Link(href=f"{base}/like", method="DELETE")
             else:
                 links["like"] = Link(href=f"{base}/like", method="PUT")
-        if row.get("author_id") == caller.id:
+        if row.get("author_id") == caller.user_id:
             links["update"] = Link(href=base, method="PUT")
             if row.get("media_type"):
                 links["removeMedia"] = Link(href=f"{base}/media", method="DELETE")

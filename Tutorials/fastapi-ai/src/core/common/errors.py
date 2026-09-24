@@ -3,7 +3,11 @@ from fastapi.responses import JSONResponse
 
 
 class AppError(Exception):
-    """A business-rule failure a service raises; main.py maps it to an HTTP status."""
+    """
+    A business-rule failure a service raises. `register_error_handlers` turns
+    it into `{"detail": ...}` with `status_code`, so routers need no
+    try/except. Domain exceptions (a domain's exceptions.py) subclass these.
+    """
 
     status_code = 400
 

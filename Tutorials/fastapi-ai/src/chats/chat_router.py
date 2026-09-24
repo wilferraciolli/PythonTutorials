@@ -3,17 +3,14 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 
 from core.ai.ai import get_ai
-from core.security.auth import AuthenticatedUser, get_authenticated_user
 from core.config.config import get_config
 from core.config.database import get_database
 from chats.schemas import ChatCreate, ChatMessageCreate, ChatTitleUpdate
 from core.ai.ai import ChatProvider
 from chats.chat_repository import ChatRepository
-from users.user_repository import UserRepository
 from chats.chat_service import ChatService
 from core.ai.embeddings import get_embedder
-from users.dependencies import get_current_user_id
-from users.profiles.me_service import MeService
+from core.security.authorization import require_owner
 from chats.chat_search_service import DEFAULT_LIMIT, SearchService
 from core.ai.vector_store import DatabaseVectorStore
 
@@ -56,7 +53,7 @@ def get_search_service(request: Request) -> SearchService:
 
 @router.get("")
 async def list_chats(
-    user_id: str = Depends(get_current_user_id),
+    user_id: str = Depends(require_owner),
     service: ChatService = Depends(get_chat_service),
 ) -> dict[str, Any]:
     chats = await service.list_chats(user_id)
@@ -66,7 +63,7 @@ async def list_chats(
 @router.post("", status_code=201)
 async def create_chat(
     payload: ChatCreate,
-    user_id: str = Depends(get_current_user_id),
+    user_id: str = Depends(require_owner),
     service: ChatService = Depends(get_chat_service),
 ) -> dict[str, Any]:
     chat = await service.create_chat(user_id, payload.provider)
@@ -77,7 +74,7 @@ async def create_chat(
 async def search_chats(
     q: str,
     limit: int = DEFAULT_LIMIT,
-    user_id: str = Depends(get_current_user_id),
+    user_id: str = Depends(require_owner),
     service: SearchService = Depends(get_search_service),
 ) -> dict[str, Any]:
     """Find messages in the user's chats by meaning (embeddings) and by keyword, best first."""
@@ -87,7 +84,7 @@ async def search_chats(
 
 @router.post("/search/reindex")
 async def reindex_chats(
-    user_id: str = Depends(get_current_user_id),
+    user_id: str = Depends(require_owner),
     service: SearchService = Depends(get_search_service),
 ) -> dict[str, Any]:
     """Backfill: embed this user's messages that aren't indexed yet."""
@@ -98,7 +95,7 @@ async def reindex_chats(
 @router.get("/{chat_id}")
 async def get_chat(
     chat_id: str,
-    user_id: str = Depends(get_current_user_id),
+    user_id: str = Depends(require_owner),
     service: ChatService = Depends(get_chat_service),
 ) -> dict[str, Any]:
     chat = await service.get_chat_with_messages(chat_id, user_id)
@@ -111,7 +108,7 @@ async def get_chat(
 async def send_message(
     chat_id: str,
     payload: ChatMessageCreate,
-    user_id: str = Depends(get_current_user_id),
+    user_id: str = Depends(require_owner),
     service: ChatService = Depends(get_chat_service),
 ) -> dict[str, Any]:
     chat = await service.send_message(chat_id, user_id, payload.content)
@@ -124,7 +121,7 @@ async def send_message(
 async def update_chat_title(
     chat_id: str,
     payload: ChatTitleUpdate,
-    user_id: str = Depends(get_current_user_id),
+    user_id: str = Depends(require_owner),
     service: ChatService = Depends(get_chat_service),
 ) -> dict[str, Any]:
     chat = await service.update_title(chat_id, user_id, payload.title)
@@ -136,7 +133,7 @@ async def update_chat_title(
 @router.delete("/{chat_id}", status_code=204)
 async def delete_chat(
     chat_id: str,
-    user_id: str = Depends(get_current_user_id),
+    user_id: str = Depends(require_owner),
     service: ChatService = Depends(get_chat_service),
 ) -> Response:
     deleted = await service.delete_chat(chat_id, user_id)

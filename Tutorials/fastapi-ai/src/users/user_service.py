@@ -1,11 +1,34 @@
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 from uuid import uuid4
 
-from core.common.api_response import API_PREFIX, envelope
-from core.common.base_dto import Link
-from core.security.roles import UserRole
-from users.schemas import User, UserCreate, UserUpdate
+from core.common.api_response import API_PREFIX
+from core.common.base_dto import FieldMetadata, Link
+from core.security.authorization import Caller
+from core.security.roles import UserRole, role_options
+from groups.group_repository import GroupRepository
+from users.constants import (
+    LINK_CREATE_USER,
+    LINK_DELETE_USER,
+    LINK_SEARCH_USERS,
+    LINK_SELF,
+    LINK_UPDATE_USER,
+    LINK_USER_TEMPLATE,
+    USER_DATA_NAME,
+    USERS_DATA_NAME,
+)
+from users.exceptions import SelfLockoutError
+from users.models import UserModel
+from users.schemas import (
+    UserCreateRequest,
+    UserDTO,
+    UserListResponse,
+    UserMetadata,
+    UserResponse,
+    UserTemplateMetadata,
+    UserTemplateResponse,
+    UserUpdateRequest,
+)
 from users.user_repository import UserRepository
 
 
@@ -13,177 +36,143 @@ class UserService:
     """
     Application service for users.
 
-    Owns business logic, UUID generation, response envelope creation,
-    metadata, links, and templates.
+    Owns business logic, UUID generation, and the response envelopes with
+    their metadata and links. Write links (update/delete/create) are only
+    handed to admins, matching the routes that require_admin guards.
     """
 
-    def __init__(self, user_repository: UserRepository) -> None:
+    def __init__(self, user_repository: UserRepository, group_repository: GroupRepository) -> None:
         self.user_repository = user_repository
+        self.group_repository = group_repository
 
-    async def create_user(self, user: UserCreate) -> User:
-        role_ids = self.normalise_role_ids(user.roleIds)
-        created = await self.user_repository.create(
+    async def create_user(self, request: UserCreateRequest, caller: Caller) -> UserDTO:
+        model = await self.user_repository.create(
             user_id=str(uuid4()),
-            name=user.name,
-            email=user.email,
-            role_ids=role_ids,
+            name=request.name,
+            email=request.email,
+            role_ids=self.normalise_role_ids(request.roleIds),
             created_date=datetime.now(timezone.utc).isoformat(),
         )
 
-        return self.to_user(created)
+        return self.to_dto(model, caller)
 
-    async def get_user(self, user_id: str) -> Optional[User]:
-        row = await self.user_repository.get_by_id(user_id)
+    async def get_user(self, user_id: str, caller: Caller) -> Optional[UserDTO]:
+        model = await self.user_repository.get_by_id(user_id)
+        return self.to_dto(model, caller) if model else None
 
-        if not row:
-            return None
+    async def get_users(self, caller: Caller) -> List[UserDTO]:
+        models = await self.user_repository.get_all()
+        return [self.to_dto(model, caller) for model in models]
 
-        return self.to_user(row)
+    async def search_users(self, term: Optional[str], caller: Caller) -> List[UserDTO]:
+        models = await self.user_repository.search(term)
+        return [self.to_dto(model, caller) for model in models]
 
-    async def get_users(self) -> List[User]:
-        rows = await self.user_repository.get_all()
-        return [self.to_user(row) for row in rows]
-
-    async def search_users(self, term: Optional[str] = None) -> List[User]:
-        rows = await self.user_repository.search(term)
-        return [self.to_user(row) for row in rows]
-
-    async def update_user(self, user_id: str, user: UserUpdate) -> Optional[User]:
+    async def update_user(self, user_id: str, request: UserUpdateRequest, caller: Caller) -> Optional[UserDTO]:
         existing = await self.user_repository.get_by_id(user_id)
 
         if not existing:
             return None
 
         role_ids = (
-            self.normalise_role_ids(user.roleIds)
-            if "roleIds" in user.model_fields_set
+            self.normalise_role_ids(request.roleIds)
+            if "roleIds" in request.model_fields_set
             else None
         )
 
+        if role_ids is not None and existing.id == caller.user_id and UserRole.ADMIN not in role_ids:
+            raise SelfLockoutError("You cannot remove your own Admin role.")
+
         updated = await self.user_repository.update(
             user_id,
-            name=user.name,
-            email=user.email,
-            roleIds=role_ids,
+            name=request.name,
+            email=request.email,
+            role_ids=role_ids,
         )
 
-        return self.to_user(updated)
+        return self.to_dto(updated, caller)
 
-    def normalise_role_ids(
-        self,
-        role_ids: Optional[list[UserRole]],
-    ) -> list[UserRole]:
+    async def delete_user(self, user_id: str, caller: Caller) -> bool:
+        existing = await self.user_repository.get_by_id(user_id)
+
+        if not existing:
+            return False
+
+        if existing.id == caller.user_id:
+            raise SelfLockoutError("You cannot delete yourself.")
+
+        # Groups they owned carry on without an owner (docs/social-groups.md).
+        await self.group_repository.forget_user(user_id)
+        await self.user_repository.delete(user_id)
+        return True
+
+    @staticmethod
+    def normalise_role_ids(role_ids: Optional[list[UserRole]]) -> list[UserRole]:
         if not role_ids:
             return [UserRole.STANDARD]
 
         return list(dict.fromkeys(role_ids))
 
-    async def delete_user(self, user_id: str) -> bool:
-        return await self.user_repository.delete(user_id)
-
-    def to_user(self, row: Dict[str, Any]) -> User:
-        return User(
-            id=row["id"],
-            external_user_id=row.get("external_user_id"),
-            name=row["name"],
-            email=row["email"],
-            roleIds=row["roleIds"],
-            created_date=row["created_date"],
-            links=self.build_user_links(row["id"]),
+    def to_dto(self, model: UserModel, caller: Caller) -> UserDTO:
+        return UserDTO(
+            id=model.id,
+            external_user_id=model.external_user_id,
+            name=model.name,
+            email=model.email,
+            roleIds=model.role_ids,
+            created_date=model.created_date,
+            links=self.build_links(model.id, caller),
         )
 
-    def build_user_links(self, user_id: str) -> dict[str, Link]:
-        return {
-            "self": Link(href=f"{API_PREFIX}/users/{user_id}", method="GET"),
-            "updateUser": Link(href=f"{API_PREFIX}/users/{user_id}", method="PUT"),
-            "deleteUser": Link(href=f"{API_PREFIX}/users/{user_id}", method="DELETE"),
-        }
+    @staticmethod
+    def build_links(user_id: str, caller: Caller) -> dict[str, Link]:
+        url = f"{API_PREFIX}/users/{user_id}"
+        links = {LINK_SELF: Link(href=url, method="GET")}
 
-    def build_metadata(self) -> dict[str, Any]:
-        return {
-            "id": {
-                "readOnly": True,
-                "hidden": True,
-            },
-            "external_user_id": {
-                "readOnly": True,
-                "hidden": True,
-            },
-            "name": {
-                "mandatory": True,
-            },
-            "email": {
-                "mandatory": True,
-            },
-            "roleIds": {
-                "mandatory": True,
-                "values": [
-                    {
-                        "id": UserRole.STANDARD.value,
-                        "value": "Standard user",
-                    },
-                    {
-                        "id": UserRole.ADMIN.value,
-                        "value": "System Administrator",
-                    },
-                ],
-            },
-            "created_date": {
-                "readOnly": True,
-            },
-        }
+        if caller.is_admin:
+            links[LINK_UPDATE_USER] = Link(href=url, method="PUT")
+            # No delete link on yourself: the API refuses it (SelfLockoutError).
+            if user_id != caller.user_id:
+                links[LINK_DELETE_USER] = Link(href=url, method="DELETE")
 
-    def build_meta_links(self) -> dict[str, Link]:
-        return {
-            "createUser": Link(href=f"{API_PREFIX}/users", method="POST"),
-            "userTemplate": Link(href=f"{API_PREFIX}/users/template", method="GET"),
-            "searchUsers": Link(href=f"{API_PREFIX}/users/search", method="GET"),
-        }
+        return links
 
-    def build_response(
-        self,
-        data_key: str,
-        data: User | list[User] | dict[str, Any],
-        messages: Optional[list[dict[str, str]]] = None,
-    ) -> Dict[str, Any]:
-        return envelope(
-            data_name=data_key,
-            data=data,
-            metadata=self.build_metadata(),
-            meta_links=self.build_meta_links(),
-            messages=messages,
+    @staticmethod
+    def build_meta_links(caller: Caller) -> dict[str, Link]:
+        links = {LINK_SEARCH_USERS: Link(href=f"{API_PREFIX}/users/search", method="GET")}
+
+        if caller.is_admin:
+            links[LINK_CREATE_USER] = Link(href=f"{API_PREFIX}/users", method="POST")
+            links[LINK_USER_TEMPLATE] = Link(href=f"{API_PREFIX}/users/template", method="GET")
+
+        return links
+
+    @staticmethod
+    def build_metadata() -> UserMetadata:
+        return UserMetadata(
+            id=FieldMetadata(readOnly=True, hidden=True),
+            external_user_id=FieldMetadata(readOnly=True, hidden=True),
+            name=FieldMetadata(mandatory=True),
+            email=FieldMetadata(mandatory=True),
+            roleIds=FieldMetadata(mandatory=True, values=role_options()),
+            created_date=FieldMetadata(readOnly=True),
         )
 
-    def build_template_response(self) -> Dict[str, Any]:
-        return envelope(
-            data_name="user",
-            data={
-                "name": "",
-                "email": "",
-                "roleIds": [UserRole.STANDARD.value],
-            },
-            metadata={
-                "name": {
-                    "mandatory": True,
-                },
-                "email": {
-                    "mandatory": True,
-                },
-                "roleIds": {
-                    "mandatory": True,
-                    "values": [
-                        {
-                            "id": UserRole.STANDARD.value,
-                            "value": "Standard user",
-                        },
-                        {
-                            "id": UserRole.ADMIN.value,
-                            "value": "System Administrator",
-                        },
-                    ],
-                },
-            },
-            meta_links={
-                "createUser": Link(href=f"{API_PREFIX}/users", method="POST"),
-            },
+    def build_response(self, user: UserDTO, caller: Caller) -> UserResponse:
+        return UserResponse.of(USER_DATA_NAME, user, self.build_metadata(), self.build_meta_links(caller))
+
+    def build_list_response(self, users: List[UserDTO], caller: Caller) -> UserListResponse:
+        return UserListResponse.of(USERS_DATA_NAME, users, self.build_metadata(), self.build_meta_links(caller))
+
+    @staticmethod
+    def build_template_response() -> UserTemplateResponse:
+        return UserTemplateResponse.of(
+            USER_DATA_NAME,
+            UserCreateRequest(name="", email=""),
+            UserTemplateMetadata(
+                name=FieldMetadata(mandatory=True),
+                email=FieldMetadata(mandatory=True),
+                roleIds=FieldMetadata(mandatory=True, values=role_options()),
+            ),
+            {LINK_CREATE_USER: Link(href=f"{API_PREFIX}/users", method="POST")},
         )

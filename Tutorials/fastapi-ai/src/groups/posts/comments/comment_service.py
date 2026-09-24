@@ -4,7 +4,8 @@ from uuid import uuid4
 
 from core.common.api_response import API_PREFIX, envelope
 from core.common.errors import ConflictError, ForbiddenError, NotFoundError
-from groups.group_permissions import Caller, GroupAccess, GroupPermissions
+from core.security.authorization import Caller
+from groups.group_permissions import GroupAccess, GroupPermissions
 from core.common.base_dto import Link
 from groups.posts.comments.schemas import Comment, CommentCreate, CommentUpdate
 from groups.posts.comments.comment_repository import PostCommentRepository
@@ -61,7 +62,7 @@ class PostCommentService:
             logger.exception("failed to remove comment %s from search", comment_id)
 
     async def _mark_liked(self, caller: Caller, rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        liked = await self.reactions.liked_ids(caller.id, "comment", (row["id"] for row in rows))
+        liked = await self.reactions.liked_ids(caller.user_id, "comment", (row["id"] for row in rows))
         for row in rows:
             row["liked_by_me"] = row["id"] in liked
         return rows
@@ -93,7 +94,7 @@ class PostCommentService:
 
         comment_id = str(uuid4())
         now = now_iso()
-        await self.comments.create(comment_id, post_id, payload.parentCommentId, caller.id, payload.body.strip(), now)
+        await self.comments.create(comment_id, post_id, payload.parentCommentId, caller.user_id, payload.body.strip(), now)
         await self.stats.refresh(post_id, now)
         await self._index(comment_id, payload.body.strip(), post["group_id"])
         return access, post, await self._comment(caller, post_id, comment_id)
@@ -103,7 +104,7 @@ class PostCommentService:
     ):
         access, post = await self.post_service.get_post(caller, group_id, post_id)
         comment = await self._comment(caller, post_id, comment_id)
-        if comment["author_id"] != caller.id:  # nobody edits someone else's words, not even admins
+        if comment["author_id"] != caller.user_id:  # nobody edits someone else's words, not even admins
             raise ForbiddenError("Only the author can edit a comment")
 
         await self.comments.update(comment_id, payload.body.strip(), now_iso())
@@ -125,12 +126,12 @@ class PostCommentService:
 
     async def like(self, caller: Caller, group_id: str, post_id: str, comment_id: str):
         access, post = await self._likeable(caller, group_id, post_id, comment_id)
-        await self.reactions.add(caller.id, "comment", comment_id, now_iso())
+        await self.reactions.add(caller.user_id, "comment", comment_id, now_iso())
         return access, post, await self._comment(caller, post_id, comment_id)
 
     async def unlike(self, caller: Caller, group_id: str, post_id: str, comment_id: str):
         access, post = await self._likeable(caller, group_id, post_id, comment_id)
-        await self.reactions.remove(caller.id, "comment", comment_id)
+        await self.reactions.remove(caller.user_id, "comment", comment_id)
         return access, post, await self._comment(caller, post_id, comment_id)
 
     async def _likeable(self, caller: Caller, group_id: str, post_id: str, comment_id: str):
@@ -154,7 +155,7 @@ class PostCommentService:
                     links["unlike"] = Link(href=f"{base}/{row['id']}/like", method="DELETE")
                 else:
                     links["like"] = Link(href=f"{base}/{row['id']}/like", method="PUT")
-            if row.get("author_id") == caller.id:
+            if row.get("author_id") == caller.user_id:
                 links["update"] = Link(href=f"{base}/{row['id']}", method="PUT")
             if self.permissions.can_delete_content(caller, access, row.get("author_id")):
                 links["delete"] = Link(href=f"{base}/{row['id']}", method="DELETE")

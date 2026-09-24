@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from core.config.database import get_database
 from core.ai.embeddings import get_embedder
 from core.ai.resource_vector_store import ResourceVectorStore
-from users.dependencies import get_current_user_id
+from core.security.authorization import require_owner
 from todos.enums import TodoState
 from todos.schemas import Todo, TodoCreate, TodoUpdate
 from tags.tag_repository import TagRepository
@@ -14,7 +14,7 @@ from tags.tag_service import TagService
 from todos.todo_search_service import DEFAULT_LIMIT, TodoSearchService
 from todos.todo_service import TodoService
 
-router = APIRouter(prefix="/users/{user_id}/todos", tags=["todos"], dependencies=[Depends(get_current_user_id)])
+router = APIRouter(prefix="/users/{user_id}/todos", tags=["todos"], dependencies=[Depends(require_owner)])
 
 
 def get_todo_search_service(request: Request) -> TodoSearchService:

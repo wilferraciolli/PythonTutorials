@@ -21,6 +21,18 @@ def role_options() -> list[EmbeddedRef]:
     return [EmbeddedRef(id=role.value, value=label) for role, label in ROLE_LABELS.items()]
 
 
+def to_role(role_id: str) -> UserRole | None:
+    """
+    A role name from outside (e.g. Clerk metadata, which is free text) as a
+    UserRole, matching case-insensitively: "admin", "Admin" and " ADMIN "
+    all mean ADMIN. None for anything that isn't a role.
+    """
+    try:
+        return UserRole(str(role_id).strip().upper())
+    except ValueError:
+        return None
+
+
 def parse_role_ids(value: str | None) -> list[str]:
     """
     Split `user_detail_view.role_ids` ('ADMIN,STANDARD', or NULL) into a

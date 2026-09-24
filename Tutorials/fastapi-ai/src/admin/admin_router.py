@@ -5,12 +5,10 @@ from fastapi import APIRouter, Depends, Request
 
 from core.common.api_response import API_PREFIX, envelope
 from core.config.database import get_database
-from core.common.errors import ForbiddenError
-from groups.group_permissions import Caller
+from core.security.authorization import Caller, require_admin
 from core.common.base_dto import Link
 from groups.posts.post_stats_repository import PostStatsRepository
 from groups.posts.post_router import get_post_search_service
-from users.dependencies import get_caller
 from groups.posts.post_search_service import PostSearchService
 
 # The admin area: system ADMINs only (the Clerk `roles` claim). The user
@@ -18,12 +16,6 @@ from groups.posts.post_search_service import PostSearchService
 # listing everything an admin can do. New admin tools (insights, ...) add a
 # route here and a link in `admin_links`.
 router = APIRouter(prefix="/admin", tags=["admin"])
-
-
-def require_admin(caller: Caller = Depends(get_caller)) -> Caller:
-    if not caller.is_admin:
-        raise ForbiddenError("Admins only")
-    return caller
 
 
 def admin_links() -> dict[str, Link]:

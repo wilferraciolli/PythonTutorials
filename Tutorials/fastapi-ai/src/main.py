@@ -16,6 +16,7 @@ from tags import tag_router
 from timeline import timeline_router
 from todos import todo_router
 from users import user_router
+from users.dependencies import ensure_current_user
 from users.profiles import me_router, user_profile_router
 
 app = FastAPI(
@@ -33,10 +34,12 @@ app.add_middleware(EnvCORSMiddleware)
 # leaves room for the Worker to serve non-API paths (static assets, etc.)
 # from the same origin later without colliding with these routes.
 # Every router except the health check requires a signed-in caller.
+# ensure_current_user creates the caller's user on first sight (as /me
+# does) before any route dependency runs, so get_caller always finds them.
 app.include_router(status_router.router, prefix="/api")
+app.include_router(me_router.router, prefix="/api", dependencies=[Depends(get_authenticated_user)])
 
 for router in (
-    me_router.router,
     user_profile_router.router,
     user_router.router,
     chat_router.router,
@@ -51,6 +54,10 @@ for router in (
     admin_router.router,
     engagement_router.router,
 ):
-    app.include_router(router, prefix="/api", dependencies=[Depends(get_authenticated_user)])
+    app.include_router(
+        router,
+        prefix="/api",
+        dependencies=[Depends(get_authenticated_user), Depends(ensure_current_user)],
+    )
 
 register_error_handlers(app)

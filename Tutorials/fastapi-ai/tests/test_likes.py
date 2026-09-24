@@ -4,7 +4,9 @@ import pytest
 from core.common.errors import ConflictError, ForbiddenError, NotFoundError
 from groups.enums import GroupVisibility
 from groups.posts.post_stats_repository import PostStatsRepository
+from groups.group_repository import GroupRepository
 from users.user_repository import UserRepository
+from users.user_service import UserService
 from social import ADMIN, MEMBER, OUTSIDER, OWNER, make_social
 
 
@@ -93,7 +95,7 @@ async def test_deleting_a_user_removes_their_likes_from_scores(s):
     row = await s.post(group_id, caller=OWNER)
     await s.posts.like(MEMBER, group_id, row["id"])
 
-    await UserRepository(s.db).delete("member")
+    assert await UserService(UserRepository(s.db), GroupRepository(s.db)).delete_user("member", ADMIN)
     assert (await stats(s, row["id"]))["like_count"] == 0
 
 

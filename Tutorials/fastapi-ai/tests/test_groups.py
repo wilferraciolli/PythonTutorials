@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 from core.security.auth import AuthenticatedUser, get_authenticated_user
 from core.config.database import SQLiteDatabase
 from core.common.errors import ConflictError, ForbiddenError, NotFoundError
-from groups.group_permissions import Caller
+from core.security.authorization import Caller
 from core.security.roles import UserRole
 from groups.enums import GroupVisibility
 from groups.schemas import GroupCreate, GroupUpdate
@@ -17,11 +17,12 @@ from groups.group_repository import GroupRepository
 from users.user_repository import UserRepository
 from groups.group_service import GroupService
 from users.profiles.me_service import MeService
+from users.user_service import UserService
 
-OWNER = Caller("owner", False)
-MEMBER = Caller("member", False)
-OUTSIDER = Caller("outsider", False)
-ADMIN = Caller("admin", True)
+OWNER = Caller(external_id="owner", user_id="owner", role_ids=[])
+MEMBER = Caller(external_id="member", user_id="member", role_ids=[])
+OUTSIDER = Caller(external_id="outsider", user_id="outsider", role_ids=[])
+ADMIN = Caller(external_id="admin", user_id="admin", role_ids=["ADMIN"])
 
 PRIVATE = GroupVisibility.PRIVATE
 
@@ -207,7 +208,7 @@ async def test_list_filters(env):
 async def test_deleting_a_user_leaves_their_groups_ownerless(env):
     _, groups, users, service = env
     group_id = await make(service)
-    await users.delete("owner")
+    assert await UserService(users, groups).delete_user("owner", ADMIN)
     group = await groups.get(group_id)
     assert group["owner_id"] is None and group["member_count"] == 0
 
@@ -223,15 +224,18 @@ async def test_links_follow_permissions(env):
     assert not {"update", "delete", "addMember", "leave"} & outsider_links.keys()
 
 
-async def test_roles_are_resynced_from_clerk(env):
+async def test_clerk_roles_are_added_never_removed(env):
     _, _, users, _ = env
     me = MeService(users)
     clerk = AuthenticatedUser(id="clerk-1", name="Sam", email="sam@x.io", role_ids=[], claims={})
-    row = await me.get_or_create_current_user(clerk)
-    assert row["roleIds"] == ["STANDARD"]
+    user = await me.get_or_create_current_user(clerk)
+    assert user.role_ids == ["STANDARD"]
 
     promoted = AuthenticatedUser(id="clerk-1", name="Sam", email="sam@x.io", role_ids=["ADMIN"], claims={})
-    assert (await me.get_or_create_current_user(promoted))["roleIds"] == ["ADMIN"]
+    assert (await me.get_or_create_current_user(promoted)).role_ids == ["ADMIN", "STANDARD"]
+
+    # Clerk no longer sending ADMIN doesn't take it away: our database decides.
+    assert (await me.get_or_create_current_user(clerk)).role_ids == ["ADMIN", "STANDARD"]
 
 
 async def test_clerk_roles_match_case_insensitively(env):
@@ -242,13 +246,13 @@ async def test_clerk_roles_match_case_insensitively(env):
         clerk = AuthenticatedUser(
             id=f"clerk-{index}", name="Wil", email=f"w{index}@x.io", role_ids=[claim], claims={}
         )
-        assert (await me.get_or_create_current_user(clerk))["roleIds"] == ["ADMIN"]
+        assert (await me.get_or_create_current_user(clerk)).role_ids == ["ADMIN"]
 
-    # and an existing standard user is upgraded on their next request
+    # and an existing standard user is made an admin on their next request
     clerk = AuthenticatedUser(id="clerk-9", name="Wil", email="w9@x.io", role_ids=[], claims={})
-    assert (await me.get_or_create_current_user(clerk))["roleIds"] == ["STANDARD"]
+    assert (await me.get_or_create_current_user(clerk)).role_ids == ["STANDARD"]
     clerk = AuthenticatedUser(id="clerk-9", name="Wil", email="w9@x.io", role_ids=["admin"], claims={})
-    assert (await me.get_or_create_current_user(clerk))["roleIds"] == ["ADMIN"]
+    assert (await me.get_or_create_current_user(clerk)).role_ids == ["ADMIN", "STANDARD"]
 
 
 # --- API wiring

@@ -3,9 +3,8 @@ from typing import Any
 from fastapi import APIRouter, Depends, Request
 
 from core.config.database import get_database
-from groups.group_permissions import Caller
+from core.security.authorization import Caller, require_admin
 from admin.analytics.engagement_repository import EngagementRepository
-from admin.admin_router import require_admin
 from admin.analytics.engagement_service import DEFAULT_DAYS, EngagementAnalyticsService
 
 # Engagement analytics API: social activity insights for the admin area.

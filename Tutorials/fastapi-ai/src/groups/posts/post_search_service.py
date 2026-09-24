@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from typing import Any, Awaitable, Callable, Dict, List, Optional
 
 from core.config.database import Database
-from groups.group_permissions import Caller
+from core.security.authorization import Caller
 from groups.social_query_repository import SocialQueryRepository
 from core.ai.resource_vector_store import ResourceVectorStore
 
@@ -85,7 +85,7 @@ class PostSearchService:
         pool = limit * 3
 
         # Only the groups the caller can see (or the one they asked about, if they can see it).
-        scopes = await self.queries.visible_group_ids(caller.id, caller.is_admin)
+        scopes = await self.queries.visible_group_ids(caller.user_id, caller.is_admin)
         if group_id:
             scopes = [scope for scope in scopes if scope == group_id]
         if not scopes:
@@ -94,12 +94,12 @@ class PostSearchService:
         [vector] = await self.embed([query])
         post_hits = await self.posts.query_scopes(scopes, vector, pool)
         comment_hits = await self.comments.query_scopes(scopes, vector, pool)
-        keyword_posts = await self.queries.keyword_posts(caller.id, caller.is_admin, query, group_id, pool)
-        keyword_comments = await self.queries.keyword_comments(caller.id, caller.is_admin, query, group_id, pool)
+        keyword_posts = await self.queries.keyword_posts(caller.user_id, caller.is_admin, query, group_id, pool)
+        keyword_comments = await self.queries.keyword_comments(caller.user_id, caller.is_admin, query, group_id, pool)
 
         comment_ids = [cid for cid, _ in comment_hits] + [row["id"] for row in keyword_comments]
         comments = {
-            row["id"]: row for row in await self.queries.comments_by_ids(caller.id, caller.is_admin, comment_ids)
+            row["id"]: row for row in await self.queries.comments_by_ids(caller.user_id, caller.is_admin, comment_ids)
         }
 
         # One ranked list per signal, at post level, so a post with many comments
@@ -138,7 +138,7 @@ class PostSearchService:
         # Re-read the posts through the visibility filter: a vector is never trusted on its own.
         rows = {
             row["id"]: row
-            for row in await self.queries.posts_by_ids(caller.id, caller.is_admin, list(scores))
+            for row in await self.queries.posts_by_ids(caller.user_id, caller.is_admin, list(scores))
         }
         ranked_ids = [pid for pid in sorted(scores, key=lambda pid: scores[pid], reverse=True) if pid in rows]
         return [
