@@ -802,6 +802,11 @@ html {
   // instead of each picking its own number. M3 margins: 16 on compact
   // windows, 24 from medium up.
   --app-page-max-width: 900px;
+  // The whole shell (app bar contents, rail and page) sits in one centred
+  // column no wider than this, so on a big monitor the menu and the account
+  // button don't drift to opposite edges of the screen. Backgrounds still
+  // run edge to edge.
+  --app-shell-max-width: 1280px;
   --app-gutter: 16px;
   --app-bar-height: 64px;
   --app-rail-width: 80px;
@@ -1324,26 +1329,28 @@ export class NavBar {
 <!-- embed: src/app/shared/nav-bar/nav-bar.html -->
 ```html
 <header class="NavBar" [class.is-scrolled]="scrolled()">
-  @if (showMenuButton()) {
-    <button
-      matIconButton
-      type="button"
-      class="NavBar-menu"
-      aria-label="Open navigation menu"
-      (click)="menuRequested.emit()"
-    >
-      <mat-icon>menu</mat-icon>
-    </button>
-  }
+  <div class="NavBar-inner">
+    @if (showMenuButton()) {
+      <button
+        matIconButton
+        type="button"
+        class="NavBar-menu"
+        aria-label="Open navigation menu"
+        (click)="menuRequested.emit()"
+      >
+        <mat-icon>menu</mat-icon>
+      </button>
+    }
 
-  <a class="NavBar-brand" routerLink="/">AppName</a>
-  <span class="App-spacer"></span>
+    <a class="NavBar-brand" routerLink="/">AppName</a>
+    <span class="App-spacer"></span>
 
-  @if (auth.isSignedIn()) {
-    <app-profile-menu />
-  } @else {
-    <button matButton="tonal" type="button" (click)="signIn()">Sign in</button>
-  }
+    @if (auth.isSignedIn()) {
+      <app-profile-menu />
+    } @else {
+      <button matButton="tonal" type="button" (click)="signIn()">Sign in</button>
+    }
+  </div>
 </header>
 ```
 <!-- /embed -->
@@ -1354,16 +1361,20 @@ export class NavBar {
 ```scss
 @use 'ui';
 
-// Small top app bar: 64px, on the page surface, tonal once scrolled.
-.NavBar {
+// The host is what sticks: a sticky element only stays put inside its
+// parent's box, and a sticky <header> inside a host of its own height would
+// scroll away with the page.
+:host {
   position: sticky;
   top: 0;
   z-index: 10;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  display: block;
+}
+
+// Small top app bar: 64px, on the page surface, tonal once scrolled. The
+// surface spans the window; its contents line up with the shell column.
+.NavBar {
   height: var(--app-bar-height);
-  padding: 0 16px 0 var(--app-gutter);
   background: var(--mat-sys-surface);
   color: var(--mat-sys-on-surface);
   view-transition-name: app-bar;
@@ -1371,6 +1382,16 @@ export class NavBar {
 
   &.is-scrolled {
     background: var(--mat-sys-surface-container);
+  }
+
+  &-inner {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 100%;
+    max-width: var(--app-shell-max-width);
+    margin: 0 auto;
+    padding: 0 16px 0 var(--app-gutter);
   }
 
   // The drawer button takes the place of the left gutter's first 8px.
@@ -1654,10 +1675,14 @@ export class App {
   flex-direction: column;
   min-height: 100dvh;
 
+  // The rail and the page share one centred column (--app-shell-max-width).
   &-body {
     flex: 1 1 auto;
     display: flex;
+    width: 100%;
+    max-width: var(--app-shell-max-width);
     min-width: 0;
+    margin: 0 auto;
   }
 
   // Sticks under the app bar and scrolls on its own if the window is short.
@@ -1986,6 +2011,12 @@ else competes with it.
   `data = computed(() => (res.hasValue() ? res.value() : undefined))` — and derive
   everything else from `data()`. Test it: flush a 500 and assert the store reads
   empty with an error message.
+- **Put `position: sticky` on the component's host, not an element inside it.**
+  A sticky element only stays put within its parent's box; a sticky `<header>`
+  inside an `<app-nav-bar>` host of the same height scrolls away with the page.
+  `:host { position: sticky; top: 0; display: block; }`. Verify it by scrolling
+  and checking the element's `getBoundingClientRect().top` is still 0 — a colour
+  check alone won't catch it.
 - **Screenshot full pages at the height you need.** A Playwright `fullPage`
   capture of a page taller than the viewport resizes the viewport mid-capture;
   anything laid out from a `ResizeObserver` (charts) can be caught half
@@ -2016,7 +2047,8 @@ Review checklist:
 - [ ] `h1` present once; landmarks and labels correct; icon-only buttons labelled.
 - [ ] Visible focus on custom interactive elements (`ui.focus-ring` / `ui.state-layer`).
 - [ ] Error `role="alert"`, results `role="status"`; empty and loading states written.
-- [ ] Mobile-first (`bp.up`), no horizontal scroll at 390px, content capped on wide screens.
+- [ ] Mobile-first (`bp.up`), no horizontal scroll at 390px, content capped on wide screens —
+      check at 1920px and 2560px too, not just 1280px.
 - [ ] Motion only in response to the user or a route change; reduced motion respected.
 - [ ] Copy: sentence case, action verbs, same word through the flow.
 - [ ] Error state checked by failing the request (500), not only the happy path.
@@ -2096,6 +2128,12 @@ desktop — layout is mobile-first (base styles target the smallest
 viewport, wider-viewport rules layer on top via `bp.up()`, never the
 reverse), and content never stretches edge-to-edge on a wide monitor.
 
+- **Two widths, two jobs.** `--app-shell-max-width` (`1280px`) caps the whole
+  shell — the app bar's contents, the navigation rail and the page column sit
+  in one centred column, so on a 24" or 27" monitor the menu and the account
+  button don't end up at opposite edges of the screen. Surfaces (the app bar's
+  background) still run edge to edge; only their contents are capped.
+  `--app-page-max-width` caps a page's content inside that column.
 - `styles.scss` defines `--app-page-max-width` (`900px`) and
   `--app-gutter` (`16px` on compact windows, `24px` from `sm` up — M3's
   margins) as the one shared source of truth, plus an
