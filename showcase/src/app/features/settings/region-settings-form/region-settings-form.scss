@@ -1,0 +1,21 @@
+@use 'breakpoints' as bp;
+@use 'spacing';
+
+.RegionSettingsForm {
+  &-fields {
+    display: grid;
+    grid-template-columns: 1fr;
+    column-gap: spacing.space(4);
+
+    @include bp.up(sm) {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  &-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: spacing.space(3);
+    margin-top: spacing.space(2);
+  }
+}

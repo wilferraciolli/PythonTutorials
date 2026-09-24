@@ -1,0 +1,46 @@
+<form [formRoot]="settingsForm" class="RegionSettingsForm">
+  <div class="RegionSettingsForm-fields">
+    <mat-form-field appearance="outline">
+      <mat-label>Timezone</mat-label>
+      <select matNativeControl [formField]="settingsForm.timezone">
+        @for (option of options().timezone; track option.value) {
+          <option [value]="option.value">{{ option.viewValue }}</option>
+        }
+      </select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Language</mat-label>
+      <select matNativeControl [formField]="settingsForm.language">
+        @for (option of options().language; track option.value) {
+          <option [value]="option.value">{{ option.viewValue }}</option>
+        }
+      </select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Currency</mat-label>
+      <select matNativeControl [formField]="settingsForm.currency">
+        @for (option of options().currency; track option.value) {
+          <option [value]="option.value">{{ option.viewValue }}</option>
+        }
+      </select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Theme</mat-label>
+      <select matNativeControl [formField]="settingsForm.theme">
+        @for (option of options().theme; track option.value) {
+          <option [value]="option.value">{{ option.viewValue }}</option>
+        }
+      </select>
+    </mat-form-field>
+  </div>
+
+  <div class="RegionSettingsForm-actions">
+    <ng-content select="[regionSettingsFormActions]" />
+    <button matButton="filled" type="submit" [disabled]="saving() || !changed()">
+      {{ saving() ? 'Saving…' : 'Save' }}
+    </button>
+  </div>
+</form>

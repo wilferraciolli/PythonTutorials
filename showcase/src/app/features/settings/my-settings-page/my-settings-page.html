@@ -1,0 +1,49 @@
+<div class="MySettingsPage">
+  <mat-card appearance="outlined">
+    <mat-card-header>
+      <mat-card-title>My settings</mat-card-title>
+      <mat-card-subtitle>How dates, language and prices look for you</mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content class="MySettingsPage-content">
+      @if (store.notAvailable()) {
+        <p class="MySettingsPage-muted">Settings aren't available for your account.</p>
+      } @else if (store.errorMessage(); as message) {
+        <p class="MySettingsPage-error">{{ message }}</p>
+      } @else if (store.settings(); as settings) {
+        @if (usingDefaults()) {
+          <p class="MySettingsPage-muted">
+            You're using the system defaults. Saving keeps your own copy.
+          </p>
+        }
+
+        <app-region-settings-form
+          [settings]="settings"
+          [options]="store.options()"
+          [saving]="saving()"
+          (save)="save($event)"
+        >
+          @if (canReset()) {
+            <button
+              regionSettingsFormActions
+              matButton
+              type="button"
+              [disabled]="saving()"
+              (click)="reset()"
+            >
+              Reset to defaults
+            </button>
+          }
+        </app-region-settings-form>
+
+        @if (saveError()) {
+          <p class="MySettingsPage-error" role="alert">{{ saveError() }}</p>
+        } @else if (status()) {
+          <p class="MySettingsPage-muted" role="status">{{ status() }}</p>
+        }
+      } @else {
+        <p class="MySettingsPage-muted">Loading…</p>
+      }
+    </mat-card-content>
+  </mat-card>
+</div>
