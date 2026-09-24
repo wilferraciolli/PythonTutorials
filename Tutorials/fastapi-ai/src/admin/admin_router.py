@@ -1,67 +1,39 @@
-from datetime import datetime, timezone
-from typing import Any
+from typing import Optional
 
 from fastapi import APIRouter, Depends, Request
 
-from core.common.api_response import API_PREFIX, envelope
+from admin.admin_service import AdminService
+from admin.schemas import AdminResponse, PostSearchReindexResponse, PostStatsRebuildResponse
 from core.config.database import get_database
-from core.security.authorization import Caller, require_admin
-from core.common.base_dto import Link
-from groups.posts.post_stats_repository import PostStatsRepository
+from core.security.authorization import require_admin
 from groups.posts.post_router import get_post_search_service
 from groups.posts.post_search_service import PostSearchService
+from groups.posts.post_stats_repository import PostStatsRepository
 
-# The admin area: system ADMINs only (the Clerk `roles` claim). The user
-# profile links here (`admin`) only for admins, and GET /admin is the hub
-# listing everything an admin can do. New admin tools (insights, ...) add a
-# route here and a link in `admin_links`.
-router = APIRouter(prefix="/admin", tags=["admin"])
+# Admins only: every route requires the ADMIN role (saved roles, not the token).
+router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(require_admin)])
 
 
-def admin_links() -> dict[str, Link]:
-    return {
-        "self": Link(href=f"{API_PREFIX}/admin", method="GET"),
-        "rebuildPostStats": Link(href=f"{API_PREFIX}/admin/post-stats/rebuild", method="POST"),
-        "reindexPostSearch": Link(href=f"{API_PREFIX}/admin/post-search/reindex", method="POST"),
-        # Insights, not a tool: routers/engagement_analytics.py.
-        "engagementAnalytics": Link(href=f"{API_PREFIX}/admin/analytics/engagement", method="GET"),
-    }
+def get_admin_service(
+    request: Request,
+    search: Optional[PostSearchService] = Depends(get_post_search_service),
+) -> AdminService:
+    return AdminService(PostStatsRepository(get_database(request)), search)
 
 
 @router.get("")
-async def admin_area(caller: Caller = Depends(require_admin)) -> dict[str, Any]:
+async def admin_area(service: AdminService = Depends(get_admin_service)) -> AdminResponse:
     """The admin hub: what an admin can do, as links."""
-    tools = [
-        {
-            "id": "rebuildPostStats",
-            "name": "Recalculate post stats",
-            "description": "Recount every post's likes and comments and recompute its popularity score.",
-        },
-        {
-            "id": "reindexPostSearch",
-            "name": "Index posts for AI search",
-            "description": (
-                "Embed every post and comment that isn't searchable yet (e.g. the seeded News posts, "
-                "or anything written while Workers AI was unavailable)."
-            ),
-        },
-    ]
-    return envelope(data_name="admin", data={"tools": tools}, metadata={}, meta_links=admin_links())
+    return service.build_admin_response(service.get_admin())
 
 
 @router.post("/post-stats/rebuild")
-async def rebuild_post_stats(request: Request, caller: Caller = Depends(require_admin)) -> dict[str, Any]:
+async def rebuild_post_stats(service: AdminService = Depends(get_admin_service)) -> PostStatsRebuildResponse:
     """Recompute every post's likes, comments and score from the source tables."""
-    rebuilt = await PostStatsRepository(get_database(request)).rebuild_all(datetime.now(timezone.utc).isoformat())
-    return envelope(data_name="postStats", data={"rebuilt": rebuilt}, metadata={}, meta_links=admin_links())
+    return service.build_post_stats_response(await service.rebuild_post_stats())
 
 
 @router.post("/post-search/reindex")
-async def reindex_post_search(
-    caller: Caller = Depends(require_admin),
-    search: PostSearchService = Depends(get_post_search_service),
-) -> dict[str, Any]:
+async def reindex_post_search(service: AdminService = Depends(get_admin_service)) -> PostSearchReindexResponse:
     """Backfill search vectors for posts and comments that have none."""
-    indexed = await search.reindex_missing()
-    # Named after the tool id: the admin page reads a tool's result under its id.
-    return envelope(data_name="reindexPostSearch", data={"indexed": indexed}, metadata={}, meta_links=admin_links())
+    return service.build_reindex_response(await service.reindex_post_search())

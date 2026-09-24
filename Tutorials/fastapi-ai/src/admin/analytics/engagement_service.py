@@ -1,15 +1,25 @@
 from datetime import date, datetime, timedelta, timezone
-from typing import Any, Callable, Dict, List
+from typing import Callable, Dict
 
-from core.common.api_response import API_PREFIX, envelope
-from core.common.base_dto import Link
+from admin.analytics.constants import (
+    DEFAULT_DAYS,
+    ENGAGEMENT_DATA_NAME,
+    LABELS,
+    LINK_ADMIN,
+    LINK_SELF,
+    MAX_DAYS,
+    MIN_DAYS,
+)
 from admin.analytics.engagement_repository import METRICS, EngagementRepository
-
-DEFAULT_DAYS = 30
-MIN_DAYS = 7
-MAX_DAYS = 90
-
-LABELS = {"groups": "Groups created", "posts": "Posts", "comments": "Comments", "likes": "Likes"}
+from admin.analytics.schemas import (
+    EngagementCountsDTO,
+    EngagementDayDTO,
+    EngagementDTO,
+    EngagementMetadata,
+    EngagementResponse,
+)
+from core.common.api_response import API_PREFIX
+from core.common.base_dto import EmbeddedRef, FieldMetadata, Link
 
 
 def utc_today() -> date:
@@ -27,7 +37,7 @@ class EngagementAnalyticsService:
         self.repository = repository
         self.today = today
 
-    async def engagement(self, days: int = DEFAULT_DAYS) -> Dict[str, Any]:
+    async def engagement(self, days: int = DEFAULT_DAYS) -> EngagementDTO:
         days = max(MIN_DAYS, min(days, MAX_DAYS))
         last = self.today()
         first = last - timedelta(days=days - 1)
@@ -36,35 +46,37 @@ class EngagementAnalyticsService:
         # One query per metric covers both windows.
         counts = await self.repository.daily_counts(previous_first.isoformat(), (last + timedelta(days=1)).isoformat())
 
-        window = [first + timedelta(days=offset) for offset in range(days)]
-        previous = [previous_first + timedelta(days=offset) for offset in range(days)]
-        daily: List[Dict[str, Any]] = [
-            {"date": day.isoformat(), **{metric: counts[metric].get(day.isoformat(), 0) for metric in METRICS}}
-            for day in window
-        ]
-        return {
-            "from": first.isoformat(),
-            "to": last.isoformat(),
-            "days": days,
-            "totals": {metric: sum(entry[metric] for entry in daily) for metric in METRICS},
-            "previousTotals": {
-                metric: sum(counts[metric].get(day.isoformat(), 0) for day in previous) for metric in METRICS
-            },
-            "daily": daily,
-        }
+        def on(day: date) -> Dict[str, int]:
+            return {metric: counts[metric].get(day.isoformat(), 0) for metric in METRICS}
+
+        def total(start: date) -> EngagementCountsDTO:
+            window = [on(start + timedelta(days=offset)) for offset in range(days)]
+            return EngagementCountsDTO(**{metric: sum(day[metric] for day in window) for metric in METRICS})
+
+        return EngagementDTO(
+            from_=first,
+            to=last,
+            days=days,
+            totals=total(first),
+            previousTotals=total(previous_first),
+            daily=[
+                EngagementDayDTO(date=first + timedelta(days=offset), **on(first + timedelta(days=offset)))
+                for offset in range(days)
+            ],
+        )
 
     @staticmethod
-    def build_response(engagement: Dict[str, Any]) -> Dict[str, Any]:
+    def build_response(engagement: EngagementDTO) -> EngagementResponse:
         href = f"{API_PREFIX}/admin/analytics/engagement"
-        return envelope(
-            data_name="engagement",
-            data=engagement,
-            metadata={
-                "metric": {"values": [{"id": metric, "value": LABELS[metric]} for metric in METRICS]},
-                "days": {"min": MIN_DAYS, "max": MAX_DAYS, "default": DEFAULT_DAYS},
-            },
-            meta_links={
-                "self": Link(href=f"{href}?days={engagement['days']}", method="GET"),
-                "admin": Link(href=f"{API_PREFIX}/admin", method="GET"),
+        return EngagementResponse.of(
+            ENGAGEMENT_DATA_NAME,
+            engagement,
+            EngagementMetadata(
+                metric=FieldMetadata(values=[EmbeddedRef(id=metric, value=LABELS[metric]) for metric in METRICS]),
+                days=FieldMetadata(min=MIN_DAYS, max=MAX_DAYS, default=DEFAULT_DAYS),
+            ),
+            {
+                LINK_SELF: Link(href=f"{href}?days={engagement.days}", method="GET"),
+                LINK_ADMIN: Link(href=f"{API_PREFIX}/admin", method="GET"),
             },
         )

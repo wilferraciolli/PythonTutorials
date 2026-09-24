@@ -1,4 +1,4 @@
-from typing import Any, Dict, Generic, List, Optional, TypeVar
+from typing import Dict, Generic, List, Optional, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -43,18 +43,3 @@ class ApiResponse(BaseModel, Generic[DataT, MetadataT]):
             messages=messages or [],
         )
 
-
-def envelope(
-    data_name: str,
-    data: Any,
-    metadata: Dict[str, Any],
-    meta_links: Optional[Dict[str, Link]] = None,
-    messages: Optional[List[Dict[str, str]]] = None,
-) -> Dict[str, Any]:
-    """Untyped envelope, kept only until every domain builds an ApiResponse."""
-    return {
-        "_data": {data_name: data},
-        "_metadata": metadata,
-        "_metaLinks": meta_links or {},
-        "_messages": messages or [],
-    }

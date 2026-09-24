@@ -63,7 +63,7 @@ async def test_counts_each_day_of_the_window_and_fills_empty_days(db):
     await add(db, "comments", "2026-08-26T00:00:00Z", n=2)  # first day of a 30-day window
     await add(db, "likes", "2026-09-10T12:00:00Z", n=4)
 
-    result = await service(db).engagement(30)
+    result = (await service(db).engagement(30)).model_dump(mode="json", by_alias=True)
 
     assert (result["from"], result["to"], result["days"]) == ("2026-08-26", "2026-09-24", 30)
     assert len(result["daily"]) == 30
@@ -77,21 +77,22 @@ async def test_the_previous_window_is_totalled_for_comparison_and_not_counted_no
     await add(db, "posts", "2026-07-27T00:00:00Z")  # first day of the previous window
     await add(db, "posts", "2026-07-26T23:00:00Z")  # before both windows
 
-    result = await service(db).engagement(30)
+    result = (await service(db).engagement(30)).model_dump(mode="json", by_alias=True)
     assert result["totals"]["posts"] == 0
     assert result["previousTotals"]["posts"] == 6
 
 
 async def test_days_are_kept_between_7_and_90(db):
-    assert (await service(db).engagement(1))["days"] == 7
-    assert (await service(db).engagement(365))["days"] == 90
-    assert len((await service(db).engagement(365))["daily"]) == 90
+    assert (await service(db).engagement(1)).days == 7
+    assert (await service(db).engagement(365)).days == 90
+    assert len((await service(db).engagement(365)).daily) == 90
 
 
 async def test_the_response_names_the_metrics(db):
-    response = service(db).build_response(await service(db).engagement(30))
+    response = service(db).build_response(await service(db).engagement(30)).model_dump(mode="json", by_alias=True)
     assert response["_metadata"]["metric"]["values"][0] == {"id": "groups", "value": "Groups created"}
-    assert response["_metaLinks"]["self"].href.endswith("/admin/analytics/engagement?days=30")
+    assert response["_metadata"]["days"] == {"min": 7, "max": 90, "default": 30}
+    assert response["_metaLinks"]["self"]["href"].endswith("/admin/analytics/engagement?days=30")
 
 
 # --- API wiring
