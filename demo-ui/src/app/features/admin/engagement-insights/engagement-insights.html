@@ -1,0 +1,95 @@
+<section class="EngagementInsights" aria-labelledby="engagement-title">
+  <header class="EngagementInsights-header">
+    <div>
+      <h2 id="engagement-title" class="EngagementInsights-title">Social engagement</h2>
+      @if (range(); as text) {
+        <p class="EngagementInsights-range">{{ text }}</p>
+      }
+    </div>
+    <mat-button-toggle-group
+      aria-label="Period"
+      [value]="days()"
+      (change)="choose($event.value)"
+      hideSingleSelectionIndicator
+    >
+      @for (period of periods; track period) {
+        <mat-button-toggle [value]="period">{{ period }} days</mat-button-toggle>
+      }
+    </mat-button-toggle-group>
+  </header>
+
+  @if (errorMessage(); as message) {
+    <p class="EngagementInsights-error" role="alert">{{ message }}</p>
+  } @else if (!engagement()) {
+    <p class="EngagementInsights-muted">Loading…</p>
+  } @else {
+    <div
+      class="EngagementInsights-body"
+      [class.is-refreshing]="refreshing()"
+      [attr.aria-busy]="refreshing()"
+    >
+      <ul class="EngagementInsights-tiles">
+        @for (tile of tiles(); track tile.metric) {
+          <li class="EngagementInsights-tile">
+            <span class="EngagementInsights-tile-label">{{ tile.label }}</span>
+            <span class="EngagementInsights-tile-value">{{ tile.value }}</span>
+            <span
+              class="EngagementInsights-tile-delta"
+              [class.is-up]="tile.delta.trend === 'up'"
+              [class.is-down]="tile.delta.trend === 'down'"
+            >
+              <mat-icon aria-hidden="true">{{
+                tile.delta.trend === 'up'
+                  ? 'trending_up'
+                  : tile.delta.trend === 'down'
+                    ? 'trending_down'
+                    : 'trending_flat'
+              }}</mat-icon>
+              {{ tile.delta.label }}
+              <span class="EngagementInsights-tile-vs">vs previous {{ days() }} days</span>
+            </span>
+          </li>
+        }
+      </ul>
+
+      <div class="EngagementInsights-charts">
+        @for (chart of charts(); track chart.metric) {
+          <app-daily-chart
+            class="EngagementInsights-chart"
+            [title]="chart.title"
+            [data]="chart.data"
+          />
+        }
+      </div>
+
+      <details class="EngagementInsights-table">
+        <summary>
+          <mat-icon>expand_more</mat-icon>
+          Daily numbers
+        </summary>
+        <div class="EngagementInsights-table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Day</th>
+                @for (metric of metrics; track metric) {
+                  <th scope="col">{{ labels[metric] }}</th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              @for (day of engagement()!.daily; track day.date) {
+                <tr>
+                  <th scope="row">{{ shortDate(day.date) }}</th>
+                  @for (metric of metrics; track metric) {
+                    <td>{{ day[metric] }}</td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </details>
+    </div>
+  }
+</section>

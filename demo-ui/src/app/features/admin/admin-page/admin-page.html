@@ -6,6 +6,11 @@
   } @else if (loadError(); as message) {
     <p class="AdminPage-error" role="alert">{{ message }}</p>
   } @else {
+    @if (insightsLink(); as link) {
+      <app-engagement-insights [link]="link" />
+    }
+
+    <h2 class="AdminPage-section">Tools</h2>
     <ul class="AdminPage-tools">
       @for (tool of tools(); track tool.id) {
         <li class="AdminPage-tool">

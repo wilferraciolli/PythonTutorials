@@ -1,0 +1,83 @@
+<figure class="DailyChart">
+  <figcaption class="DailyChart-title">{{ title() }}</figcaption>
+  <div
+    #plot
+    class="DailyChart-plot"
+    tabindex="0"
+    role="img"
+    [attr.aria-label]="summary()"
+    (pointermove)="hover($event)"
+    (pointerleave)="active.set(null)"
+    (focus)="focus()"
+    (blur)="active.set(null)"
+    (keydown)="key($event)"
+  >
+    <svg class="DailyChart-svg" [attr.width]="width()" [attr.height]="height" aria-hidden="true">
+      @if (tooltip(); as tip) {
+        <rect
+          class="DailyChart-band"
+          [attr.x]="tip.bandX"
+          [attr.y]="bandTop"
+          [attr.width]="slotWidth()"
+          [attr.height]="bandHeight"
+          rx="4"
+        />
+      }
+      @for (tick of ticks(); track tick.value) {
+        <line
+          class="DailyChart-grid"
+          [attr.x1]="left"
+          [attr.x2]="width()"
+          [attr.y1]="tick.y"
+          [attr.y2]="tick.y"
+        />
+        <text
+          class="DailyChart-axis"
+          [attr.x]="left - 8"
+          [attr.y]="tick.y"
+          text-anchor="end"
+          dy="0.32em"
+        >
+          {{ tick.label }}
+        </text>
+      }
+      @for (bar of bars(); track bar.date) {
+        @if (bar.path) {
+          <path class="DailyChart-bar" [attr.d]="bar.path" />
+        }
+      }
+      @if (peak(); as top) {
+        <text
+          class="DailyChart-peak"
+          [attr.x]="top.x + top.width / 2"
+          [attr.y]="top.top - 6"
+          text-anchor="middle"
+        >
+          {{ top.value }}
+        </text>
+      }
+      @for (label of xLabels(); track label.x) {
+        <text
+          class="DailyChart-axis"
+          [attr.x]="label.x"
+          [attr.y]="height - 6"
+          [attr.text-anchor]="label.anchor"
+        >
+          {{ label.label }}
+        </text>
+      }
+    </svg>
+
+    @if (tooltip(); as tip) {
+      <div class="DailyChart-tooltip" [style.left.px]="tip.left" [style.top.px]="tip.top">
+        <strong class="DailyChart-tooltip-value">{{ tip.value }}</strong>
+        <span class="DailyChart-tooltip-date">{{ tip.date }}</span>
+      </div>
+    }
+  </div>
+  <p class="App-visually-hidden" aria-live="polite">
+    @if (tooltip(); as tip) {
+      {{ tip.date }}: {{ tip.value }}
+    }
+  </p>
+</figure>
