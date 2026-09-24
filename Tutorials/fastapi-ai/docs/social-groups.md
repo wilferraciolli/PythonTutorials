@@ -444,6 +444,26 @@ A post can tag up to **20 people** (any existing user), like "with Sam and Ana".
 In `demo-ui` the post composer and the post editor have a **Tag people** field (chips with a
 name/email search over `GET /api/users/search`), and cards show "With Sam Rivera and Ana Lens".
 
+## Engagement analytics
+
+`GET /api/admin/analytics/engagement?days=30` — the **engagement analytics API** behind
+the admin area's "Social engagement" section. Admins only (403 otherwise); the admin hub
+(`GET /api/admin`) links it as `_metaLinks.engagementAnalytics`.
+
+- `days`: 7–90 (clamped), default 30. The window is the last `days` **UTC** days,
+  today included.
+- Counts what was **created** each day: groups, posts, comments and likes (on posts and
+  comments together). Deleted posts and comments still count — the activity happened; a
+  like that was taken back doesn't (its row is gone).
+- `_data.engagement`:
+  `{from, to, days, totals: {groups, posts, comments, likes}, previousTotals: {...},
+  daily: [{date: "YYYY-MM-DD", groups, posts, comments, likes}, ...]}` — `daily` has
+  every day of the window (zeros included); `previousTotals` covers the `days` before
+  `from`, for "vs previous period".
+- `_metadata.metric.values` names the metrics (`{id: "groups", value: "Groups created"}`, ...).
+- Code: `routers/engagement_analytics.py` → `services/engagement_analytics_service.py`
+  → `repositories/engagement_repository.py` (one `GROUP BY day` query per metric).
+
 ## How it plugs into AI search and Ask
 
 Post titles, bodies and comments are free text, so this follows the README checklist
