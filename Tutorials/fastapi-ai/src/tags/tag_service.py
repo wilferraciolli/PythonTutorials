@@ -1,92 +1,69 @@
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 from uuid import uuid4
 
-from core.common.api_response import API_PREFIX, envelope
-from core.common.base_dto import EmbeddedRef, Link
-from tags.schemas import Tag, TagCreate
+from core.common.api_response import API_PREFIX
+from core.common.base_dto import EmbeddedRef, FieldMetadata, Link
+from tags.constants import LINK_CREATE_TAG, LINK_DELETE, LINK_SELF, TAG_DATA_NAME, TAGS_DATA_NAME
+from tags.models import TagModel
+from tags.schemas import (
+    TagCreateRequest,
+    TagDTO,
+    TagListResponse,
+    TagMetadata,
+    TagResponse,
+    TagTemplateMetadata,
+    TagTemplateResponse,
+)
 from tags.tag_repository import TagRepository
 
 
 class TagService:
-    """Business logic for Tags, sitting between the router and the D1 repository."""
+    """Business logic for Tags, sitting between the router and the repository."""
 
     def __init__(self, repository: TagRepository):
         self.repository = repository
 
-    def build_template_response(self) -> Dict[str, Any]:
-        """
-        Build a create-template response.
+    async def search_tags(self, term: Optional[str] = None) -> List[TagDTO]:
+        return [self.to_dto(model) for model in await self.repository.search_tags(term)]
 
-        Templates use the create DTO shape, so server-managed fields like id
-        and created_date are omitted entirely.
-        """
-        template = {
-            "id": "",
-            "resource_id": "",
-            "tag": "",
-            "created_date": ""
-        }
-
-        return envelope(
-            "tag",
-            template,
-            self._template_metadata(),
-            self._meta_links(),
-        )
-
-    async def search_tags(self, term: Optional[str] = None) -> List[Tag]:
-        rows = await self.repository.search_tags(term)
-
-        return [self._row_to_tag(row) for row in rows]
-
-
-    async def create_tag(
-            self,
-            tag_create: TagCreate) -> Tag:
-        row = await self.repository.create(
-            id=str(uuid4()),
-            tag=tag_create.tag,
-            resource_id=tag_create.resource_id,
+    async def create_tag(self, request: TagCreateRequest) -> TagDTO:
+        model = await self.repository.create(
+            tag_id=str(uuid4()),
+            tag=request.tag,
+            resource_id=request.resource_id,
             created_date=datetime.now(timezone.utc).isoformat(),
         )
+        return self.to_dto(model)
 
-        return self._row_to_tag(row)
+    async def get_tag(self, tag_id: str) -> Optional[TagDTO]:
+        model = await self.repository.get_by_id(tag_id)
+        return self.to_dto(model) if model else None
 
-
-    async def get_tag(self, id: str) -> Optional[Tag]:
-        row = await self.repository.get_by_id(id)
-        if not row:
-            return None
-
-        return self._row_to_tag(row)
-
-
-    async def get_all_tags(self, resource_id : Optional[str] = None) -> List[Tag]:
+    async def get_all_tags(self, resource_id: Optional[str] = None) -> List[TagDTO]:
         if resource_id:
-            rows = await self.repository.get_all_by_resource_id(resource_id)
+            models = await self.repository.get_all_by_resource_id(resource_id)
         else:
-            rows = await self.repository.get_all()
+            models = await self.repository.get_all()
 
-        return [self._row_to_tag(row) for row in rows]
+        return [self.to_dto(model) for model in models]
 
+    async def delete_tag(self, tag_id: str) -> bool:
+        return await self.repository.delete(tag_id)
 
-    async def delete_tag(self, id: str) -> bool:
-       return await self.repository.delete(id)
-
-    async def add_tag_if_missing(self, resource_id: str, tag_name: str) -> Tag:
+    async def add_tag_if_missing(self, resource_id: str, tag_name: str) -> TagDTO:
         """Add a tag to a resource, or return the existing one if it's already there."""
         existing = await self.repository.get_by_resource_and_tag(resource_id, tag_name)
         if existing:
-            return self._row_to_tag(existing)
+            return self.to_dto(existing)
 
-        row = await self.repository.create(
-            id=str(uuid4()),
+        model = await self.repository.create(
+            tag_id=str(uuid4()),
             tag=tag_name,
             resource_id=resource_id,
             created_date=datetime.now(timezone.utc).isoformat(),
         )
-        return self._row_to_tag(row)
+        return self.to_dto(model)
 
     async def remove_tag_by_name(self, resource_id: str, tag_name: str) -> bool:
         """Remove a tag from a resource by name, if present."""
@@ -96,90 +73,54 @@ class TagService:
         """Remove every tag attached to a resource (e.g. when the resource is deleted)."""
         await self.repository.delete_all_for_resource(resource_id)
 
-    def build_response(
-        self,
-        data_name: str,
-        data: Any,
-        messages: Optional[List[Dict[str, str]]] = None,
-    ) -> Dict[str, Any]:
-        """
-        Build the full Tag response envelope for this stateless request.
+    # --- responses
 
-        Metadata and links are calculated here in the application service,
-        because they can depend on business rules and future permissions.
-        """
-        tag = data if isinstance(data, Tag) else None
-        return envelope(
-            data_name,
-            data,
-            self._metadata(tag),
-            self._meta_links(),
-            messages,
+    def to_dto(self, model: TagModel) -> TagDTO:
+        return TagDTO(
+            id=model.id,
+            resource_id=model.resource_id,
+            resource=EmbeddedRef(id=model.resource_id, value=model.resource_name) if model.resource_name else None,
+            tag=model.tag,
+            created_date=model.created_date,
+            links=self.build_links(model.id),
         )
 
-    def _row_to_tag(self, row: Dict[str, Any]) -> Tag:
-        tag_id = row["id"]
-        resource_name = row.get("resource_name") if hasattr(row, "get") else row["resource_name"]
-        tag = Tag(
-            id=tag_id,
-            tag=row["tag"],
-            resource_id=row["resource_id"],
-            resource=EmbeddedRef(id=row["resource_id"], value=resource_name) if resource_name else None,
-            created_date=datetime.fromisoformat(row["created_date"]),
-        )
-        tag.links = self._links(tag)
-        return tag
-
-    def _links(
-        self,
-        tag: Tag,
-        *,
-        can_delete: bool = True,
-    ) -> Dict[str, Link]:
+    @staticmethod
+    def build_links(tag_id: str) -> dict[str, Link]:
         """Resource-level Tag links, calculated per request."""
-        links = {
-            "self": Link(href=f"{API_PREFIX}/tags/{tag.id}", method="GET"),
-        }
-
-        if can_delete:
-            links["delete"] = Link(href=f"{API_PREFIX}/tags/{tag.id}", method="DELETE")
-
-        return links
-
-    def _metadata(self, tag: Optional[Tag] = None) -> Dict[str, Any]:
-        """Field metadata for Tag payloads, calculated per request."""
+        url = f"{API_PREFIX}/tags/{tag_id}"
         return {
-            "id": {
-                "readOnly": True,
-                "hidden": True,
-            },
-            "resource_id": {
-                "mandatory": True
-            },
-            "tag": {
-                "mandatory": True,
-            },
-            "created_date": {
-                "readOnly": True
-            }
+            LINK_SELF: Link(href=url, method="GET"),
+            LINK_DELETE: Link(href=url, method="DELETE"),
         }
 
-    def _template_metadata(self) -> Dict[str, Any]:
-        """Metadata for a create template: only fields the client can submit."""
-        return {
-            "resource_id": {
-                "mandatory": True
-            },
-            "tag": {
-                "mandatory": True,
-            },
-        }
+    @staticmethod
+    def build_meta_links() -> dict[str, Link]:
+        return {LINK_CREATE_TAG: Link(href=f"{API_PREFIX}/tags", method="POST")}
 
-    def _meta_links(self, *, can_create: bool = True) -> Dict[str, Link]:
-        """Collection-level Tag links, calculated per request."""
-        if not can_create:
-            return {}
+    @staticmethod
+    def build_metadata() -> TagMetadata:
+        return TagMetadata(
+            id=FieldMetadata(readOnly=True, hidden=True),
+            resource_id=FieldMetadata(mandatory=True),
+            tag=FieldMetadata(mandatory=True),
+            created_date=FieldMetadata(readOnly=True),
+        )
 
-        return {
-            "createTag": Link(href=f"{API_PREFIX}/tags", method="POST"),
-        }
+    def build_response(self, tag: TagDTO) -> TagResponse:
+        return TagResponse.of(TAG_DATA_NAME, tag, self.build_metadata(), self.build_meta_links())
+
+    def build_list_response(self, tags: List[TagDTO]) -> TagListResponse:
+        return TagListResponse.of(TAGS_DATA_NAME, tags, self.build_metadata(), self.build_meta_links())
+
+    def build_template_response(self) -> TagTemplateResponse:
+        # Blank values, so skip the create validation (min_length) on purpose.
+        return TagTemplateResponse.of(
+            TAG_DATA_NAME,
+            TagCreateRequest.model_construct(resource_id="", tag=""),
+            TagTemplateMetadata(
+                resource_id=FieldMetadata(mandatory=True),
+                tag=FieldMetadata(mandatory=True),
+            ),
+            self.build_meta_links(),
+        )

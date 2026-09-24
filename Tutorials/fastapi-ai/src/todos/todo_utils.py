@@ -1,28 +1,27 @@
-from datetime import datetime
+from datetime import datetime, timezone
+
 from todos.enums import TodoState
-from todos.schemas import Todo
+from todos.models import TodoModel
 
 
 class TodoUtils:
-    """Utility methods for TODO operations"""
+    """Date rules for todos."""
 
     @staticmethod
-    def is_overdue(todo: Todo) -> bool:
-        """A TODO is overdue if complete_by has passed and it is not CLOSED."""
+    def is_overdue(todo: TodoModel) -> bool:
+        """A todo is overdue if complete_by has passed and it is not CLOSED."""
         if todo.state == TodoState.CLOSED:
             return False
-        return todo.complete_by < datetime.now(todo.complete_by.tzinfo)
+        return todo.complete_by < datetime.now(timezone.utc)
 
     @staticmethod
-    def get_days_until_due(todo: Todo) -> int:
+    def get_days_until_due(todo: TodoModel) -> int:
         """Days until due (negative if overdue)."""
-        now = datetime.now(todo.complete_by.tzinfo)
-        return (todo.complete_by - now).days
+        return (todo.complete_by - datetime.now(timezone.utc)).days
 
     @staticmethod
-    def is_due_soon(todo: Todo, days: int = 3) -> bool:
-        """True if TODO is due within N days and not CLOSED."""
+    def is_due_soon(todo: TodoModel, days: int = 3) -> bool:
+        """True if the todo is due within N days and not CLOSED."""
         if todo.state == TodoState.CLOSED:
             return False
-        days_left = TodoUtils.get_days_until_due(todo)
-        return 0 <= days_left <= days
+        return 0 <= TodoUtils.get_days_until_due(todo) <= days

@@ -1,19 +1,28 @@
-from typing import Any, Dict, Optional
+from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 
-from core.config.database import get_database
 from core.ai.embeddings import get_embedder
 from core.ai.resource_vector_store import ResourceVectorStore
+from core.config.database import get_database
 from core.security.authorization import require_owner
-from todos.enums import TodoState
-from todos.schemas import Todo, TodoCreate, TodoUpdate
 from tags.tag_repository import TagRepository
-from todos.todo_repository import TodoRepository
 from tags.tag_service import TagService
+from todos.enums import TodoState
+from todos.schemas import (
+    TodoCreateRequest,
+    TodoListResponse,
+    TodoReindexResponse,
+    TodoResponse,
+    TodoSearchResponse,
+    TodoTemplateResponse,
+    TodoUpdateRequest,
+)
+from todos.todo_repository import TodoRepository
 from todos.todo_search_service import DEFAULT_LIMIT, TodoSearchService
 from todos.todo_service import TodoService
 
+# Personal resource: only the user in the path may use it (require_owner, 403).
 router = APIRouter(prefix="/users/{user_id}/todos", tags=["todos"], dependencies=[Depends(require_owner)])
 
 
@@ -24,15 +33,8 @@ def get_todo_search_service(request: Request) -> TodoSearchService:
 
 
 def get_todo_service(request: Request) -> TodoService:
-    """
-    Build a TodoService per-request using the configured database adapter.
-
-    The app can run against local SQLite, Cloudflare D1 binding, or D1 HTTP
-    without repositories/services depending on a concrete database runtime.
-    """
     db = get_database(request)
-    tag_service = TagService(TagRepository(db))
-    return TodoService(TodoRepository(db), tag_service, get_todo_search_service(request))
+    return TodoService(TodoRepository(db), TagService(TagRepository(db)), get_todo_search_service(request))
 
 
 @router.get("/search")
@@ -43,10 +45,10 @@ async def search_todos(
     limit: int = DEFAULT_LIMIT,
     search: TodoSearchService = Depends(get_todo_search_service),
     service: TodoService = Depends(get_todo_service),
-) -> Dict[str, Any]:
+) -> TodoSearchResponse:
     """Find todos by meaning (embeddings) and keyword, best first."""
-    hits = await search.search(user_id, q, state.value if state else None, limit)
-    return service.build_response("todos", hits, user_id)
+    hits = await search.search(user_id, q, state, limit)
+    return service.build_search_response(user_id, hits)
 
 
 @router.post("/search/reindex")
@@ -54,30 +56,27 @@ async def reindex_todos(
     user_id: str,
     search: TodoSearchService = Depends(get_todo_search_service),
     service: TodoService = Depends(get_todo_service),
-) -> Dict[str, Any]:
+) -> TodoReindexResponse:
     """Backfill: embed this user's todos that aren't indexed yet."""
-    indexed = await search.reindex_user(user_id)
-    return service.build_response("reindex", {"indexed": indexed}, user_id)
+    return service.build_reindex_response(user_id, await search.reindex_user(user_id))
 
 
-@router.get("/template", status_code=200)
+@router.get("/template")
 async def get_todo_template(
     user_id: str,
     service: TodoService = Depends(get_todo_service),
-) -> Dict[str, Any]:
-    """Get a TODO template"""
+) -> TodoTemplateResponse:
+    """The shape a new todo is POSTed in, with defaults."""
     return service.build_template_response(user_id)
 
 
 @router.post("", status_code=201)
 async def create_todo(
     user_id: str,
-    todo: TodoCreate,
+    request: TodoCreateRequest,
     service: TodoService = Depends(get_todo_service),
-) -> Dict[str, Any]:
-    """Create a new TODO"""
-    created = await service.create_todo(user_id, todo)
-    return service.build_response("todo", created, user_id)
+) -> TodoResponse:
+    return service.build_response(await service.create_todo(user_id, request))
 
 
 @router.get("")
@@ -85,10 +84,9 @@ async def get_all_todos(
     user_id: str,
     state: Optional[TodoState] = None,
     service: TodoService = Depends(get_todo_service),
-) -> Dict[str, Any]:
-    """Get all TODOs for a user, optionally filtered by state"""
-    todos = await service.get_all_todos(user_id, state=state)
-    return service.build_response("todos", todos, user_id)
+) -> TodoListResponse:
+    """All the user's todos, optionally filtered by state."""
+    return service.build_list_response(user_id, await service.get_all_todos(user_id, state=state))
 
 
 @router.get("/{todo_id}")
@@ -96,26 +94,25 @@ async def get_todo(
     user_id: str,
     todo_id: str,
     service: TodoService = Depends(get_todo_service),
-) -> Dict[str, Any]:
-    """Get a single TODO by ID"""
+) -> TodoResponse:
     todo = await service.get_todo(user_id, todo_id)
     if not todo:
         raise HTTPException(status_code=404, detail=f"TODO {todo_id} not found")
-    return service.build_response("todo", todo, user_id)
+    return service.build_response(todo)
 
 
 @router.put("/{todo_id}")
 async def update_todo(
     user_id: str,
     todo_id: str,
-    todo_update: TodoUpdate,
+    request: TodoUpdateRequest,
     service: TodoService = Depends(get_todo_service),
-) -> Dict[str, Any]:
-    """Update a TODO (partial update - only send fields you want to change)"""
-    todo = await service.update_todo(user_id, todo_id, todo_update)
+) -> TodoResponse:
+    """Partial update: only the fields sent are changed."""
+    todo = await service.update_todo(user_id, todo_id, request)
     if not todo:
         raise HTTPException(status_code=404, detail=f"TODO {todo_id} not found")
-    return service.build_response("todo", todo, user_id)
+    return service.build_response(todo)
 
 
 @router.patch("/{todo_id}/state/{new_state}")
@@ -124,12 +121,11 @@ async def update_todo_state(
     todo_id: str,
     new_state: TodoState,
     service: TodoService = Depends(get_todo_service),
-) -> Dict[str, Any]:
-    """Update only the state of a TODO"""
+) -> TodoResponse:
     todo = await service.update_todo_state(user_id, todo_id, new_state)
     if not todo:
         raise HTTPException(status_code=404, detail=f"TODO {todo_id} not found")
-    return service.build_response("todo", todo, user_id)
+    return service.build_response(todo)
 
 
 @router.delete("/{todo_id}", status_code=204)
@@ -137,8 +133,7 @@ async def delete_todo(
     user_id: str,
     todo_id: str,
     service: TodoService = Depends(get_todo_service),
-) -> None:
-    """Delete a TODO"""
-    success = await service.delete_todo(user_id, todo_id)
-    if not success:
+) -> Response:
+    if not await service.delete_todo(user_id, todo_id):
         raise HTTPException(status_code=404, detail=f"TODO {todo_id} not found")
+    return Response(status_code=204)

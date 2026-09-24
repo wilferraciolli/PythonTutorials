@@ -2,6 +2,8 @@ from datetime import date, datetime, timedelta, timezone
 from typing import Any, Callable, Dict, List, Optional
 
 from assistant.tools.tool import Tool
+from core.common.serializers import format_utc_datetime
+from todos.models import TodoModel
 from todos.todo_repository import TodoRepository
 from todos.todo_search_service import TodoSearchService
 
@@ -33,11 +35,6 @@ def utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def _parse(value: str) -> datetime:
-    parsed = datetime.fromisoformat(value)
-    return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
-
-
 def _day_start(value: str) -> datetime:
     day = date.fromisoformat(value)
     return datetime(day.year, day.month, day.day, tzinfo=timezone.utc)
@@ -48,7 +45,7 @@ def build_todo_tools(
     now: Callable[[], datetime] = utc_now,
     search: Optional[TodoSearchService] = None,
 ) -> List[Tool]:
-    async def _filtered(user_id: str, args: Dict[str, Any]) -> List[Dict[str, Any]] | Dict[str, str]:
+    async def _filtered(user_id: str, args: Dict[str, Any]) -> List[TodoModel] | Dict[str, str]:
         state: Optional[str] = args.get("state")
         if state is not None and state not in STATES:
             return {"error": f"state must be one of {STATES}"}
@@ -62,25 +59,25 @@ def build_todo_tools(
         except ValueError:
             return {"error": "dates must be YYYY-MM-DD"}
 
-        rows = await repository.list_for_user(user_id)
+        todos = await repository.list_for_user(user_id)
 
         if state:
-            rows = [row for row in rows if row["state"] == state]
+            todos = [todo for todo in todos if todo.state == state]
         if args.get("overdue") is True:
             current = now()
-            rows = [row for row in rows if row["state"] != "CLOSED" and _parse(row["complete_by"]) < current]
+            todos = [todo for todo in todos if todo.state != "CLOSED" and todo.complete_by < current]
         if args.get("tag"):
             tagged = await repository.ids_with_tag(user_id, str(args["tag"]))
-            rows = [row for row in rows if row["id"] in tagged]
+            todos = [todo for todo in todos if todo.id in tagged]
         if created_from:
-            rows = [row for row in rows if _parse(row["created_date"]) >= created_from]
+            todos = [todo for todo in todos if todo.created_date >= created_from]
         if created_to:
-            rows = [row for row in rows if _parse(row["created_date"]) < created_to]
+            todos = [todo for todo in todos if todo.created_date < created_to]
         if due_from:
-            rows = [row for row in rows if _parse(row["complete_by"]) >= due_from]
+            todos = [todo for todo in todos if todo.complete_by >= due_from]
         if due_to:
-            rows = [row for row in rows if _parse(row["complete_by"]) < due_to]
-        return rows
+            todos = [todo for todo in todos if todo.complete_by < due_to]
+        return todos
 
     async def count_todos(user_id: str, args: Dict[str, Any]) -> Dict[str, Any]:
         rows = await _filtered(user_id, args)
@@ -98,17 +95,17 @@ def build_todo_tools(
             "total": len(rows),
             "todos": [
                 {
-                    "title": r["title"],
-                    "state": r["state"],
-                    "complete_by": r["complete_by"],
-                    "created_date": r["created_date"],
+                    "title": todo.title,
+                    "state": todo.state.value,
+                    "complete_by": format_utc_datetime(todo.complete_by),
+                    "created_date": format_utc_datetime(todo.created_date),
                 }
-                for r in rows[:limit]
+                for todo in rows[:limit]
             ],
         }
 
     async def list_tags(user_id: str, args: Dict[str, Any]) -> Any:
-        return {"tags": await repository.tag_counts(user_id)}
+        return {"tags": [count.model_dump() for count in await repository.tag_counts(user_id)]}
 
     tools = [
         Tool(
@@ -155,7 +152,8 @@ def build_todo_tools(
             matches = await search.search(user_id, query, args.get("state"), int(args.get("limit") or 5))
             return {
                 "matches": [
-                    {k: m[k] for k in ("title", "description", "state", "complete_by")} for m in matches
+                    match.model_dump(mode="json", include={"title", "description", "state", "complete_by"})
+                    for match in matches
                 ]
             }
 

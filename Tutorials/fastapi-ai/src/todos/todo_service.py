@@ -1,26 +1,54 @@
 import logging
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 from uuid import uuid4
 
-from core.common.api_response import API_PREFIX, envelope
-from core.common.base_dto import Link
-from core.common.serializers import format_utc_datetime
-from todos.enums import TodoState
-from todos.schemas import Todo, TodoCreate, TodoUpdate
-from todos.todo_repository import TodoRepository
+from core.ai.schemas import ReindexDTO
+from core.common.api_response import API_PREFIX
+from core.common.base_dto import EmbeddedRef, FieldMetadata, Link
 from tags.tag_service import TagService
+from todos.constants import (
+    LINK_ADD_TAG,
+    LINK_DELETE,
+    LINK_SELF,
+    LINK_TAGS,
+    LINK_TODO_TEMPLATE,
+    LINK_UPDATE,
+    NOT_STARTED_TAG,
+    OVERDUE_TAG,
+    REINDEX_DATA_NAME,
+    TODO_DATA_NAME,
+    TODOS_DATA_NAME,
+)
+from todos.enums import TodoState
+from todos.models import TodoModel
+from todos.schemas import (
+    TodoCreateRequest,
+    TodoDTO,
+    TodoListResponse,
+    TodoMetadata,
+    TodoReindexResponse,
+    TodoResponse,
+    TodoSearchHitDTO,
+    TodoSearchResponse,
+    TodoTemplateMetadata,
+    TodoTemplateResponse,
+    TodoUpdateRequest,
+)
+from todos.todo_repository import TodoRepository
 from todos.todo_search_service import TodoSearchService
 from todos.todo_utils import TodoUtils
 
 logger = logging.getLogger(__name__)
 
-OVERDUE_TAG = "overdue"
-NOT_STARTED_TAG = "not-started"
-
 
 class TodoService:
-    """Business logic for TODOs, sitting between the router and the D1 repository."""
+    """
+    Business logic for a user's todos.
+
+    Todos are personal: the router only lets the user in the path through
+    (require_owner), so every link here is theirs to follow.
+    """
 
     def __init__(
         self,
@@ -32,94 +60,58 @@ class TodoService:
         self.tag_service = tag_service
         self.search_service = search_service
 
-    async def _index(self, row: Dict[str, Any]) -> None:
-        # Best effort: search indexing must never fail a todo write. Anything
-        # missed is picked up by POST .../todos/search/reindex.
-        if not self.search_service:
-            return
-        try:
-            await self.search_service.index_todos([row])
-        except Exception:
-            logger.exception("failed to index todo %s for search", row.get("id"))
-
-    def build_template_response(self, user_id: str) -> Dict[str, Any]:
-        """
-        Build a create-template response.
-
-        Templates use the create DTO shape, not the persisted Todo shape, so
-        server-managed fields like id and created_date are omitted entirely.
-        """
-        template = {
-            "id": "",
-            "title": "",
-            "description": "",
-            "complete_by": format_utc_datetime(datetime.now(timezone.utc)),
-            "state": TodoState.NEW,
-            "created_date": ""
-        }
-
-        return envelope(
-            "todo",
-            template,
-            self._template_metadata(),
-            self._meta_links(user_id),
-        )
-
-    async def create_todo(self, user_id: str, todo_create: TodoCreate) -> Todo:
-        row = await self.repository.create(
+    async def create_todo(self, user_id: str, request: TodoCreateRequest) -> TodoDTO:
+        model = await self.repository.create(
             todo_id=str(uuid4()),
             user_id=user_id,
-            title=todo_create.title,
-            description=todo_create.description,
-            complete_by=todo_create.complete_by.isoformat(),
-            state=todo_create.state,
+            title=request.title,
+            description=request.description,
+            complete_by=request.complete_by.isoformat(),
+            state=request.state,
             created_date=datetime.now(timezone.utc).isoformat(),
         )
-        todo = self._row_to_todo(row)
-        await self._sync_auto_tags(todo)
-        await self._index(row)
-        return todo
+        await self._sync_auto_tags(model)
+        await self._index(model)
+        return self.to_dto(model)
 
-    async def get_todo(self, user_id: str, todo_id: str) -> Optional[Todo]:
-        row = await self.repository.get_by_id(todo_id, user_id)
-        if not row:
+    async def get_todo(self, user_id: str, todo_id: str) -> Optional[TodoDTO]:
+        model = await self.repository.get_by_id(todo_id, user_id)
+        if not model:
             return None
 
-        todo = self._row_to_todo(row)
+        if TodoUtils.is_overdue(model):
+            logger.info("todo %s is overdue", todo_id)
+        elif TodoUtils.is_due_soon(model, days=3):
+            logger.info("todo %s is due soon", todo_id)
 
-        if TodoUtils.is_overdue(todo):
-            print(f"WARNING: TODO {todo_id} is overdue!")
-        if TodoUtils.is_due_soon(todo, days=3):
-            print(f"NOTICE: TODO {todo_id} is due soon!")
+        return self.to_dto(model)
 
-        return todo
+    async def get_all_todos(self, user_id: str, state: Optional[TodoState] = None) -> List[TodoDTO]:
+        return [self.to_dto(model) for model in await self.repository.get_all(user_id, state=state)]
 
-    async def get_all_todos(self, user_id: str, state: Optional[TodoState] = None) -> List[Todo]:
-        rows = await self.repository.get_all(user_id, state=state)
-        return [self._row_to_todo(row) for row in rows]
-
-    async def update_todo(self, user_id: str, todo_id: str, todo_update: TodoUpdate) -> Optional[Todo]:
-        update_data = todo_update.model_dump(exclude_unset=True)
-        if "complete_by" in update_data and update_data["complete_by"] is not None:
-            update_data["complete_by"] = todo_update.complete_by.isoformat()
-
-        row = await self.repository.update(todo_id, user_id, **update_data)
-        if not row:
+    async def update_todo(self, user_id: str, todo_id: str, request: TodoUpdateRequest) -> Optional[TodoDTO]:
+        model = await self.repository.update(
+            todo_id,
+            user_id,
+            title=request.title,
+            description=request.description,
+            complete_by=request.complete_by.isoformat() if request.complete_by else None,
+            state=request.state,
+        )
+        if not model:
             return None
 
-        todo = self._row_to_todo(row)
-        await self._sync_auto_tags(todo)
-        await self._index(row)
-        return todo
+        await self._sync_auto_tags(model)
+        await self._index(model)
+        return self.to_dto(model)
 
-    async def update_todo_state(self, user_id: str, todo_id: str, new_state: TodoState) -> Optional[Todo]:
-        row = await self.repository.update(todo_id, user_id, state=new_state)
-        if not row:
+    async def update_todo_state(self, user_id: str, todo_id: str, new_state: TodoState) -> Optional[TodoDTO]:
+        model = await self.repository.update(todo_id, user_id, state=new_state)
+        if not model:
             return None
 
-        todo = self._row_to_todo(row)
-        await self._sync_auto_tags(todo)
-        return todo
+        await self._sync_auto_tags(model)
+        return self.to_dto(model)
 
     async def delete_todo(self, user_id: str, todo_id: str) -> bool:
         deleted = await self.repository.delete(todo_id, user_id)
@@ -129,30 +121,7 @@ class TodoService:
                 await self.search_service.remove_todo(todo_id)
         return deleted
 
-    def build_response(
-        self,
-        data_name: str,
-        data: Any,
-        user_id: str,
-        messages: Optional[List[Dict[str, str]]] = None,
-    ) -> Dict[str, Any]:
-        """
-        Build the full Todo response envelope for this stateless request.
-
-        Metadata and links are calculated here in the application service,
-        because they are business decisions. Later, this method can use the
-        current user/permissions to hide fields or remove links like delete.
-        """
-        todo = data if isinstance(data, Todo) else None
-        return envelope(
-            data_name,
-            data,
-            self._metadata(todo),
-            self._meta_links(user_id),
-            messages,
-        )
-
-    async def _sync_auto_tags(self, todo: Todo) -> None:
+    async def _sync_auto_tags(self, todo: TodoModel) -> None:
         """
         Keep the "overdue" and "not-started" tags in sync with the todo's
         current state. The two are mutually exclusive - adding one removes
@@ -165,122 +134,95 @@ class TodoService:
             await self.tag_service.add_tag_if_missing(todo.id, NOT_STARTED_TAG)
             await self.tag_service.remove_tag_by_name(todo.id, OVERDUE_TAG)
 
-    def _row_to_todo(self, row: Dict[str, Any]) -> Todo:
-        """Convert a raw D1 row (dict-like) into a validated Todo model."""
-        todo_id = row["id"]
-        todo = Todo(
-            id=todo_id,
-            user_id=row["user_id"],
-            title=row["title"],
-            description=row.get("description") if hasattr(row, "get") else row["description"],
-            complete_by=datetime.fromisoformat(row["complete_by"]),
-            state=TodoState(row["state"]),
-            created_date=datetime.fromisoformat(row["created_date"]),
-        )
-        todo.links = self._links(todo)
-        return todo
+    async def _index(self, todo: TodoModel) -> None:
+        # Best effort: search indexing must never fail a todo write. Anything
+        # missed is picked up by POST .../todos/search/reindex.
+        if not self.search_service:
+            return
+        try:
+            await self.search_service.index_todos([todo])
+        except Exception:
+            logger.exception("failed to index todo %s for search", todo.id)
 
-    def _links(
-        self,
-        todo: Todo,
-        *,
-        can_update: bool = True,
-        can_delete: bool = True,
-        can_add_tag: bool = True,
-        can_view_tags: bool = True,
-    ) -> Dict[str, Link]:
-        """
-        Resource-level links for this Todo, calculated per request.
+    # --- responses
 
-        Permission flags are hard-coded for now because there is no auth yet.
-        Once auth exists, these values should come from the current user.
-        """
-        links = {
-            "self": Link(href=f"{API_PREFIX}/users/{todo.user_id}/todos/{todo.id}", method="GET"),
-        }
+    def to_dto(self, model: TodoModel) -> TodoDTO:
+        return TodoDTO(**model.model_dump(), links=self.build_links(model))
 
-        if can_update:
-            links["update"] = Link(href=f"{API_PREFIX}/users/{todo.user_id}/todos/{todo.id}", method="PUT")
-
-        if can_delete:
-            links["delete"] = Link(href=f"{API_PREFIX}/users/{todo.user_id}/todos/{todo.id}", method="DELETE")
-
-        if can_add_tag:
-            links["addTag"] = Link(href=f"{API_PREFIX}/tags", method="POST")
-
-        if can_view_tags:
-            links["tags"] = Link(href=f"{API_PREFIX}/tags?resource_id={todo.id}", method="GET")
-
-        return links
-
-    def _metadata(self, todo: Optional[Todo] = None) -> Dict[str, Any]:
-        """
-        Field metadata for Todo payloads, calculated per request.
-
-        Example business rule:
-        - If a todo has already left NEW, NEW is no longer offered as an
-          allowed state value.
-        """
-        state_values = [
-            {"id": state.value, "value": state.value.title()}
-            for state in TodoState
-            if todo is None or todo.state == TodoState.NEW or state != TodoState.NEW
-        ]
-
+    @staticmethod
+    def build_links(todo: TodoModel) -> dict[str, Link]:
+        """Resource-level links for this todo. The owner may do everything with it."""
+        url = f"{API_PREFIX}/users/{todo.user_id}/todos/{todo.id}"
         return {
-            "id": {
-                "readOnly": True,
-                "hidden": True,
-            },
-            "user_id": {
-                "readOnly": True,
-                "hidden": True,
-            },
-            "title": {
-                "mandatory": True,
-            },
-            "complete_by": {
-                "mandatory": True,
-            },
-            "state": {
-                "mandatory": True,
-                "values": state_values,
-            },
-            "created_date": {
-                "readOnly": True
-            }
+            LINK_SELF: Link(href=url, method="GET"),
+            LINK_UPDATE: Link(href=url, method="PUT"),
+            LINK_DELETE: Link(href=url, method="DELETE"),
+            LINK_ADD_TAG: Link(href=f"{API_PREFIX}/tags", method="POST"),
+            LINK_TAGS: Link(href=f"{API_PREFIX}/tags?resource_id={todo.id}", method="GET"),
         }
 
-    def _template_metadata(self) -> Dict[str, Any]:
-        """Metadata for a create template: only fields the client can submit."""
-        return {
-            "title": {
-                "mandatory": True,
-            },
-            "complete_by": {
-                "mandatory": True,
-            },
-            "state": {
-                "mandatory": True,
-                "values": [
-                    {"id": state.value, "value": state.value.title()}
-                    for state in TodoState
-                ],
-            },
-        }
-
-    def _meta_links(self, user_id: str, *, can_create: bool = True) -> Dict[str, Link]:
+    @staticmethod
+    def build_meta_links(user_id: str) -> dict[str, Link]:
         """
-        Collection-level Todo links, calculated per request.
+        Collection-level links.
 
         There is no standalone `createTodo` link: the create URL is never
         POSTed to blind. Clients get it by first GETting `todoTemplate`
         (its field metadata says what's mandatory) and deriving the create
         URL from that template link.
         """
-        if not can_create:
-            return {}
+        return {LINK_TODO_TEMPLATE: Link(href=f"{API_PREFIX}/users/{user_id}/todos/template", method="GET")}
 
-        return {
-            "todoTemplate": Link(href=f"{API_PREFIX}/users/{user_id}/todos/template", method="GET"),
-        }
+    @staticmethod
+    def _state_values(todo: Optional[TodoDTO] = None) -> list[EmbeddedRef]:
+        # A todo that has left NEW can't go back to it, so NEW is only
+        # offered while the todo is still NEW (or for a list, where there's
+        # no single todo to judge by).
+        return [
+            EmbeddedRef(id=state.value, value=state.value.title())
+            for state in TodoState
+            if todo is None or todo.state == TodoState.NEW or state != TodoState.NEW
+        ]
+
+    def build_metadata(self, todo: Optional[TodoDTO] = None) -> TodoMetadata:
+        return TodoMetadata(
+            id=FieldMetadata(readOnly=True, hidden=True),
+            user_id=FieldMetadata(readOnly=True, hidden=True),
+            title=FieldMetadata(mandatory=True),
+            complete_by=FieldMetadata(mandatory=True),
+            state=FieldMetadata(mandatory=True, values=self._state_values(todo)),
+            created_date=FieldMetadata(readOnly=True),
+        )
+
+    def build_response(self, todo: TodoDTO) -> TodoResponse:
+        return TodoResponse.of(TODO_DATA_NAME, todo, self.build_metadata(todo), self.build_meta_links(todo.user_id))
+
+    def build_list_response(self, user_id: str, todos: List[TodoDTO]) -> TodoListResponse:
+        return TodoListResponse.of(TODOS_DATA_NAME, todos, self.build_metadata(), self.build_meta_links(user_id))
+
+    def build_search_response(self, user_id: str, hits: List[TodoSearchHitDTO]) -> TodoSearchResponse:
+        return TodoSearchResponse.of(TODOS_DATA_NAME, hits, self.build_metadata(), self.build_meta_links(user_id))
+
+    def build_reindex_response(self, user_id: str, indexed: int) -> TodoReindexResponse:
+        return TodoReindexResponse.of(
+            REINDEX_DATA_NAME, ReindexDTO(indexed=indexed), self.build_metadata(), self.build_meta_links(user_id)
+        )
+
+    def build_template_response(self, user_id: str) -> TodoTemplateResponse:
+        # Blank title, so skip the create validation (min_length) on purpose.
+        template = TodoCreateRequest.model_construct(
+            title="",
+            description="",
+            complete_by=datetime.now(timezone.utc),
+            state=TodoState.NEW,
+        )
+        return TodoTemplateResponse.of(
+            TODO_DATA_NAME,
+            template,
+            TodoTemplateMetadata(
+                title=FieldMetadata(mandatory=True),
+                complete_by=FieldMetadata(mandatory=True),
+                state=FieldMetadata(mandatory=True, values=self._state_values()),
+            ),
+            self.build_meta_links(user_id),
+        )
