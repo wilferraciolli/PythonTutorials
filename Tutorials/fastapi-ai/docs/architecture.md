@@ -18,7 +18,7 @@ flowchart TB
     end
 
     Clerk[(Clerk<br/>one instance)]
-    D1[(D1 database wiltech-db<br/>one database)]
+    D1[(D1 database demo-db<br/>one database)]
 
     Home --> ChatUI
     UI -- JWT --> Py

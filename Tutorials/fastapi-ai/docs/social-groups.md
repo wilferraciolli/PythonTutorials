@@ -421,7 +421,7 @@ keystroke. The group page's new-post form has **Add media**, and the post page h
 - Giphy: set `giphyApiKey` in `demo-ui/src/environments/environment*.ts`. It is public by nature
   (it runs in the browser), so restrict it in the Giphy dashboard.
 - A D1 database created before this feature needs `migrations/012_add_post_media.sql` run once:
-  `npx wrangler d1 execute wiltech-db --remote --file migrations/012_add_post_media.sql`.
+  `npx wrangler d1 execute demo-db --remote --file migrations/012_add_post_media.sql`.
 
 ## Tagging people
 
@@ -438,6 +438,10 @@ A post can tag up to **20 people** (any existing user), like "with Sam and Ana".
   `"_metadata": {"taggedUserIds": {"values": [{"id": "u3", "value": "Sam Rivera"}, ...]}}`.
   Single posts, a group's posts and the timeline all do this.
 - Someone whose account is deleted drops out of the tags. A deleted post shows no tags.
+- **A D1 database created before this feature needs** `migrations/013_create_post_people_tags.sql`
+  **run once** (local SQLite applies it by itself the next time the API starts):
+  `npx wrangler d1 execute demo-db --remote --file migrations/013_create_post_people_tags.sql`.
+  Until it runs, listing or creating posts on that database fails because the table is missing.
 - Tagging doesn't notify anyone or grant access: tagging a non-member in a private group
   doesn't let them see the post.
 

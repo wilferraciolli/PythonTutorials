@@ -22,7 +22,7 @@
 	"d1_databases": [
 		{
 			"binding": "DB",
-			"database_name": "wiltech-db",
+			"database_name": "demo-db",
 			"database_id": "c4b6187b-e49e-4929-9f00-ace7137a1051"
 		}
 	]

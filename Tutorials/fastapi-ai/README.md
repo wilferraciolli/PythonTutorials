@@ -19,7 +19,7 @@ talking to — both sit behind small adapters (`database.py`, `ai.py`).
 > **This is where new AI work happens.** [`fastapi-cloudflare-ai`](../fastapi-cloudflare-ai)
 > (Workers AI only) and [`fastapi-groq-ai`](../fastapi-groq-ai) (Groq only) are kept
 > as reference/resource projects. All three share the **same Clerk instance and
-> the same D1 database** (`wiltech-db`). This project owns both `cloudflare` and
+> the same D1 database** (`demo-db`). This project owns both `cloudflare` and
 > `groq` chats and advertises `aiChats` on the user profile (used by `demo-ui`
 > Home page card). It also has **AI search over chat history** — see
 > [`docs/ask-your-data.md`](docs/ask-your-data.md) (the AI assistant: todos, chats, ...),
@@ -136,7 +136,7 @@ the non-secret values come from `wrangler.jsonc` `vars` and secrets from
 | `DATABASE_MODE` | No | `sqlite` (local), `d1_binding` (Worker) or `d1_http` — see "Database modes". Defaults to `d1_binding` when a D1 binding exists, otherwise `sqlite` |
 | `DATABASE_PATH` | With `sqlite` | SQLite file path, e.g. `./local.db` |
 | `CF_D1_ACCOUNT_ID` | With `d1_http` | Cloudflare account id that owns the D1 database |
-| `CF_D1_DATABASE_ID` | With `d1_http` | Id of the D1 database (`wiltech-db`) |
+| `CF_D1_DATABASE_ID` | With `d1_http` | Id of the D1 database (`demo-db`) |
 | `CF_D1_API_TOKEN` | With `d1_http` | Cloudflare API token with D1 edit access (secret) |
 | `CORS_ORIGINS` | For a browser UI | Comma-separated frontend origins, read on every request (`src/cors.py`): `.env` locally, `wrangler.jsonc` `vars` in the Worker (set to the deployed demo-ui, `https://demo-ui-2pk.pages.dev`) |
 | `AI_MODE` | No | `http` (Cloudflare REST API) or `binding` (`env.AI`). Defaults to `binding` inside a Worker, otherwise `http` |
@@ -169,7 +169,7 @@ DATABASE_MODE=sqlite
 DATABASE_PATH=./local.db
 
 # Cloudflare Workers native binding — wrangler.jsonc already has a
-# d1_databases block (its own "wiltech-db" database, not shared with
+# d1_databases block (its own "demo-db" database, not shared with
 # fastapi-cloudflare-d1's todo-db)
 DATABASE_MODE=d1_binding
 
@@ -185,7 +185,7 @@ last one wins.
 
 ### Running locally against the real D1 database
 
-To run uvicorn locally with your data in `wiltech-db` instead of SQLite:
+To run uvicorn locally with your data in `demo-db` instead of SQLite:
 
 1. Apply the schema to the remote database once (see "Deploying to
    Cloudflare", step 2).
@@ -267,11 +267,11 @@ This opens a browser window — log in (or sign up for free) and click
 
 ### 2. Apply the schema to the remote D1 database
 The `ai` binding in `wrangler.jsonc` is account-wide and needs no setup, but
-the `d1_databases` binding (`wiltech-db`) is a real database that needs its
+the `d1_databases` binding (`demo-db`) is a real database that needs its
 tables created once:
 
 ```powershell
-npx wrangler d1 execute wiltech-db --remote --file=./schema.sql
+npx wrangler d1 execute demo-db --remote --file=./schema.sql
 ```
 You'll be asked to confirm (`Y`) since this touches the live database.
 
