@@ -3,7 +3,7 @@ from typing import Any, Optional, Protocol
 
 from fastapi import Request
 
-from config import get_config
+from core.config.config import get_config
 
 MIGRATIONS_DIR = Path(__file__).resolve().parent.parent / "migrations"
 

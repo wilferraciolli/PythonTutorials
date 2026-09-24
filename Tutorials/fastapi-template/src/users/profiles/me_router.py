@@ -2,10 +2,10 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, Request
 
-from auth import AuthenticatedUser, get_authenticated_user
-from database import get_database
-from repositories.user_repository import UserRepository
-from services.me_service import MeService
+from core.security.auth import AuthenticatedUser, get_authenticated_user
+from core.config.database import get_database
+from users.user_repository import UserRepository
+from users.profiles.me_service import MeService
 
 router = APIRouter(prefix="/me", tags=["me"])
 

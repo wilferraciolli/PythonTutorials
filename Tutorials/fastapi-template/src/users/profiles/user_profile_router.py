@@ -2,11 +2,12 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 
-from auth import AuthenticatedUser, get_authenticated_user
-from database import get_database
-from repositories.user_repository import UserRepository
-from services.me_service import MeService
-from services.user_profile_service import UserProfileService
+from core.security.auth import AuthenticatedUser, get_authenticated_user
+from core.config.database import get_database
+from users.profiles.user_profile_service import UserProfileService
+from users.user_repository import UserRepository
+from users.profiles.me_service import MeService
+
 
 router = APIRouter(prefix="/users", tags=["userprofiles"])
 

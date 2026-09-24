@@ -7,8 +7,8 @@ each time. It already has:
 - **Clerk JWT authentication** wired into every route except `/api/health`.
 - **A portable `Database` protocol** — local SQLite for uvicorn/Docker, a
   Cloudflare D1 binding, or D1-over-HTTP, all through the same interface
-  (`src/database.py`). Business logic never touches SQLite or D1 directly.
-- **A working example resource** (`users`) built through the full
+  (`src/core/config/database.py`). Business logic never touches SQLite or D1 directly.
+- **A working example resource** (`user_router.py`) built through the full
   router -> service -> repository -> database layering, so you can see the
   pattern before repeating it for your own domain.
 - **A standard response envelope** (`_data`, `_metadata`, `_metaLinks`) with
@@ -78,7 +78,7 @@ fastapi-template/
    purpose (see the note above). Only stop-one-start-the-next, never a new
    port per project.
 4. Set `compatibility_date` in `wrangler.jsonc` to today, if deploying.
-5. Delete or repurpose the `users` resource: keep it if you want user
+5. Delete or repurpose the `user_router.py` resource: keep it if you want user
    accounts, otherwise use it as the reference implementation and add your
    own `repositories/`, `services/`, `routers/` per resource, following the
    same layering.

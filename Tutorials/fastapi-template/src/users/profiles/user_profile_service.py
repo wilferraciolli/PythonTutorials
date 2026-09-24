@@ -1,8 +1,11 @@
 from typing import Any, Dict, Optional
 
-from api_response import API_PREFIX, envelope
-from models import Link, UserProfile, UserRole
-from repositories.user_repository import UserRepository
+from core.common.api_response import API_PREFIX, envelope
+from core.common.base_dto import Link
+from users.enums import UserRole
+from users.profiles.schemas import UserProfile
+
+from users.user_repository import UserRepository
 
 
 class UserProfileService:

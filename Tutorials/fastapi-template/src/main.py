@@ -3,10 +3,9 @@ import os
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from auth import get_authenticated_user
-from routers import health, me, user_profile, users
-
-
+from core.security.auth import get_authenticated_user
+from users.profiles import me_router, user_profile_router
+from users import user_router
 
 app = FastAPI(
     title="FastAPI Template",
@@ -39,7 +38,7 @@ app.add_middleware(
 # Register routers under /api (e.g. /api/health, /api/me, /api/users) —
 # leaves room for the Worker to serve non-API paths (static assets, etc.)
 # from the same origin later without colliding with these routes.
-app.include_router(health.router, prefix="/api")
-app.include_router(me.router, prefix="/api", dependencies=[Depends(get_authenticated_user)])
-app.include_router(user_profile.router, prefix="/api", dependencies=[Depends(get_authenticated_user)])
-app.include_router(users.router, prefix="/api", dependencies=[Depends(get_authenticated_user)])
+app.include_router(user_router.router, prefix="/api")
+app.include_router(me_router.router, prefix="/api", dependencies=[Depends(get_authenticated_user)])
+app.include_router(user_profile_router.router, prefix="/api", dependencies=[Depends(get_authenticated_user)])
+app.include_router(user_router.router, prefix="/api", dependencies=[Depends(get_authenticated_user)])

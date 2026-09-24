@@ -1,13 +1,15 @@
 from typing import Any, Dict, List, Optional
 
-from database import Database
-
-from models import UserRole
+from core.config.database import Database
 
 
-class UserRepository:
+from shared.settings.region.enums import RegionSettingOwnerType
+from users.enums import UserRole
+
+
+class RegionSettingsRepository:
     """
-    Repository for user database operations.
+    Repository for region settings database operations.
 
     This repository depends on the portable Database protocol, not SQLite,
     Cloudflare D1, or any other concrete database runtime.
@@ -15,6 +17,61 @@ class UserRepository:
 
     def __init__(self, db: Database) -> None:
         self.db = db
+
+    # Get system Settings
+    async def get_system_settings(self) -> Optional[Dict[str, Any]]:
+        result = await self.db.fetch_one(
+            "SELECT * FROM region_settings WHERE owner_type = ?",
+            (RegionSettingOwnerType.SYSTEM)
+        )
+
+        if not result:
+            return None
+
+        return result
+
+    # Get user Settings
+    async def get_user_settings(self, user_id: str) -> Optional[Dict[str, Any]]:
+        result = await self.db.fetch_one(
+            "SELECT * FROM region_settings WHERE id = ?",
+            (user_id)
+        )
+
+        if not result:
+            return None
+
+        return result
+
+    # Update user Settings
+    async def update_user_settings(self, user_id: str, **fields: Any) -> Optional[Dict[str, Any]]:
+        result = await self.db.fetch_one(
+            "SELECT * FROM region_settings WHERE id = ?",
+            (user_id)
+        )
+
+        if not result:
+            return None
+
+        return result
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     async def create(
         self,
@@ -54,17 +111,7 @@ class UserRepository:
         user["roleIds"] = await self.get_role_ids(user_id)
         return user
 
-    async def get_by_external_id(self, external_user_id: str) -> Optional[Dict[str, Any]]:
-        user = await self.db.fetch_one(
-            "SELECT * FROM users WHERE external_user_id = ?",
-            (external_user_id,),
-        )
 
-        if not user:
-            return None
-
-        user["roleIds"] = await self.get_role_ids(user["id"])
-        return user
 
     async def get_all(self) -> List[Dict[str, Any]]:
         users = await self.db.fetch_all(

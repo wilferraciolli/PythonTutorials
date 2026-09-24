@@ -2,10 +2,12 @@ from datetime import datetime, timezone
 from typing import Any, Dict
 from uuid import uuid4
 
-from api_response import API_PREFIX, envelope
-from auth import AuthenticatedUser
-from models import Link, Me, UserRole
-from repositories.user_repository import UserRepository
+from core.common.api_response import API_PREFIX, envelope
+from core.security.auth import AuthenticatedUser
+from core.common.base_dto import Link
+from users.enums import UserRole
+from users.profiles.schemas import Me
+from users.user_repository import UserRepository
 
 
 class MeService:

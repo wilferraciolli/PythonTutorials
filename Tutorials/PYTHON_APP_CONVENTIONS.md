@@ -37,7 +37,7 @@ The default target is a **portable local-development-first FastAPI app**:
     next) instead of giving each project its own port.
 
 ## Recommended project structure
-
+Organize by domain, not by file type. One package per bounded context.
 Use this structure for new FastAPI APIs:
 
 ```text
@@ -49,15 +49,16 @@ my-python-api/
 │   ├── database.py                # Database protocol and concrete adapters
 │   ├── api_response.py            # Shared response envelope types/helpers
 │   ├── models.py                  # Shared DTOs / Pydantic models
-│   ├── routers/
-│   │   ├── __init__.py
-│   │   └── resources.py           # HTTP endpoints only
-│   ├── services/
-│   │   ├── __init__.py
-│   │   └── resource_service.py    # Business logic and response shaping
-│   └── repositories/
-│       ├── __init__.py
-│       └── resource_repository.py # SQL/data access only
+├── {domain}/           # e.g., auth/, posts/, aws/
+│   │   ├── router.py       # API endpoints
+│   │   ├── schemas.py      # Pydantic models
+│   │   ├── models.py       # SQLAlchemy ORM models
+│   │   ├── service.py      # Business logic
+│   │   ├── dependencies.py # Route dependencies
+│   │   ├── config.py       # Domain-scoped BaseSettings
+│   │   ├── constants.py    # Constants and error codes
+│   │   ├── exceptions.py   # Domain-specific exceptions
+│   │   └── utils.py        # Helper functions
 ├── migrations/
 │   └── 001_create_tables.sql      # Local SQLite migrations
 ├── schema.sql                     # Cloudflare D1 schema when applicable

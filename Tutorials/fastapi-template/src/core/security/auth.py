@@ -9,7 +9,7 @@ from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jwt import InvalidTokenError, PyJWK
 
-from config import get_config
+from core.config.config import get_config
 
 _bearer = HTTPBearer(auto_error=False)
 _jwks_cache: dict[str, tuple[float, dict[str, Any]]] = {}

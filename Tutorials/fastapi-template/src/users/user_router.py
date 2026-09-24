@@ -2,10 +2,10 @@ from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 
-from database import get_database
-from models import UserCreate, UserUpdate
-from repositories.user_repository import UserRepository
-from services.user_service import UserService
+from core.config.database import get_database
+from users.schemas import UserCreate, UserUpdate
+from users.user_repository import UserRepository
+from users.user_service import UserService
 
 router = APIRouter(prefix="/users", tags=["users"])
 

@@ -2,9 +2,11 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
-from api_response import API_PREFIX, envelope
-from models import Link, User, UserCreate, UserRole, UserUpdate
-from repositories.user_repository import UserRepository
+from core.common.api_response import API_PREFIX, envelope
+from core.common.base_dto import Link
+from users.enums import UserRole
+from users.schemas import UserCreate, User, UserUpdate
+from users.user_repository import UserRepository
 
 
 class UserService:
