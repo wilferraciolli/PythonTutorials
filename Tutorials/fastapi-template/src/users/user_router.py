@@ -3,10 +3,15 @@ from typing import Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 
 from core.config.database import get_database
+from core.security.auth import AuthenticatedUser
+from core.security.authorization import require_admin
+from users.exceptions import SelfLockoutError
 from users.schemas import UserCreate, UserUpdate
 from users.user_repository import UserRepository
 from users.user_service import UserService
 
+# Reads are open to any signed-in user (main.py adds get_authenticated_user);
+# writes additionally require the ADMIN role, since they can change roles.
 router = APIRouter(prefix="/users", tags=["users"])
 
 
@@ -53,7 +58,7 @@ async def get_user(
     return service.build_response("user", user)
 
 
-@router.post("", status_code=201)
+@router.post("", status_code=201, dependencies=[Depends(require_admin)])
 async def create_user(
     user: UserCreate,
     service: UserService = Depends(get_user_service),
@@ -66,9 +71,13 @@ async def create_user(
 async def update_user(
     user_id: str,
     user: UserUpdate,
+    current_user: AuthenticatedUser = Depends(require_admin),
     service: UserService = Depends(get_user_service),
 ) -> dict[str, Any]:
-    updated = await service.update_user(user_id, user)
+    try:
+        updated = await service.update_user(user_id, user, current_user.id)
+    except SelfLockoutError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     if not updated:
         raise HTTPException(status_code=404, detail="User not found")
@@ -79,9 +88,13 @@ async def update_user(
 @router.delete("/{user_id}", status_code=204)
 async def delete_user(
     user_id: str,
+    current_user: AuthenticatedUser = Depends(require_admin),
     service: UserService = Depends(get_user_service),
 ) -> Response:
-    deleted = await service.delete_user(user_id)
+    try:
+        deleted = await service.delete_user(user_id, current_user.id)
+    except SelfLockoutError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     if not deleted:
         raise HTTPException(status_code=404, detail="User not found")

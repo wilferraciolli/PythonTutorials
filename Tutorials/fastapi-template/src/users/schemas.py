@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field, field_serializer
 
 from core.common.base_dto import LinkedResource
 from core.common.serializers import format_utc_datetime
-from users.enums import UserRole
+from core.security.roles import UserRole
 
 
 class User(LinkedResource):

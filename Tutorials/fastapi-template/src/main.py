@@ -4,6 +4,8 @@ from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from core.security.auth import get_authenticated_user
+from shared.settings.region import system_settings_router
+from core.security.authorization import require_admin
 from users.profiles import me_router, user_profile_router
 from users import user_router
 from metrics import status_router
@@ -45,3 +47,4 @@ app.include_router(me_router.router, prefix="/api", dependencies=[Depends(get_au
 app.include_router(user_profile_router.router, prefix="/api", dependencies=[Depends(get_authenticated_user)])
 app.include_router(user_router.router, prefix="/api", dependencies=[Depends(get_authenticated_user)])
 app.include_router(user_settings_router.router, prefix="/api", dependencies=[Depends(get_authenticated_user)])
+app.include_router(system_settings_router.router, prefix="/api", dependencies=[Depends(require_admin)])

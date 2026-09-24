@@ -1,7 +1,7 @@
 from typing import Optional
 
 from core.common.base_dto import LinkedResource
-from users.enums import UserRole
+from core.security.roles import UserRole
 
 
 class UserProfile(LinkedResource):

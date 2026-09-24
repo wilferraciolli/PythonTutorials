@@ -53,7 +53,9 @@ fastapi-template/
 │   │   │   ├── config.py             # Runtime config from Worker env / .env / OS env
 │   │   │   └── database.py           # SQLite, D1 binding, and D1 HTTP adapters + migrations
 │   │   └── security/
-│   │       └── auth.py               # Clerk JWT verification (JWKS fetch/cache)
+│   │       ├── auth.py               # Clerk JWT verification (JWKS fetch/cache)
+│   │       ├── authorization.py      # require_admin, reading user_detail_view
+│   │       └── roles.py              # UserRole enum
 │   ├── metrics/
 │   │   └── status_router.py          # /api/health
 │   ├── shared/                       # Data owned by several domains
@@ -65,13 +67,14 @@ fastapi-template/
 │       ├── user_service.py
 │       ├── user_repository.py        # Raw parameterized SQL via the Database protocol
 │       ├── schemas.py
-│       ├── enums.py
+│       ├── exceptions.py
 │       ├── profiles/                 # /api/me and /api/users/{id}/profile
 │       └── settings/                 # /api/users/{id}/settings — reference for the
 │                                      # typed Model / Request / DTO / Response layers
 ├── migrations/
 │   ├── 001_create_users_table.sql   # Auto-applied against local SQLite
-│   └── 002_settings.sql
+│   ├── 002_settings.sql
+│   └── 003_user_detail_view.sql     # A user + comma-joined role_ids, one row per user
 ├── Dockerfile
 ├── docker-compose.yml
 ├── .env.example
@@ -178,6 +181,22 @@ on every route below. Optionally set `CLERK_AUTHORIZED_PARTIES` (comma-separated
 shared dev instance; swap them for your own project's Clerk instance if this
 stops being a throwaway/tutorial app.
 
+### Roles
+
+Roles live in our own `user_roles` table, not only in Clerk:
+
+- **Clerk seeds them.** `/api/me` creates the user with the roles in the
+  token, and on every later call **adds** any token role the user doesn't
+  have yet. It never removes one.
+- **Our API is the source of truth after that.** An admin can grant or remove
+  roles through `PUT /api/users/{id}`, and a role granted here survives even
+  if Clerk stops sending it. To revoke a role, use the API, not Clerk.
+- **`require_admin`** (`core/security/authorization.py`) guards admin-only
+  routes: `403` unless the caller's saved roles include `ADMIN`. It reads
+  `user_detail_view`, so `core/` never imports the `users` package.
+- **No lockout:** an admin can't remove their own `ADMIN` role or delete
+  themselves (`400`), so the system can't end up with no admin by accident.
+
 ## Database modes
 
 Set **one active** `DATABASE_MODE` at a time:
@@ -263,17 +282,19 @@ above) except `/api/health`, `/docs`, and `/openapi.json`.
 | Method | Path | Description |
 |---|---|---|
 | GET | `/api/health` | Health check |
-| GET | `/api/me` | Current user — upserted from the Clerk token's identity on first call |
+| GET | `/api/me` | Current user — created from the Clerk token's identity on first call; later calls add any new roles from the token (never remove) |
 | GET | `/api/users` | List users |
 | GET | `/api/users/search` | Search users by name or email (`?q=`); no `q` returns everyone |
 | GET | `/api/users/template` | Create-template payload for users |
 | GET | `/api/users/{id}` | Get one user |
-| POST | `/api/users` | Create a user |
-| PUT | `/api/users/{id}` | Update a user |
-| DELETE | `/api/users/{id}` | Delete a user (returns `204 No Content`) |
+| POST | `/api/users` | **Admin only.** Create a user |
+| PUT | `/api/users/{id}` | **Admin only.** Update a user, including their roles. You can't remove your own `ADMIN` role (`400`) |
+| DELETE | `/api/users/{id}` | **Admin only.** Delete a user (returns `204 No Content`). You can't delete yourself (`400`) |
 | GET | `/api/users/{id}/settings` | The user's region settings (timezone, language, currency, theme); falls back to the system defaults (`owner_type: SYSTEM`) until the user saves their own |
 | PUT | `/api/users/{id}/settings` | Save the user's region settings |
 | DELETE | `/api/users/{id}/settings` | Drop the user's own settings so they fall back to the system defaults (returns `204 No Content`) |
+| GET | `/api/admin/settings` | **Admin only.** The system default region settings every user falls back to |
+| PUT | `/api/admin/settings` | **Admin only.** Update the system default region settings |
 | GET | `/api/users/{id}/profile` | **Where links live.** `/me` only returns the `userProfile` link; this returns the user (`id`, `externalId`, `name`, `email`, `roleIds`) plus every link the UI follows, built from the `{id}` in the path. `UserProfileService.can_view_profile` is the seam for "may the caller see this user's resources?" |
 | GET | `/docs` | Interactive Swagger UI |
 | GET | `/openapi.json` | OpenAPI schema |

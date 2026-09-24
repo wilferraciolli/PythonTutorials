@@ -27,6 +27,28 @@ class RegionSettingsRepository:
 
         return self._to_model(row)
 
+
+    async def update_system_settings(
+            self,
+            timezone: str,
+            language: str,
+            currency: str,
+            theme: str,
+    ) -> RegionSettingModel:
+        # The SYSTEM row is seeded by the migrations, so this is a plain update.
+        await self.db.execute(
+            "UPDATE region_settings SET timezone = ?, language = ?, currency = ?, theme = ? "
+            "WHERE owner_type = ?",
+            (timezone, language, currency, theme, RegionSettingOwnerType.SYSTEM.value),
+        )
+
+        saved = await self.get_system_settings()
+        if saved is None:
+            raise RuntimeError("system region settings are missing; run the migrations")
+
+        return saved
+
+
     async def get_user_settings(self, user_id: str) -> Optional[RegionSettingModel]:
         row = await self.db.fetch_one(
             "SELECT * FROM region_settings WHERE id = ? AND owner_type = ?",
@@ -54,7 +76,7 @@ class RegionSettingsRepository:
 
         saved = await self.get_user_settings(user_id)
         if saved is None:
-            raise RuntimeError(f"saved region settings were not found: {user_id}")
+            raise RuntimeError(f"saved user region settings were not found: {user_id}")
 
         return saved
 

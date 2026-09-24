@@ -4,7 +4,8 @@ from uuid import uuid4
 
 from core.common.api_response import API_PREFIX, envelope
 from core.common.base_dto import Link
-from users.enums import UserRole
+from core.security.roles import UserRole
+from users.exceptions import SelfLockoutError
 from users.schemas import UserCreate, User, UserUpdate
 from users.user_repository import UserRepository
 
@@ -48,7 +49,7 @@ class UserService:
         rows = await self.user_repository.search(term)
         return [self.to_user(row) for row in rows]
 
-    async def update_user(self, user_id: str, user: UserUpdate) -> Optional[User]:
+    async def update_user(self, user_id: str, user: UserUpdate, caller_external_id: str) -> Optional[User]:
         existing = await self.user_repository.get_by_id(user_id)
 
         if not existing:
@@ -59,6 +60,13 @@ class UserService:
             if "roleIds" in user.model_fields_set
             else None
         )
+
+        if (
+            role_ids is not None
+            and self._is_caller(existing, caller_external_id)
+            and UserRole.ADMIN not in role_ids
+        ):
+            raise SelfLockoutError("You cannot remove your own Admin role.")
 
         updated = await self.user_repository.update(
             user_id,
@@ -78,8 +86,20 @@ class UserService:
 
         return list(dict.fromkeys(role_ids))
 
-    async def delete_user(self, user_id: str) -> bool:
+    async def delete_user(self, user_id: str, caller_external_id: str) -> bool:
+        existing = await self.user_repository.get_by_id(user_id)
+
+        if not existing:
+            return False
+
+        if self._is_caller(existing, caller_external_id):
+            raise SelfLockoutError("You cannot delete yourself.")
+
         return await self.user_repository.delete(user_id)
+
+    @staticmethod
+    def _is_caller(user_row: Dict[str, Any], caller_external_id: str) -> bool:
+        return user_row.get("external_user_id") == caller_external_id
 
     def to_user(self, row: Dict[str, Any]) -> User:
         return User(

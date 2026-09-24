@@ -35,13 +35,12 @@ class UserSettingsService:
     """
 
     def __init__(
-        self,
-        user_repository: UserRepository,
-        region_repository: RegionSettingsRepository,
+            self,
+            user_repository: UserRepository,
+            region_repository: RegionSettingsRepository,
     ) -> None:
         self.user_repository = user_repository
         self.region_repository = region_repository
-
 
     async def get_user_settings(self, user_id: str) -> Optional[UserSettingsDTO]:
         if not await self.user_repository.get_by_id(user_id):
@@ -55,11 +54,10 @@ class UserSettingsService:
 
         return self.to_dto(user_id, model)
 
-
     async def update_user_settings(
-        self,
-        user_id: str,
-        request: UserSettingsUpdateRequest,
+            self,
+            user_id: str,
+            request: UserSettingsUpdateRequest,
     ) -> Optional[UserSettingsDTO]:
         if not await self.user_repository.get_by_id(user_id):
             return None
@@ -74,7 +72,6 @@ class UserSettingsService:
 
         return self.to_dto(user_id, model)
 
-
     async def reset_user_settings(self, user_id: str) -> bool:
         if not await self.user_repository.get_by_id(user_id):
             return False
@@ -82,22 +79,11 @@ class UserSettingsService:
         await self.region_repository.delete_user_settings(user_id)
         return True
 
-
     def to_dto(self, user_id: str, model: RegionSettingModel) -> UserSettingsDTO:
         return UserSettingsDTO(
             **model.model_dump(),
             links=self.build_links(user_id),
         )
-
-
-    def build_links(self, user_id: str) -> dict[str, Link]:
-        url = f"{API_PREFIX}/users/{user_id}/settings"
-        return {
-            LINK_SELF: Link(href=url, method="GET"),
-            LINK_UPDATE_SETTINGS: Link(href=url, method="PUT"),
-            LINK_RESET_SETTINGS: Link(href=url, method="DELETE"),
-        }
-
 
     def build_metadata(self, user_settings: UserSettingsDTO) -> UserSettingsMetadata:
         # Receives the DTO so rules can depend on its current state
@@ -111,6 +97,14 @@ class UserSettingsService:
             theme=self._choice_field(SupportedThemes),
         )
 
+    @staticmethod
+    def build_links(user_id: str) -> dict[str, Link]:
+        url = f"{API_PREFIX}/users/{user_id}/settings"
+        return {
+            LINK_SELF: Link(href=url, method="GET"),
+            LINK_UPDATE_SETTINGS: Link(href=url, method="PUT"),
+            LINK_RESET_SETTINGS: Link(href=url, method="DELETE"),
+        }
 
     @staticmethod
     def _choice_field(enum_type: Type[Enum]) -> FieldMetadata:
@@ -118,7 +112,6 @@ class UserSettingsService:
             mandatory=True,
             values=[EmbeddedRef(id=member.value, value=member.value) for member in enum_type],
         )
-
 
     def build_response(self, user_settings: UserSettingsDTO) -> UserSettingsResponse:
         return UserSettingsResponse.of(

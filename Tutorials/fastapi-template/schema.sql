@@ -1,4 +1,4 @@
--- Consolidated snapshot of migrations/*.sql (001, 002). Keep in sync when adding a migration.
+-- Consolidated snapshot of migrations/*.sql (001, 002, 003). Keep in sync when adding a migration.
 
 -- 001_create_users_table.sql
 CREATE TABLE IF NOT EXISTS users (
@@ -37,3 +37,20 @@ CREATE TABLE IF NOT EXISTS configuration_settings (
 
 INSERT OR IGNORE INTO configuration_settings (id, setting_type, enabled)
 VALUES ('e41ee356-fe48-4d22-a4e1-680149c6c31d', 'AUTH', 1);
+
+-- 003_user_detail_view.sql
+-- A user plus their roles in one row. role_ids is a comma-separated list
+-- (e.g. 'ADMIN,STANDARD'), NULL when the user has no roles; order is not
+-- guaranteed. core/security reads this view, so it can check roles without
+-- importing the users domain.
+CREATE VIEW IF NOT EXISTS user_detail_view AS
+SELECT
+    u.id,
+    u.external_user_id,
+    u.name,
+    u.email,
+    u.created_date,
+    GROUP_CONCAT(r.role_id) AS role_ids
+FROM users u
+LEFT JOIN user_roles r ON r.user_id = u.id
+GROUP BY u.id;

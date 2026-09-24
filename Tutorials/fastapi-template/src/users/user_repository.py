@@ -1,12 +1,15 @@
 from typing import Any, Dict, List, Optional
 
 from core.config.database import Database
-from users.enums import UserRole
+from core.security.roles import UserRole, parse_role_ids
 
 
 class UserRepository:
     """
     Repository for user database operations.
+
+    Reads go through `user_detail_view`, which returns each user with their
+    roles in one row, so listing users is one query rather than one per user.
 
     This repository depends on the portable Database protocol, not SQLite,
     Cloudflare D1, or any other concrete database runtime.
@@ -42,38 +45,27 @@ class UserRepository:
         return created
 
     async def get_by_id(self, user_id: str) -> Optional[Dict[str, Any]]:
-        user = await self.db.fetch_one(
-            "SELECT * FROM users WHERE id = ?",
+        row = await self.db.fetch_one(
+            "SELECT * FROM user_detail_view WHERE id = ?",
             (user_id,),
         )
 
-        if not user:
-            return None
-
-        user["roleIds"] = await self.get_role_ids(user_id)
-        return user
+        return self._to_user(row) if row else None
 
     async def get_by_external_id(self, external_user_id: str) -> Optional[Dict[str, Any]]:
-        user = await self.db.fetch_one(
-            "SELECT * FROM users WHERE external_user_id = ?",
+        row = await self.db.fetch_one(
+            "SELECT * FROM user_detail_view WHERE external_user_id = ?",
             (external_user_id,),
         )
 
-        if not user:
-            return None
-
-        user["roleIds"] = await self.get_role_ids(user["id"])
-        return user
+        return self._to_user(row) if row else None
 
     async def get_all(self) -> List[Dict[str, Any]]:
-        users = await self.db.fetch_all(
-            "SELECT * FROM users ORDER BY name",
+        rows = await self.db.fetch_all(
+            "SELECT * FROM user_detail_view ORDER BY name",
         )
 
-        for user in users:
-            user["roleIds"] = await self.get_role_ids(user["id"])
-
-        return users
+        return [self._to_user(row) for row in rows]
 
     async def search(self, term: Optional[str] = None) -> List[Dict[str, Any]]:
         # Case-insensitive match on name or email (SQLite LIKE and D1 both
@@ -82,15 +74,12 @@ class UserRepository:
             return await self.get_all()
 
         like = f"%{term}%"
-        users = await self.db.fetch_all(
-            "SELECT * FROM users WHERE name LIKE ? OR email LIKE ? ORDER BY name",
+        rows = await self.db.fetch_all(
+            "SELECT * FROM user_detail_view WHERE name LIKE ? OR email LIKE ? ORDER BY name",
             (like, like),
         )
 
-        for user in users:
-            user["roleIds"] = await self.get_role_ids(user["id"])
-
-        return users
+        return [self._to_user(row) for row in rows]
 
     async def update(self, user_id: str, **fields: Any) -> Optional[Dict[str, Any]]:
         role_ids = fields.pop("roleIds", None)
@@ -129,13 +118,13 @@ class UserRepository:
 
         return True
 
-    async def get_role_ids(self, user_id: str) -> list[str]:
-        rows = await self.db.fetch_all(
-            "SELECT role_id FROM user_roles WHERE user_id = ? ORDER BY role_id",
-            (user_id,),
-        )
-
-        return [row["role_id"] for row in rows]
+    async def add_roles(self, user_id: str, role_ids: list[UserRole]) -> None:
+        """Add roles the user doesn't already have; never removes any."""
+        for role_id in role_ids:
+            await self.db.execute(
+                "INSERT OR IGNORE INTO user_roles (user_id, role_id) VALUES (?, ?)",
+                (user_id, role_id.value),
+            )
 
     async def replace_roles(
         self,
@@ -159,3 +148,9 @@ class UserRepository:
             return [UserRole.STANDARD]
 
         return list(dict.fromkeys(role_ids))
+
+    @staticmethod
+    def _to_user(row: Dict[str, Any]) -> Dict[str, Any]:
+        user = dict(row)
+        user["roleIds"] = parse_role_ids(user.pop("role_ids"))
+        return user

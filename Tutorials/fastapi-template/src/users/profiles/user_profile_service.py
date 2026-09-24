@@ -2,7 +2,7 @@ from typing import Any, Dict, Optional
 
 from core.common.api_response import API_PREFIX, envelope
 from core.common.base_dto import Link
-from users.enums import UserRole
+from core.security.roles import UserRole
 from users.profiles.schemas import UserProfile
 
 from users.user_repository import UserRepository
