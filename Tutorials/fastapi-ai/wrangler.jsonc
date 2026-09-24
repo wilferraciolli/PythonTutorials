@@ -19,10 +19,26 @@
 	"ai": {
 		"binding": "AI"
 	},
+	// Workers Logs (what you switched on in the dashboard). Kept here so a deploy
+	// doesn't switch it back off. Read them in the dashboard under this Worker's
+	// Observability tab, or live with `npx wrangler tail`.
+	"observability": {
+		"logs": {
+			"enabled": true,
+			"head_sampling_rate": 1,
+			"invocation_logs": true,
+			"persist": true
+		},
+		"traces": {
+			"enabled": false,
+			"head_sampling_rate": 1,
+			"persist": true
+		}
+	},
 	"d1_databases": [
 		{
 			"binding": "DB",
-			"database_name": "wiltech-db",
+			"database_name": "demo-db",
 			"database_id": "c4b6187b-e49e-4929-9f00-ace7137a1051"
 		}
 	]
