@@ -1,8 +1,9 @@
 from enum import Enum
-from typing import Optional, Type
+from typing import Type
 
 from core.common.api_response import API_PREFIX
 from core.common.base_dto import EmbeddedRef, FieldMetadata, Link
+from core.security.authorization import Caller
 from shared.settings.region.enums import (
     SupportedCurrencies,
     SupportedLanguages,
@@ -23,7 +24,7 @@ from users.settings.schemas import (
     UserSettingsResponse,
     UserSettingsUpdateRequest,
 )
-from users.user_repository import UserRepository
+from users.exceptions import NotOwnerError
 
 
 class UserSettingsService:
@@ -32,19 +33,16 @@ class UserSettingsService:
 
     A user without saved settings sees the SYSTEM defaults (owner_type SYSTEM)
     until they save their own, at which point a USER row is created.
+
+    Settings are personal: only their owner may read, change or reset them —
+    not even an admin. System-wide defaults are managed at /admin/settings.
     """
 
-    def __init__(
-            self,
-            user_repository: UserRepository,
-            region_repository: RegionSettingsRepository,
-    ) -> None:
-        self.user_repository = user_repository
+    def __init__(self, region_repository: RegionSettingsRepository) -> None:
         self.region_repository = region_repository
 
-    async def get_user_settings(self, user_id: str) -> Optional[UserSettingsDTO]:
-        if not await self.user_repository.get_by_id(user_id):
-            return None
+    async def get_user_settings(self, user_id: str, caller: Caller) -> UserSettingsDTO:
+        self._ensure_owner(user_id, caller)
 
         model = await self.region_repository.get_user_settings(user_id)
         if model is None:
@@ -58,9 +56,9 @@ class UserSettingsService:
             self,
             user_id: str,
             request: UserSettingsUpdateRequest,
-    ) -> Optional[UserSettingsDTO]:
-        if not await self.user_repository.get_by_id(user_id):
-            return None
+            caller: Caller,
+    ) -> UserSettingsDTO:
+        self._ensure_owner(user_id, caller)
 
         model = await self.region_repository.upsert_user_settings(
             user_id,
@@ -72,12 +70,16 @@ class UserSettingsService:
 
         return self.to_dto(user_id, model)
 
-    async def reset_user_settings(self, user_id: str) -> bool:
-        if not await self.user_repository.get_by_id(user_id):
-            return False
-
+    async def reset_user_settings(self, user_id: str, caller: Caller) -> None:
+        self._ensure_owner(user_id, caller)
         await self.region_repository.delete_user_settings(user_id)
-        return True
+
+    @staticmethod
+    def _ensure_owner(user_id: str, caller: Caller) -> None:
+        # The caller's own user always exists, so passing this check also
+        # means the user in the path exists — no separate 404 needed.
+        if caller.user_id is None or caller.user_id != user_id:
+            raise NotOwnerError("You can only access your own settings.")
 
     def to_dto(self, user_id: str, model: RegionSettingModel) -> UserSettingsDTO:
         return UserSettingsDTO(

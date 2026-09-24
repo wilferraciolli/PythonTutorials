@@ -1,12 +1,17 @@
-from typing import Any, Optional
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 
 from core.config.database import get_database
-from core.security.auth import AuthenticatedUser
-from core.security.authorization import require_admin
+from core.security.authorization import Caller, get_caller, require_admin
 from users.exceptions import SelfLockoutError
-from users.schemas import UserCreate, UserUpdate
+from users.schemas import (
+    UserCreateRequest,
+    UserListResponse,
+    UserResponse,
+    UserTemplateResponse,
+    UserUpdateRequest,
+)
 from users.user_repository import UserRepository
 from users.user_service import UserService
 
@@ -22,77 +27,81 @@ def get_user_service(request: Request) -> UserService:
 
 @router.get("")
 async def get_users(
+    caller: Caller = Depends(get_caller),
     service: UserService = Depends(get_user_service),
-) -> dict[str, Any]:
-    users = await service.get_users()
-    return service.build_response("users", users)
+) -> UserListResponse:
+    users = await service.get_users(caller)
+    return service.build_list_response(users, caller)
 
 
 @router.get("/search")
 async def search_users(
     q: Optional[str] = None,
+    caller: Caller = Depends(get_caller),
     service: UserService = Depends(get_user_service),
-) -> dict[str, Any]:
+) -> UserListResponse:
     """Search users by name or email (`?q=`); no `q` returns everyone."""
-    users = await service.search_users(q)
-    return service.build_response("users", users)
+    users = await service.search_users(q, caller)
+    return service.build_list_response(users, caller)
 
 
 @router.get("/template")
 async def get_user_template(
     service: UserService = Depends(get_user_service),
-) -> dict[str, Any]:
+) -> UserTemplateResponse:
     return service.build_template_response()
 
 
 @router.get("/{user_id}")
 async def get_user(
     user_id: str,
+    caller: Caller = Depends(get_caller),
     service: UserService = Depends(get_user_service),
-) -> dict[str, Any]:
-    user = await service.get_user(user_id)
+) -> UserResponse:
+    user = await service.get_user(user_id, caller)
 
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    return service.build_response("user", user)
+    return service.build_response(user, caller)
 
 
-@router.post("", status_code=201, dependencies=[Depends(require_admin)])
+@router.post("", status_code=201)
 async def create_user(
-    user: UserCreate,
+    request: UserCreateRequest,
+    caller: Caller = Depends(require_admin),
     service: UserService = Depends(get_user_service),
-) -> dict[str, Any]:
-    created = await service.create_user(user)
-    return service.build_response("user", created)
+) -> UserResponse:
+    created = await service.create_user(request, caller)
+    return service.build_response(created, caller)
 
 
 @router.put("/{user_id}")
 async def update_user(
     user_id: str,
-    user: UserUpdate,
-    current_user: AuthenticatedUser = Depends(require_admin),
+    request: UserUpdateRequest,
+    caller: Caller = Depends(require_admin),
     service: UserService = Depends(get_user_service),
-) -> dict[str, Any]:
+) -> UserResponse:
     try:
-        updated = await service.update_user(user_id, user, current_user.id)
+        updated = await service.update_user(user_id, request, caller)
     except SelfLockoutError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     if not updated:
         raise HTTPException(status_code=404, detail="User not found")
 
-    return service.build_response("user", updated)
+    return service.build_response(updated, caller)
 
 
 @router.delete("/{user_id}", status_code=204)
 async def delete_user(
     user_id: str,
-    current_user: AuthenticatedUser = Depends(require_admin),
+    caller: Caller = Depends(require_admin),
     service: UserService = Depends(get_user_service),
 ) -> Response:
     try:
-        deleted = await service.delete_user(user_id, current_user.id)
+        deleted = await service.delete_user(user_id, caller)
     except SelfLockoutError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

@@ -1,10 +1,20 @@
-from typing import Any, Dict, Optional
+from typing import Optional
 
-from core.common.api_response import API_PREFIX, envelope
-from core.common.base_dto import Link
-from core.security.roles import UserRole
-from users.profiles.schemas import UserProfile
-
+from core.common.api_response import API_PREFIX
+from core.common.base_dto import FieldMetadata, Link
+from core.security.authorization import Caller
+from core.security.roles import role_options
+from users.models import UserModel
+from users.profiles.constants import (
+    LINK_SEARCH_USERS,
+    LINK_SELF,
+    LINK_USER,
+    LINK_USER_SETTINGS,
+    LINK_USER_TEMPLATE,
+    LINK_USERS,
+    USER_PROFILE_DATA_NAME,
+)
+from users.profiles.schemas import UserProfileDTO, UserProfileMetadata, UserProfileResponse
 from users.user_repository import UserRepository
 
 
@@ -17,88 +27,80 @@ class UserProfileService:
     `/users/{user_id}/profile`, keyed by the user id in the path — so the
     rules for "may this caller see that user's resources?" live in one
     place (`can_view_profile`) instead of being scattered over each feature.
+
+    Access rules:
+    - Any signed-in caller may view any profile.
+    - Only the owner may change a profile. There is no PUT yet; when one is
+      added, guard it with `can_edit_profile`.
+    - Personal links (e.g. `userSettings`) only appear on your own profile.
     """
 
     def __init__(self, user_repository: UserRepository) -> None:
         self.user_repository = user_repository
 
-    async def get_user_profile(self, user_id: str, caller: Dict[str, Any]) -> Optional[UserProfile]:
+    async def get_user_profile(self, user_id: str, caller: Caller) -> Optional[UserProfileDTO]:
         """
         Build the profile for the user in the path, as seen by `caller`.
 
         Returns None if that user doesn't exist; raises PermissionError if
         the caller may not see them (the router maps it to 403).
         """
-        user = await self.user_repository.get_by_id(user_id)
+        target = await self.user_repository.get_by_id(user_id)
 
-        if not user:
+        if not target:
             return None
 
-        if not self.can_view_profile(caller, user):
-            raise PermissionError(f"user {caller['id']} may not view profile {user['id']}")
+        if not self.can_view_profile(caller, target):
+            raise PermissionError(f"{caller.external_id} may not view profile {target.id}")
 
-        return UserProfile(
-            id=user["id"],
-            externalId=user.get("external_user_id"),
-            name=user["name"],
-            email=user.get("email"),
-            roleIds=user["roleIds"],
-            links=self.build_user_profile_links(user["id"]),
+        return UserProfileDTO(
+            id=target.id,
+            externalId=target.external_user_id,
+            name=target.name,
+            email=target.email,
+            roleIds=target.role_ids,
+            links=self.build_links(target.id, caller),
         )
 
-    def can_view_profile(self, caller: Dict[str, Any], target: Dict[str, Any]) -> bool:
-        # Business-logic seam: decide whether `caller` (the logged-in
-        # user's row) may see `target` (the user whose id is in the path)
-        # and, through the links built for that id, their resources.
-        # Currently open to any signed-in caller — tighten here (e.g. self
-        # or ADMIN only).
+    @staticmethod
+    def can_view_profile(caller: Caller, target: UserModel) -> bool:
+        # Everyone signed in may see everyone's profile.
         return True
 
-    def build_user_profile_links(self, user_id: str) -> dict[str, Link]:
-        # No standalone `createTodo` link here: the create URL is never
-        # POSTed to blind. Clients GET `todoTemplate` (its field metadata
+    @staticmethod
+    def can_edit_profile(caller: Caller, target: UserModel) -> bool:
+        # Only the owner may change their profile — use this to guard a PUT.
+        return caller.user_id is not None and caller.user_id == target.id
+
+    @staticmethod
+    def build_links(user_id: str, caller: Caller) -> dict[str, Link]:
+        # No standalone `createUser` link here: the create URL is never
+        # POSTed to blind. Clients GET `userTemplate` (its field metadata
         # says what's mandatory) and derive the create URL from that link.
-        return {
-            "self": Link(href=f"{API_PREFIX}/users/{user_id}/profile", method="GET"),
-            "user": Link(href=f"{API_PREFIX}/users/{user_id}", method="GET"),
-            "users": Link(href=f"{API_PREFIX}/users", method="GET"),
-            "userTemplate": Link(href=f"{API_PREFIX}/users/template", method="GET"),
-            "searchUsers": Link(href=f"{API_PREFIX}/users/search", method="GET"),
+        links = {
+            LINK_SELF: Link(href=f"{API_PREFIX}/users/{user_id}/profile", method="GET"),
+            LINK_USER: Link(href=f"{API_PREFIX}/users/{user_id}", method="GET"),
+            LINK_USERS: Link(href=f"{API_PREFIX}/users", method="GET"),
+            LINK_SEARCH_USERS: Link(href=f"{API_PREFIX}/users/search", method="GET"),
         }
 
-    def build_metadata(self) -> dict[str, Any]:
-        return {
-            "id": {
-                "readOnly": True,
-                "hidden": True,
-            },
-            "name": {
-                "readOnly": True,
-            },
-            "roleIds": {
-                "readOnly": True,
-                "values": [
-                    {
-                        "id": UserRole.STANDARD.value,
-                        "value": "Standard user",
-                    },
-                    {
-                        "id": UserRole.ADMIN.value,
-                        "value": "System Administrator",
-                    },
-                ],
-            },
-        }
+        # Settings are personal: only offered on your own profile.
+        if caller.user_id == user_id:
+            links[LINK_USER_SETTINGS] = Link(href=f"{API_PREFIX}/users/{user_id}/settings", method="GET")
 
-    def build_response(
-        self,
-        user_profile: UserProfile,
-        messages: Optional[list[dict[str, str]]] = None,
-    ) -> dict[str, Any]:
-        return envelope(
-            data_name="userProfile",
-            data=user_profile,
-            metadata=self.build_metadata(),
-            meta_links={},
-            messages=messages,
+        # Creating users is admin-only, so only admins get the way in.
+        if caller.is_admin:
+            links[LINK_USER_TEMPLATE] = Link(href=f"{API_PREFIX}/users/template", method="GET")
+
+        return links
+
+    @staticmethod
+    def build_metadata() -> UserProfileMetadata:
+        return UserProfileMetadata(
+            id=FieldMetadata(readOnly=True, hidden=True),
+            name=FieldMetadata(readOnly=True),
+            roleIds=FieldMetadata(readOnly=True, values=role_options()),
         )
+
+    def build_response(self, user_profile: UserProfileDTO) -> UserProfileResponse:
+        return UserProfileResponse.of(USER_PROFILE_DATA_NAME, user_profile, self.build_metadata())

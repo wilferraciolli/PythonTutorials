@@ -1,10 +1,24 @@
 from enum import Enum
 
+from core.common.base_dto import EmbeddedRef
+
 
 # Enum for user role
 class UserRole(str, Enum):
     STANDARD = "STANDARD"
     ADMIN = "ADMIN"
+
+
+# Display labels for metadata option lists.
+ROLE_LABELS: dict[UserRole, str] = {
+    UserRole.STANDARD: "Standard user",
+    UserRole.ADMIN: "System Administrator",
+}
+
+
+def role_options() -> list[EmbeddedRef]:
+    """The `values` list for any `roleIds` field in `_metadata`."""
+    return [EmbeddedRef(id=role.value, value=label) for role, label in ROLE_LABELS.items()]
 
 
 def parse_role_ids(value: str | None) -> list[str]:

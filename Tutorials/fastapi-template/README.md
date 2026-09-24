@@ -60,17 +60,18 @@ fastapi-template/
 │   │   └── status_router.py          # /api/health
 │   ├── shared/                       # Data owned by several domains
 │   │   └── settings/
-│   │       ├── region/               # region_settings table: enums, models, repository
-│   │       └── configuration/        # configuration_settings table: enums, schemas, repository
+│   │       ├── region/               # region_settings: /api/admin/settings + the shared repository
+│   │       └── configuration/        # configuration_settings table: enums, models, repository
 │   └── users/
 │       ├── user_router.py            # /api/users CRUD — copy this pattern per resource
-│       ├── user_service.py
-│       ├── user_repository.py        # Raw parameterized SQL via the Database protocol
-│       ├── schemas.py
-│       ├── exceptions.py
+│       ├── user_service.py           # Business rules, links, metadata, envelopes
+│       ├── user_repository.py        # SQL -> UserModel, reads via user_detail_view
+│       ├── models.py                 # UserModel
+│       ├── schemas.py                # Request / DTO / Metadata classes + Response aliases
+│       ├── constants.py              # `_data` key names and link names
+│       ├── exceptions.py             # SelfLockoutError
 │       ├── profiles/                 # /api/me and /api/users/{id}/profile
-│       └── settings/                 # /api/users/{id}/settings — reference for the
-│                                      # typed Model / Request / DTO / Response layers
+│       └── settings/                 # /api/users/{id}/settings
 ├── migrations/
 │   ├── 001_create_users_table.sql   # Auto-applied against local SQLite
 │   ├── 002_settings.sql
@@ -133,8 +134,9 @@ return service.build_response(user_settings)
   `response_model_exclude_none`, and a DTO's `None` fields still come back as
   `null`.
 
-`users/user_service.py` and `users/profiles/` still use the older dict-based
-`envelope()` helper; move them to `ApiResponse` when you next touch them.
+Every resource in the template follows these conventions: users, `/me`,
+profiles, user settings and system settings. `/api/health` is the one
+exception; it's an infrastructure probe and returns a plain object.
 
 ## Starting a new project from this template
 
@@ -191,11 +193,20 @@ Roles live in our own `user_roles` table, not only in Clerk:
 - **Our API is the source of truth after that.** An admin can grant or remove
   roles through `PUT /api/users/{id}`, and a role granted here survives even
   if Clerk stops sending it. To revoke a role, use the API, not Clerk.
-- **`require_admin`** (`core/security/authorization.py`) guards admin-only
-  routes: `403` unless the caller's saved roles include `ADMIN`. It reads
+- **`get_caller`** (`core/security/authorization.py`) returns a `Caller`
+  with the caller's saved roles. **`require_admin`** builds on it to guard
+  admin-only routes: `403` unless those roles include `ADMIN`. Both read
   `user_detail_view`, so `core/` never imports the `users` package.
+- **Links follow permissions.** Services receive the `Caller`, so a
+  non-admin gets no `updateUser` / `deleteUser` links and no `createUser` /
+  `userTemplate` meta links. Nobody gets a `deleteUser` link on themselves.
 - **No lockout:** an admin can't remove their own `ADMIN` role or delete
   themselves (`400`), so the system can't end up with no admin by accident.
+- **Personal resources:** your settings (`/api/users/{id}/settings`) are
+  yours alone. Anyone else gets `403`, admins included; system-wide defaults
+  live at `/api/admin/settings`. Profiles are viewable by everyone, but only
+  their owner may change one (`can_edit_profile`, ready for when a profile
+  `PUT` is added).
 
 ## Database modes
 
@@ -290,12 +301,12 @@ above) except `/api/health`, `/docs`, and `/openapi.json`.
 | POST | `/api/users` | **Admin only.** Create a user |
 | PUT | `/api/users/{id}` | **Admin only.** Update a user, including their roles. You can't remove your own `ADMIN` role (`400`) |
 | DELETE | `/api/users/{id}` | **Admin only.** Delete a user (returns `204 No Content`). You can't delete yourself (`400`) |
-| GET | `/api/users/{id}/settings` | The user's region settings (timezone, language, currency, theme); falls back to the system defaults (`owner_type: SYSTEM`) until the user saves their own |
-| PUT | `/api/users/{id}/settings` | Save the user's region settings |
-| DELETE | `/api/users/{id}/settings` | Drop the user's own settings so they fall back to the system defaults (returns `204 No Content`) |
+| GET | `/api/users/{id}/settings` | **Your own only** (`403` for anyone else, admins included). Your region settings (timezone, language, currency, theme); falls back to the system defaults (`owner_type: SYSTEM`) until the user saves their own |
+| PUT | `/api/users/{id}/settings` | **Your own only.** Save your region settings |
+| DELETE | `/api/users/{id}/settings` | **Your own only.** Drop your settings so you fall back to the system defaults (returns `204 No Content`) |
 | GET | `/api/admin/settings` | **Admin only.** The system default region settings every user falls back to |
 | PUT | `/api/admin/settings` | **Admin only.** Update the system default region settings |
-| GET | `/api/users/{id}/profile` | **Where links live.** `/me` only returns the `userProfile` link; this returns the user (`id`, `externalId`, `name`, `email`, `roleIds`) plus every link the UI follows, built from the `{id}` in the path. `UserProfileService.can_view_profile` is the seam for "may the caller see this user's resources?" |
+| GET | `/api/users/{id}/profile` | **Where links live.** `/me` only returns the `userProfile` link; this returns the user (`id`, `externalId`, `name`, `email`, `roleIds`) plus every link the UI follows, built from the `{id}` in the path. `UserProfileService.can_view_profile` is the seam for "may the caller see this user's resources?" Anyone signed in can view any profile; the `userSettings` link only appears on your own. |
 | GET | `/docs` | Interactive Swagger UI |
 | GET | `/openapi.json` | OpenAPI schema |
 

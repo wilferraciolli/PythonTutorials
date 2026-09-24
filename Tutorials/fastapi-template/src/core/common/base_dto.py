@@ -1,3 +1,4 @@
+from enum import Enum
 from typing import Dict, Optional
 
 from pydantic import BaseModel, Field, SerializerFunctionWrapHandler, model_serializer
@@ -8,6 +9,19 @@ class Link(BaseModel):
     """A single navigation link describing a related action on a resource."""
     href: str
     method: str = "GET"
+
+
+class MessageType(str, Enum):
+    INFO = "INFO"
+    WARNING = "WARNING"
+    ERROR = "ERROR"
+    SUCCESS = "SUCCESS"
+
+
+class Message(BaseModel):
+    """One entry in `_messages`: something useful to tell the client or user."""
+    type: MessageType
+    value: str
 
 
 class EmbeddedRef(BaseModel):

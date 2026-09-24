@@ -43,25 +43,34 @@ Use this structure for new FastAPI APIs:
 ```text
 my-python-api/
 ├── src/
-│   ├── main.py                    # Plain FastAPI app for uvicorn/Docker
+│   ├── main.py                    # Plain FastAPI app for uvicorn/Docker; registers routers
 │   ├── entry.py                   # Optional Cloudflare Worker ASGI entrypoint
-│   ├── config.py                  # Runtime config from env / .env / Worker env
-│   ├── database.py                # Database protocol and concrete adapters
-│   ├── api_response.py            # Shared response envelope types/helpers
-│   ├── models.py                  # Shared DTOs / Pydantic models
-├── {domain}/           # e.g., auth/, posts/, aws/
-│   │   ├── router.py       # API endpoints
-│   │   ├── schemas.py      # Request, DTO and Metadata classes
-│   │   ├── models.py       # Database row models (entities): {Name}Model
-│   │   ├── service.py      # Business logic
-│   │   ├── dependencies.py # Route dependencies
-│   │   ├── config.py       # Domain-scoped BaseSettings
-│   │   ├── constants.py    # Constants and error codes
-│   │   ├── exceptions.py   # Domain-specific exceptions
-│   │   └── utils.py        # Helper functions
+│   ├── core/                      # Cross-cutting code. Never imports a domain package.
+│   │   ├── common/
+│   │   │   ├── api_response.py    # ApiResponse envelope + API_PREFIX
+│   │   │   ├── base_dto.py        # Link, LinkedResource, EmbeddedRef, FieldMetadata, Message
+│   │   │   └── serializers.py     # UTC date formatting
+│   │   ├── config/
+│   │   │   ├── config.py          # Runtime config from env / .env / Worker env
+│   │   │   └── database.py        # Database protocol, adapters, migration runner
+│   │   └── security/
+│   │       ├── auth.py            # Token verification -> AuthenticatedUser
+│   │       ├── authorization.py   # Caller, get_caller, require_admin
+│   │       └── roles.py           # UserRole, role labels/options
+│   ├── shared/                    # Data owned by several domains (e.g. settings)
+│   └── {domain}/                  # e.g. users/, todos/ — one package per bounded context
+│       ├── {domain}_router.py     # HTTP only
+│       ├── {domain}_service.py    # Business rules, links, metadata, envelope
+│       ├── {domain}_repository.py # SQL -> {Name}Model
+│       ├── models.py              # Database row models: {Name}Model
+│       ├── schemas.py             # Request, DTO, Metadata classes + Response aliases
+│       ├── constants.py           # `_data` key names, link names
+│       ├── exceptions.py          # Domain exceptions the router maps to HTTP errors
+│       ├── enums.py               # Domain enums, when there are any
+│       └── {sub_resource}/        # Same layout, e.g. users/settings/
 ├── migrations/
-│   └── 001_create_tables.sql      # Local SQLite migrations
-├── schema.sql                     # Cloudflare D1 schema when applicable
+│   └── 001_create_tables.sql      # Applied automatically to local SQLite
+├── schema.sql                     # Snapshot of all migrations, for Cloudflare D1
 ├── Dockerfile
 ├── docker-compose.yml
 ├── pyproject.toml
@@ -71,24 +80,16 @@ my-python-api/
 └── README.md
 ```
 
-`models.py` is only for database row models (`{Name}Model`); Request, DTO and
-Metadata classes go in `schemas.py` (see "Model, Request, DTO and Response
-conventions"). For larger APIs, split them by domain:
+Rules:
 
-```text
-src/
-├── domains/
-│   ├── todos/
-│   │   ├── models.py
-│   │   ├── router.py
-│   │   ├── service.py
-│   │   └── repository.py
-│   └── tags/
-│       ├── models.py
-│       ├── router.py
-│       ├── service.py
-│       └── repository.py
-```
+- `core/` holds only cross-cutting code and never imports a domain package.
+  When `core/` needs domain data (e.g. the caller's roles), read it through a
+  database view (see "Database views").
+- `models.py` is only for database row models (`{Name}Model`). Request, DTO
+  and Metadata classes, and the `{Name}Response` aliases, go in `schemas.py`
+  (see "Model, Request, DTO and Response conventions").
+- A sub-resource (`/users/{id}/settings`) gets its own sub-package with the
+  same layout.
 
 Choose one structure and stay consistent.
 
@@ -121,6 +122,7 @@ Recommended `fastapi-cloudflare-d1/.env` values:
 ```env
 DATABASE_MODE=sqlite
 DATABASE_PATH=./local.db
+MIGRATIONS_DIR=./migrations
 ```
 
 ### 2. Docker + SQLite
@@ -148,6 +150,7 @@ services:
     environment:
       DATABASE_MODE: sqlite
       DATABASE_PATH: /data/local.db
+      MIGRATIONS_DIR: /app/migrations
     volumes:
       - ./src:/app/src
       - ./migrations:/app/migrations
@@ -412,6 +415,23 @@ npx wrangler d1 execute todo-db --remote --file=./schema.sql
 Where possible, keep `schema.sql` and `migrations/` compatible. If they drift,
 document why.
 
+Rules:
+
+- The migrations folder comes from the `MIGRATIONS_DIR` environment variable,
+  defaulting to `./migrations` relative to the working directory. Do not
+  compute it from `__file__` (`parents[3]`): that breaks whenever files move.
+  Docker sets `MIGRATIONS_DIR=/app/migrations` in both the `Dockerfile` and
+  `docker-compose.yml`.
+- Fail at startup if the folder does not exist. A missing folder must never
+  silently mean "no migrations to run".
+- `schema.sql` is a snapshot of every migration in order, with a header naming
+  the migrations it covers. Update it in the same change as a new migration.
+- Seed rows in `schema.sql` use `INSERT OR IGNORE`, so re-running the file
+  against D1 does not fail. Migrations themselves use plain `INSERT`; each
+  runs once.
+- Local SQLite applies new migrations automatically. D1 does not: apply each
+  new migration file with `wrangler d1 execute --file=...`.
+
 ## Identifier conventions
 
 Use UUID strings for public resource IDs.
@@ -555,6 +575,10 @@ Application services should not:
 - Return raw database rows directly without DTO shaping.
 - Contain host-specific code.
 
+Helpers that don't use instance state are `@staticmethod` and take no
+`self`. Do not combine the two: `@staticmethod def build_links(self, id)`
+makes `self.build_links(id)` fail with a missing-argument `TypeError`.
+
 This is the correct place for dynamic rules such as:
 
 - Remove `NEW` from available state values once a todo is already started.
@@ -571,6 +595,12 @@ Repositories should:
 - Contain SQL.
 - Accept a `Database` protocol implementation.
 - Return typed `Model` objects (one per table row), not raw dictionaries.
+- Convert rows in one private helper, `_to_model(row)`, returning None for no
+  row.
+- Take explicit, optional arguments for partial updates
+  (`update(user_id, name=None, email=None, role_ids=None)`), not `**fields`.
+- Read through a view when one model spans several tables (e.g. a user plus
+  their roles), rather than one extra query per row.
 - Use parameterized SQL only.
 
 Repositories should not:
@@ -622,6 +652,8 @@ Rules:
 - `_metaLinks` is required, but may be an empty object.
 - `_messages` is required, but may be an empty array.
 - Delete endpoints return `204 No Content` and no response body.
+- The health check (`/health`) is the one exception: it is an
+  infrastructure probe, not a resource, and returns a plain JSON object.
 
 ### Typed envelope: `ApiResponse`
 
@@ -787,7 +819,10 @@ For one resource, `_data` should contain a named object:
 
 ### Collection response
 
-For arrays, keep the same named resource key and make its value an array:
+For arrays, keep the same named resource key and make its value an array.
+Type it as `ApiResponse[list[{Name}DTO], {Name}Metadata]`
+(`UserListResponse`), with the plural key from `constants.py`
+(`USERS_DATA_NAME = "users"`):
 
 ```json
 {
@@ -849,6 +884,15 @@ For arrays, keep the same named resource key and make its value an array:
 ### Template response
 
 Template endpoints should return the shape needed to create a new resource.
+
+The template's `_data` is the `{Name}CreateRequest` itself, filled with
+defaults, so the form starts from exactly the shape it will POST:
+
+```python
+UserTemplateResponse = ApiResponse[UserCreateRequest, UserTemplateMetadata]
+
+UserTemplateResponse.of(USER_DATA_NAME, UserCreateRequest(name="", email=""), ...)
+```
 
 Do not include server-generated or persisted-only fields:
 
@@ -979,6 +1023,10 @@ Unhelpful metadata:
 }
 ```
 
+Option lists used by several resources are built in one place. For example,
+`role_options()` in `core/security/roles.py` builds the `roleIds` values with
+their display labels. Do not copy the labels into each service.
+
 Type metadata with a per-resource `{Resource}Metadata` class whose fields are
 the shared `FieldMetadata` from `core/common/base_dto.py`. Use `EmbeddedRef`
 (`{id, value}`) for each option in `values`:
@@ -1052,6 +1100,30 @@ Resource links live inside each returned resource:
 Resource links should be dynamic. For example, do not include a `delete` link
 if the current user cannot delete the resource.
 
+Pass the `Caller` (see "Authentication and authorization conventions") into
+the service so links match what the API will actually allow:
+
+```python
+@staticmethod
+def build_links(user_id: str, caller: Caller) -> dict[str, Link]:
+    url = f"{API_PREFIX}/users/{user_id}"
+    links = {LINK_SELF: Link(href=url, method="GET")}
+
+    if caller.is_admin:
+        links[LINK_UPDATE_USER] = Link(href=url, method="PUT")
+        # The API refuses deleting yourself, so don't offer it.
+        if user_id != caller.user_id:
+            links[LINK_DELETE_USER] = Link(href=url, method="DELETE")
+
+    return links
+```
+
+The same applies to meta links: `createUser` and `userTemplate` are only
+offered to callers who may create users.
+
+Link names are constants in the domain's `constants.py` (`LINK_SELF`,
+`LINK_UPDATE_USER`, ...), never inline strings.
+
 ### Meta links
 
 Meta links live at the envelope level:
@@ -1106,13 +1178,14 @@ Add entries only when there is something useful for the client/user:
   "_messages": [
     {
       "type": "INFO",
-      "value": "You cannot remove your own Admin role."
+      "value": "Your settings apply from your next sign-in."
     }
   ]
 }
 ```
 
-Suggested message types:
+Messages are typed: `Message(type=MessageType.INFO, value="...")` from
+`core/common/base_dto.py`. `MessageType` is one of:
 
 - `INFO`
 - `WARNING`
@@ -1295,6 +1368,28 @@ Example:
 
 ## Error handling conventions
 
+Services raise domain exceptions, defined in the domain's `exceptions.py`, for
+business-rule failures. The router catches them and maps them to HTTP errors.
+Services never raise `HTTPException`:
+
+```python
+# users/exceptions.py
+class SelfLockoutError(Exception):
+    """An admin tried to remove their own ADMIN role or delete themselves."""
+
+
+# users/user_router.py
+try:
+    updated = await service.update_user(user_id, request, caller)
+except SelfLockoutError as exc:
+    raise HTTPException(status_code=400, detail=str(exc)) from exc
+```
+
+"Not found" is not an exception: services return `None` (or `False` for
+delete) and the router returns `404`. A missing row that the migrations seed,
+like the SYSTEM settings row, is a server error (`RuntimeError`, so `500`),
+not a `404`.
+
 Use proper HTTP status codes:
 
 - `400 Bad Request` for invalid business input.
@@ -1355,6 +1450,36 @@ Keep SQL simple and portable where possible:
 - Avoid database-specific syntax unless the adapter owns it.
 - Add indexes for lookup paths.
 - Use unique indexes for business uniqueness rules.
+- Use `INSERT OR IGNORE` for idempotent inserts (e.g. adding a role the user
+  may already have). SQLite and D1 both support it.
+
+### Database views
+
+Use a view when:
+
+- one model spans several tables, so reads stay one query per request, not
+  one per row; or
+- `core/` needs domain data without importing the domain package. The view is
+  the contract between them.
+
+```sql
+-- migrations/003_user_detail_view.sql
+CREATE VIEW IF NOT EXISTS user_detail_view AS
+SELECT
+    u.id, u.external_user_id, u.name, u.email, u.created_date,
+    GROUP_CONCAT(r.role_id) AS role_ids
+FROM users u
+LEFT JOIN user_roles r ON r.user_id = u.id
+GROUP BY u.id;
+```
+
+- Name views `{name}_view`, and add them through a migration like any table.
+- D1 is SQLite underneath, so `CREATE VIEW` and `GROUP_CONCAT` work in every
+  runtime.
+- `GROUP_CONCAT` returns a comma-separated string, or `NULL` when there are no
+  rows, in no guaranteed order. Split and sort it in one helper
+  (`parse_role_ids`), never inline.
+- Views are read-only: writes still go to the underlying tables.
 
 ## Local development checklist
 
@@ -1429,7 +1554,13 @@ must:
 14. Add Docker support when requested or when useful for local reproducibility.
 15. Add Cloudflare support only as an adapter/entrypoint, not as a dependency
     throughout the app.
-16. Validate the app with at least compile/import checks and a local smoke test.
+16. Put authentication and authorization in `core/security/`; guard write
+    endpoints with `require_admin` and build links from the `Caller`.
+17. Keep `core/` free of domain imports; use a database view when `core/`
+    needs domain data.
+18. Raise domain exceptions from services and map them to HTTP errors in the
+    router.
+19. Validate the app with at least compile/import checks and a local smoke test.
 
 If the user asks for a quick prototype, the agent may simplify, but it should
 not violate the core boundaries:
@@ -1505,6 +1636,8 @@ TodoUpdateRequest    # PUT body, schemas.py
 TodoDTO              # service result, schemas.py
 TodoMetadata         # field rules, schemas.py
 TodoResponse         # = ApiResponse[TodoDTO, TodoMetadata], schemas.py
+TodoListResponse     # = ApiResponse[list[TodoDTO], TodoMetadata], schemas.py
+TodoTemplateResponse # = ApiResponse[TodoCreateRequest, TodoTemplateMetadata], schemas.py
 ```
 
 Per-domain constants (the `_data` key name and link names) live in the
@@ -1543,6 +1676,73 @@ reason to use another naming standard:
   "created_date": "2026-09-21T13:47:02Z"
 }
 ```
+
+## Authentication and authorization conventions
+
+Authentication (who is calling) and authorization (what they may do) live in
+`core/security/`:
+
+| Piece | File | What it does |
+|---|---|---|
+| `get_authenticated_user` | `auth.py` | Verifies the Clerk token and returns `AuthenticatedUser`. `401` if missing or invalid. |
+| `Caller`, `get_caller` | `authorization.py` | The caller as our database sees them: `external_id`, `user_id` (None before their first `/me`), saved `role_ids`, `is_admin`. |
+| `require_admin` | `authorization.py` | Returns the `Caller`, or `403` unless their saved roles include `ADMIN`. |
+| `UserRole`, `role_options()` | `roles.py` | The role enum and the metadata option list with labels. |
+
+`get_caller` reads `user_detail_view`, not the users repository, so
+`core/security` never imports the users domain.
+
+### Where roles come from
+
+- **Clerk seeds roles.** `/me` creates the user with the roles in the token.
+  On every later call it **adds** any token role the user lacks, and never
+  removes one.
+- **Our database is the source of truth after that.** Permission checks read
+  saved roles, never the token. An admin granted through the API stays an
+  admin even if Clerk stops sending the role, and revoking is done through
+  the API.
+- `STANDARD` is only the fallback for a user with no roles (the token parser
+  supplies it when the token has none), so `/me` does not add it to a user
+  who already has roles.
+
+### Guarding routes
+
+- Every route except `/health` requires a signed-in caller: `main.py` adds
+  `Depends(get_authenticated_user)` to each router.
+- Write endpoints that can change permissions or shared data require an
+  admin: take `caller: Caller = Depends(require_admin)` as a parameter (so
+  the service can use it), or add `dependencies=[Depends(require_admin)]` to
+  the route or `include_router` when the caller isn't needed.
+- Read endpoints take `caller: Caller = Depends(get_caller)` whenever links
+  depend on permissions.
+- Only offer links for what the caller may do (see "Link conventions").
+
+### Personal resources
+
+Some resources belong to one user and nobody else may use them, not even an
+admin. The user's settings at `/users/{user_id}/settings` are one example:
+
+- The service checks ownership first (`caller.user_id == user_id`) and raises
+  a domain exception (`NotOwnerError`) that the router turns into `403`.
+- Check ownership before existence: someone else's id gets `403` whether or
+  not it exists, so the API doesn't reveal which ids exist. The caller's own
+  user always exists, so no separate `404` is needed.
+- Only offer links to personal resources on the owner's own view (e.g. the
+  `userSettings` link appears only on your own profile).
+- A resource can be public to read but owner-only to change: everyone may
+  view any profile, only the owner may edit it (`can_edit_profile`).
+- Shared defaults that admins manage live on a separate admin route
+  (`/admin/settings`), not behind an "admin can edit anyone's" exception.
+
+### Preventing lockout
+
+An admin must not be able to leave the system without an admin. The service
+refuses, with a domain exception that the router turns into `400`:
+
+- removing your own `ADMIN` role;
+- deleting yourself.
+
+Compare by our id (`existing.id == caller.user_id`), not by name or email.
 
 ## Security and secret conventions
 
@@ -1603,6 +1803,13 @@ For CRUD resources, verify:
 - Date fields use UTC `Z` format.
 - Metadata contains only meaningful rules.
 - Links are present or absent based on business rules.
+
+For guarded resources, also verify with a non-admin and an admin caller:
+
+- No token returns `401`; a non-admin on an admin route returns `403`.
+- A non-admin gets no write links or write meta links.
+- The lockout rules return `400`.
+- Roles granted through the API survive a `/me` call whose token lacks them.
 
 ## Final design summary
 

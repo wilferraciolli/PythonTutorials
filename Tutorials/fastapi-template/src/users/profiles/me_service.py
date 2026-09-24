@@ -1,12 +1,13 @@
 from datetime import datetime, timezone
-from typing import Any, Dict
 from uuid import uuid4
 
-from core.common.api_response import API_PREFIX, envelope
+from core.common.api_response import API_PREFIX
+from core.common.base_dto import FieldMetadata, Link
 from core.security.auth import AuthenticatedUser
-from core.common.base_dto import Link
 from core.security.roles import UserRole
-from users.profiles.schemas import Me
+from users.models import UserModel
+from users.profiles.constants import LINK_SELF, LINK_USER_PROFILE, ME_DATA_NAME
+from users.profiles.schemas import MeDTO, MeMetadata, MeResponse
 from users.user_repository import UserRepository
 
 
@@ -27,7 +28,10 @@ class MeService:
     def __init__(self, user_repository: UserRepository) -> None:
         self.user_repository = user_repository
 
-    async def get_or_create_current_user(self, current_user: AuthenticatedUser) -> Dict[str, Any]:
+    async def get_me(self, current_user: AuthenticatedUser) -> MeDTO:
+        return self.to_dto(await self.get_or_create_current_user(current_user))
+
+    async def get_or_create_current_user(self, current_user: AuthenticatedUser) -> UserModel:
         existing = await self.user_repository.get_by_external_id(current_user.id)
         if existing:
             return await self._add_missing_clerk_roles(existing, current_user)
@@ -43,11 +47,11 @@ class MeService:
 
     async def _add_missing_clerk_roles(
         self,
-        existing: Dict[str, Any],
+        existing: UserModel,
         current_user: AuthenticatedUser,
-    ) -> Dict[str, Any]:
-        saved = set(existing["roleIds"])
-        missing = [role for role in self._normalise_role_ids(current_user.role_ids) if role.value not in saved]
+    ) -> UserModel:
+        saved = set(existing.role_ids)
+        missing = [role for role in self._normalise_role_ids(current_user.role_ids) if role not in saved]
 
         # STANDARD is only the fallback for a user with no roles (auth.py
         # hands it out when the token has none), so don't add it to someone
@@ -58,10 +62,10 @@ class MeService:
         if not missing:
             return existing
 
-        await self.user_repository.add_roles(existing["id"], missing)
-        updated = await self.user_repository.get_by_id(existing["id"])
+        await self.user_repository.add_roles(existing.id, missing)
+        updated = await self.user_repository.get_by_id(existing.id)
         if updated is None:
-            raise RuntimeError(f"user disappeared while adding roles: {existing['id']}")
+            raise RuntimeError(f"user disappeared while adding roles: {existing.id}")
         return updated
 
     def _normalise_role_ids(self, role_ids: list[str]) -> list[UserRole]:
@@ -74,35 +78,27 @@ class MeService:
         except ValueError:
             return None
 
-    def build_response(self, user_row: Dict[str, Any]) -> dict[str, Any]:
-        me = Me(
-            id=user_row["id"],
-            name=user_row["name"],
-            email=user_row["email"],
-            roleIds=user_row["roleIds"],
+    @staticmethod
+    def to_dto(model: UserModel) -> MeDTO:
+        return MeDTO(
+            id=model.id,
+            name=model.name,
+            email=model.email,
+            roleIds=model.role_ids,
             links={
-                "self": Link(href=f"{API_PREFIX}/me", method="GET"),
-                "userProfile": Link(href=f"{API_PREFIX}/users/{user_row['id']}/profile", method="GET"),
+                LINK_SELF: Link(href=f"{API_PREFIX}/me", method="GET"),
+                LINK_USER_PROFILE: Link(href=f"{API_PREFIX}/users/{model.id}/profile", method="GET"),
             },
         )
 
-        return envelope(
-            data_name="me",
-            data=me,
-            metadata={
-                "id": {
-                    "readOnly": True,
-                    "hidden": True,
-                },
-                "name": {
-                    "readOnly": True,
-                },
-                "email": {
-                    "readOnly": True,
-                },
-                "roleIds": {
-                    "readOnly": True,
-                },
-            },
-            meta_links={},
+    @staticmethod
+    def build_metadata() -> MeMetadata:
+        return MeMetadata(
+            id=FieldMetadata(readOnly=True, hidden=True),
+            name=FieldMetadata(readOnly=True),
+            email=FieldMetadata(readOnly=True),
+            roleIds=FieldMetadata(readOnly=True),
         )
+
+    def build_response(self, me: MeDTO) -> MeResponse:
+        return MeResponse.of(ME_DATA_NAME, me, self.build_metadata())
