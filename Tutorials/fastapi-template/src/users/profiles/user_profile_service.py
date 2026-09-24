@@ -8,6 +8,7 @@ from users.models import UserModel
 from users.profiles.constants import (
     LINK_SEARCH_USERS,
     LINK_SELF,
+    LINK_SYSTEM_SETTINGS,
     LINK_USER,
     LINK_USER_SETTINGS,
     LINK_USER_TEMPLATE,
@@ -33,6 +34,7 @@ class UserProfileService:
     - Only the owner may change a profile. There is no PUT yet; when one is
       added, guard it with `can_edit_profile`.
     - Personal links (e.g. `userSettings`) only appear on your own profile.
+    - Admin links (`userTemplate`, `systemSettings`) only appear for admins.
     """
 
     def __init__(self, user_repository: UserRepository) -> None:
@@ -88,9 +90,11 @@ class UserProfileService:
         if caller.user_id == user_id:
             links[LINK_USER_SETTINGS] = Link(href=f"{API_PREFIX}/users/{user_id}/settings", method="GET")
 
-        # Creating users is admin-only, so only admins get the way in.
+        # Creating users and the system-wide settings are admin-only, so only
+        # admins get the way in.
         if caller.is_admin:
             links[LINK_USER_TEMPLATE] = Link(href=f"{API_PREFIX}/users/template", method="GET")
+            links[LINK_SYSTEM_SETTINGS] = Link(href=f"{API_PREFIX}/admin/settings", method="GET")
 
         return links
 

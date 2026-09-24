@@ -23,6 +23,23 @@
           </mat-chip-set>
         </div>
       </mat-card-content>
+
+      @if (canEditOwnSettings() || canEditSystemSettings()) {
+        <mat-card-actions class="ProfilePage-actions">
+          @if (canEditOwnSettings()) {
+            <a matButton routerLink="/settings">
+              <mat-icon aria-hidden="true">tune</mat-icon>
+              My settings
+            </a>
+          }
+          @if (canEditSystemSettings()) {
+            <a matButton routerLink="/settings/system">
+              <mat-icon aria-hidden="true">admin_panel_settings</mat-icon>
+              System settings
+            </a>
+          }
+        </mat-card-actions>
+      }
     } @else {
       <mat-card-content>Loading…</mat-card-content>
     }

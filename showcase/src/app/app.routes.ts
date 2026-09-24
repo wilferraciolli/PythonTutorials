@@ -17,6 +17,11 @@ export const routes: Routes = [
     loadChildren: () => import('./features/profile/profile.routes').then((m) => m.profileRoutes),
   },
   {
+    path: 'settings',
+    canActivate: [authGuard],
+    loadChildren: () => import('./features/settings/settings.routes').then((m) => m.settingsRoutes),
+  },
+  {
     path: 'todos',
     canActivate: [authGuard],
     loadChildren: () => import('./features/todos/todos.routes').then((m) => m.todosRoutes),
