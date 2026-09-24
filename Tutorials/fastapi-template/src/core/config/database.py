@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from typing import Any, Optional, Protocol
 
@@ -5,7 +6,17 @@ from fastapi import Request
 
 from core.config.config import get_config
 
-MIGRATIONS_DIR = Path(__file__).resolve().parent.parent / "migrations"
+# Allow MIGRATIONS_DIR to be overridden by environment variable for flexibility
+# across local and Docker environments. Falls back to ./migrations relative to
+# the current working directory (typical for uvicorn from project root).
+_env_migrations = os.environ.get("MIGRATIONS_DIR")
+MIGRATIONS_DIR = Path(_env_migrations) if _env_migrations else Path.cwd() / "migrations"
+
+if not MIGRATIONS_DIR.exists():
+    raise RuntimeError(
+        f"Migrations directory not found at {MIGRATIONS_DIR}. "
+        f"Set MIGRATIONS_DIR environment variable or ensure migrations folder exists."
+    )
 
 
 class Database(Protocol):
