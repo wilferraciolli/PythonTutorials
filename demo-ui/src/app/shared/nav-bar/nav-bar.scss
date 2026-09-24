@@ -1,15 +1,19 @@
 @use 'ui';
 
-// Small top app bar: 64px, on the page surface, tonal once scrolled.
-.NavBar {
+// The host is what sticks: a sticky element only stays put inside its
+// parent's box, and a sticky <header> inside a host of its own height would
+// scroll away with the page.
+:host {
   position: sticky;
   top: 0;
   z-index: 10;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  display: block;
+}
+
+// Small top app bar: 64px, on the page surface, tonal once scrolled. The
+// surface spans the window; its contents line up with the shell column.
+.NavBar {
   height: var(--app-bar-height);
-  padding: 0 16px 0 var(--app-gutter);
   background: var(--mat-sys-surface);
   color: var(--mat-sys-on-surface);
   view-transition-name: app-bar;
@@ -17,6 +21,16 @@
 
   &.is-scrolled {
     background: var(--mat-sys-surface-container);
+  }
+
+  &-inner {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 100%;
+    max-width: var(--app-shell-max-width);
+    margin: 0 auto;
+    padding: 0 16px 0 var(--app-gutter);
   }
 
   // The drawer button takes the place of the left gutter's first 8px.
