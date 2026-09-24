@@ -306,7 +306,7 @@ above) except `/api/health`, `/docs`, and `/openapi.json`.
 | DELETE | `/api/users/{id}/settings` | **Your own only.** Drop your settings so you fall back to the system defaults (returns `204 No Content`) |
 | GET | `/api/admin/settings` | **Admin only.** The system default region settings every user falls back to |
 | PUT | `/api/admin/settings` | **Admin only.** Update the system default region settings |
-| GET | `/api/users/{id}/profile` | **Where links live.** `/me` only returns the `userProfile` link; this returns the user (`id`, `externalId`, `name`, `email`, `roleIds`) plus every link the UI follows, built from the `{id}` in the path. `UserProfileService.can_view_profile` is the seam for "may the caller see this user's resources?" Anyone signed in can view any profile; the `userSettings` link only appears on your own. |
+| GET | `/api/users/{id}/profile` | **Where links live.** `/me` only returns the `userProfile` link; this returns the user (`id`, `externalId`, `name`, `email`, `roleIds`) plus every link the UI follows, built from the `{id}` in the path. `UserProfileService.can_view_profile` is the seam for "may the caller see this user's resources?" Anyone signed in can view any profile; the `userSettings` link only appears on your own, and `systemSettings` / `userTemplate` only for admins. |
 | GET | `/docs` | Interactive Swagger UI |
 | GET | `/openapi.json` | OpenAPI schema |
 
