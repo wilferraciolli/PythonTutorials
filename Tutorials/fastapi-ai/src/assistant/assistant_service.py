@@ -3,11 +3,12 @@ import logging
 from datetime import datetime
 from typing import Any, Callable, Dict, List
 
-from core.common.api_response import envelope
-from assistant.tools.tool import Tool
+from assistant.constants import ANSWER_DATA_NAME
+from assistant.schemas import AssistantAnswerDTO, AssistantAnswerResponse, ToolCallDTO
 from assistant.tools.todo_tools import utc_now
+from assistant.tools.tool import Tool
 from core.ai.llm import ToolLlm
-from assistant.schemas import AssistantAnswer, ToolCallTrace
+from core.common.base_dto import NoMetadata
 
 logger = logging.getLogger(__name__)
 
@@ -51,13 +52,13 @@ class AssistantService:
         self.tools = {tool.name: tool for tool in tools}
         self.now = now
 
-    async def ask(self, user_id: str, question: str) -> AssistantAnswer:
+    async def ask(self, user_id: str, question: str) -> AssistantAnswerDTO:
         messages: List[Dict[str, Any]] = [
             {"role": "system", "content": SYSTEM_PROMPT.format(today=self.now().date().isoformat())},
             {"role": "user", "content": question},
         ]
         specs = [tool.spec() for tool in self.tools.values()]
-        trace: List[ToolCallTrace] = []
+        trace: List[ToolCallDTO] = []
 
         for _ in range(MAX_STEPS):
             turn = await self.llm.complete(self.model, messages, specs)
@@ -83,7 +84,7 @@ class AssistantService:
 
             for call in calls:
                 arguments, result = await self._run_tool(user_id, call["name"], call["arguments"])
-                trace.append(ToolCallTrace(name=call["name"], arguments=arguments, result=result))
+                trace.append(ToolCallDTO(name=call["name"], arguments=arguments, result=result))
                 messages.append(
                     {
                         "role": "tool",
@@ -114,8 +115,8 @@ class AssistantService:
             logger.exception("assistant tool %s failed", name)
             return arguments, {"error": "the tool failed"}
 
-    def _answer(self, question: str, answer: str, trace: List[ToolCallTrace]) -> AssistantAnswer:
-        return AssistantAnswer(
+    def _answer(self, question: str, answer: str, trace: List[ToolCallDTO]) -> AssistantAnswerDTO:
+        return AssistantAnswerDTO(
             question=question,
             answer=answer.strip(),
             provider=self.provider,
@@ -123,5 +124,6 @@ class AssistantService:
             toolCalls=trace,
         )
 
-    def build_response(self, answer: AssistantAnswer) -> Dict[str, Any]:
-        return envelope(data_name="answer", data=answer, metadata={}, meta_links={})
+    @staticmethod
+    def build_response(answer: AssistantAnswerDTO) -> AssistantAnswerResponse:
+        return AssistantAnswerResponse.of(ANSWER_DATA_NAME, answer, NoMetadata())

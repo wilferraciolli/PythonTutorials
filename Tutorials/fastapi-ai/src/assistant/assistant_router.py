@@ -1,24 +1,22 @@
-from typing import Any
-
 from fastapi import APIRouter, Depends, HTTPException, Request
 
+from assistant.assistant_service import AssistantService
+from assistant.schemas import AssistantAnswerResponse, AssistantAskRequest
 from assistant.tools.chat_tools import build_chat_tools
 from assistant.tools.date_tools import build_date_tools
 from assistant.tools.social_tools import build_social_tools
 from assistant.tools.todo_tools import build_todo_tools, utc_now
+from chats.chat_router import get_chat_search_service
+from core.ai.llm import OpenAICompatibleLlm
 from core.config.config import get_config
 from core.config.database import get_database
-from core.security.authorization import Caller
-from core.ai.llm import OpenAICompatibleLlm
-from assistant.schemas import AssistantAsk
+from core.security.authorization import Caller, get_caller, require_owner
+from groups.posts.post_router import get_post_search_service
 from groups.social_query_repository import SocialQueryRepository
 from todos.todo_repository import TodoRepository
-from chats.chat_router import get_search_service
-from groups.posts.post_router import get_post_search_service
 from todos.todo_router import get_todo_search_service
-from core.security.authorization import get_caller, require_owner
-from assistant.assistant_service import AssistantService
 
+# Personal resource: only the user in the path may ask about their data (require_owner, 403).
 router = APIRouter(prefix="/users/{user_id}/assistant", tags=["assistant"])
 
 
@@ -46,7 +44,7 @@ def get_assistant_service(request: Request, provider: str, caller: Caller) -> As
     tools = [
         *build_todo_tools(TodoRepository(db), search=get_todo_search_service(request)),
         *build_date_tools(utc_now),
-        *build_chat_tools(get_search_service(request)),
+        *build_chat_tools(get_chat_search_service(request)),
         # Shared data: scoped by the caller's group visibility, not just their id.
         *build_social_tools(caller, SocialQueryRepository(db), get_post_search_service(request)),
     ]
@@ -55,13 +53,11 @@ def get_assistant_service(request: Request, provider: str, caller: Caller) -> As
 
 @router.post("/ask")
 async def ask(
-    payload: AssistantAsk,
+    body: AssistantAskRequest,
     request: Request,
     user_id: str = Depends(require_owner),
     caller: Caller = Depends(get_caller),
-) -> dict[str, Any]:
+) -> AssistantAnswerResponse:
     """Ask a question about your data (todos, chats) and the groups you can see, in plain English."""
-    # require_owner already checked the path user is the caller.
-    service = get_assistant_service(request, payload.provider, caller)
-    answer = await service.ask(user_id, payload.question)
-    return service.build_response(answer)
+    service = get_assistant_service(request, body.provider, caller)
+    return service.build_response(await service.ask(user_id, body.question))

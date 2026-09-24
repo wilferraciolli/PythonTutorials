@@ -1,19 +1,25 @@
-from typing import Any
-
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 
-from core.ai.ai import get_ai
+from chats.chat_repository import ChatRepository
+from chats.chat_search_service import DEFAULT_LIMIT, ChatSearchService
+from chats.chat_service import ChatService
+from chats.schemas import (
+    ChatCreateRequest,
+    ChatListResponse,
+    ChatMessageCreateRequest,
+    ChatReindexResponse,
+    ChatResponse,
+    ChatSearchResponse,
+    ChatTitleUpdateRequest,
+)
+from core.ai.ai import ChatProvider, get_ai
+from core.ai.embeddings import get_embedder
+from core.ai.vector_store import DatabaseVectorStore
 from core.config.config import get_config
 from core.config.database import get_database
-from chats.schemas import ChatCreate, ChatMessageCreate, ChatTitleUpdate
-from core.ai.ai import ChatProvider
-from chats.chat_repository import ChatRepository
-from chats.chat_service import ChatService
-from core.ai.embeddings import get_embedder
 from core.security.authorization import require_owner
-from chats.chat_search_service import DEFAULT_LIMIT, SearchService
-from core.ai.vector_store import DatabaseVectorStore
 
+# Personal resource: only the user in the path may use it (require_owner, 403).
 router = APIRouter(prefix="/users/{user_id}/chats", tags=["chats"])
 
 
@@ -22,6 +28,19 @@ def _required_config(request: Request, key: str) -> str:
     if not value:
         raise RuntimeError(f"{key} must be configured (see .env.example)")
     return value
+
+
+def get_chat_search_service(request: Request) -> ChatSearchService:
+    db = get_database(request)
+    embed_texts, embedding_model = get_embedder(request)
+
+    return ChatSearchService(
+        ChatRepository(db),
+        DatabaseVectorStore(db),
+        embed_texts,
+        embedding_model,
+        ["cloudflare", "groq"],
+    )
 
 
 def get_chat_service(request: Request) -> ChatService:
@@ -34,20 +53,7 @@ def get_chat_service(request: Request) -> ChatService:
         ChatRepository(db),
         lambda provider: get_ai(request, provider),
         models,
-        get_search_service(request),
-    )
-
-
-def get_search_service(request: Request) -> SearchService:
-    db = get_database(request)
-    embed_texts, embedding_model = get_embedder(request)
-
-    return SearchService(
-        ChatRepository(db),
-        DatabaseVectorStore(db),
-        embed_texts,
-        embedding_model,
-        ["cloudflare", "groq"],
+        get_chat_search_service(request),
     )
 
 
@@ -55,19 +61,17 @@ def get_search_service(request: Request) -> SearchService:
 async def list_chats(
     user_id: str = Depends(require_owner),
     service: ChatService = Depends(get_chat_service),
-) -> dict[str, Any]:
-    chats = await service.list_chats(user_id)
-    return service.build_list_response(user_id, chats)
+) -> ChatListResponse:
+    return service.build_list_response(user_id, await service.list_chats(user_id))
 
 
 @router.post("", status_code=201)
 async def create_chat(
-    payload: ChatCreate,
+    request: ChatCreateRequest,
     user_id: str = Depends(require_owner),
     service: ChatService = Depends(get_chat_service),
-) -> dict[str, Any]:
-    chat = await service.create_chat(user_id, payload.provider)
-    return service.build_response(chat)
+) -> ChatResponse:
+    return service.build_response(await service.create_chat(user_id, request.provider))
 
 
 @router.get("/search")
@@ -75,21 +79,19 @@ async def search_chats(
     q: str,
     limit: int = DEFAULT_LIMIT,
     user_id: str = Depends(require_owner),
-    service: SearchService = Depends(get_search_service),
-) -> dict[str, Any]:
+    service: ChatSearchService = Depends(get_chat_search_service),
+) -> ChatSearchResponse:
     """Find messages in the user's chats by meaning (embeddings) and by keyword, best first."""
-    hits = await service.search(user_id, q, limit)
-    return service.build_response(user_id, hits)
+    return service.build_response(user_id, await service.search(user_id, q, limit))
 
 
 @router.post("/search/reindex")
 async def reindex_chats(
     user_id: str = Depends(require_owner),
-    service: SearchService = Depends(get_search_service),
-) -> dict[str, Any]:
+    service: ChatSearchService = Depends(get_chat_search_service),
+) -> ChatReindexResponse:
     """Backfill: embed this user's messages that aren't indexed yet."""
-    indexed = await service.reindex_user(user_id)
-    return service.build_reindex_response(indexed)
+    return service.build_reindex_response(await service.reindex_user(user_id))
 
 
 @router.get("/{chat_id}")
@@ -97,7 +99,7 @@ async def get_chat(
     chat_id: str,
     user_id: str = Depends(require_owner),
     service: ChatService = Depends(get_chat_service),
-) -> dict[str, Any]:
+) -> ChatResponse:
     chat = await service.get_chat_with_messages(chat_id, user_id)
     if not chat:
         raise HTTPException(status_code=404, detail="Chat not found")
@@ -107,11 +109,11 @@ async def get_chat(
 @router.post("/{chat_id}/messages", status_code=201)
 async def send_message(
     chat_id: str,
-    payload: ChatMessageCreate,
+    request: ChatMessageCreateRequest,
     user_id: str = Depends(require_owner),
     service: ChatService = Depends(get_chat_service),
-) -> dict[str, Any]:
-    chat = await service.send_message(chat_id, user_id, payload.content)
+) -> ChatResponse:
+    chat = await service.send_message(chat_id, user_id, request.content)
     if not chat:
         raise HTTPException(status_code=404, detail="Chat not found")
     return service.build_response(chat)
@@ -120,11 +122,11 @@ async def send_message(
 @router.put("/{chat_id}")
 async def update_chat_title(
     chat_id: str,
-    payload: ChatTitleUpdate,
+    request: ChatTitleUpdateRequest,
     user_id: str = Depends(require_owner),
     service: ChatService = Depends(get_chat_service),
-) -> dict[str, Any]:
-    chat = await service.update_title(chat_id, user_id, payload.title)
+) -> ChatResponse:
+    chat = await service.update_title(chat_id, user_id, request.title)
     if not chat:
         raise HTTPException(status_code=404, detail="Chat not found")
     return service.build_response(chat)
@@ -136,7 +138,6 @@ async def delete_chat(
     user_id: str = Depends(require_owner),
     service: ChatService = Depends(get_chat_service),
 ) -> Response:
-    deleted = await service.delete_chat(chat_id, user_id)
-    if not deleted:
+    if not await service.delete_chat(chat_id, user_id):
         raise HTTPException(status_code=404, detail="Chat not found")
     return Response(status_code=204)

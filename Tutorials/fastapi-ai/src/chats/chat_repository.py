@@ -1,6 +1,16 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, List, Mapping, Optional
 
+from chats.models import ChatMessageHitModel, ChatMessageModel, ChatModel
 from core.config.database import Database
+
+_SELECT_MESSAGE_HIT = (
+    "SELECT m.*, c.title AS chat_title, c.user_id AS user_id FROM chat_messages m "
+    "JOIN chats c ON c.id = m.chat_id"
+)
+
+
+def _placeholders(values: List[str]) -> str:
+    return ", ".join("?" for _ in values)
 
 
 class ChatRepository:
@@ -22,7 +32,7 @@ class ChatRepository:
         provider: str,
         model: str,
         created_date: str,
-    ) -> Dict[str, Any]:
+    ) -> ChatModel:
         await self.db.execute(
             "INSERT INTO chats (id, user_id, title, provider, model, created_date, updated_date) "
             "VALUES (?, ?, ?, ?, ?, ?, ?)",
@@ -34,18 +44,19 @@ class ChatRepository:
             raise RuntimeError(f"created chat was not found: {chat_id}")
         return chat
 
-    async def get_chat(self, chat_id: str) -> Optional[Dict[str, Any]]:
-        return await self.db.fetch_one("SELECT * FROM chats WHERE id = ?", (chat_id,))
+    async def get_chat(self, chat_id: str) -> Optional[ChatModel]:
+        row = await self.db.fetch_one("SELECT * FROM chats WHERE id = ?", (chat_id,))
+        return ChatModel(**row) if row else None
 
-    async def list_chats_for_user(self, user_id: str, providers: List[str]) -> List[Dict[str, Any]]:
+    async def list_chats_for_user(self, user_id: str, providers: List[str]) -> List[ChatModel]:
         # The chats table is shared by every python project (same D1), so
         # each project only lists the providers it owns.
-        placeholders = ", ".join("?" for _ in providers)
-        return await self.db.fetch_all(
-            f"SELECT * FROM chats WHERE user_id = ? AND provider IN ({placeholders}) "
+        rows = await self.db.fetch_all(
+            f"SELECT * FROM chats WHERE user_id = ? AND provider IN ({_placeholders(providers)}) "
             "ORDER BY updated_date DESC",
             (user_id, *providers),
         )
+        return [ChatModel(**row) for row in rows]
 
     async def update_title(self, chat_id: str, title: str) -> None:
         await self.db.execute("UPDATE chats SET title = ? WHERE id = ?", (title, chat_id))
@@ -54,8 +65,7 @@ class ChatRepository:
         await self.db.execute("UPDATE chats SET updated_date = ? WHERE id = ?", (updated_date, chat_id))
 
     async def delete_chat(self, chat_id: str) -> bool:
-        existing = await self.get_chat(chat_id)
-        if not existing:
+        if await self.get_chat(chat_id) is None:
             return False
 
         await self.db.execute("DELETE FROM chat_messages WHERE chat_id = ?", (chat_id,))
@@ -69,7 +79,7 @@ class ChatRepository:
         role: str,
         content: str,
         created_date: str,
-    ) -> Dict[str, Any]:
+    ) -> ChatMessageModel:
         await self.db.execute(
             "INSERT INTO chat_messages (id, chat_id, role, content, created_date) VALUES (?, ?, ?, ?, ?)",
             (message_id, chat_id, role, content, created_date),
@@ -80,45 +90,46 @@ class ChatRepository:
             raise RuntimeError(f"created message was not found: {message_id}")
         return message
 
-    async def get_message(self, message_id: str) -> Optional[Dict[str, Any]]:
-        return await self.db.fetch_one("SELECT * FROM chat_messages WHERE id = ?", (message_id,))
+    async def get_message(self, message_id: str) -> Optional[ChatMessageModel]:
+        row = await self.db.fetch_one("SELECT * FROM chat_messages WHERE id = ?", (message_id,))
+        return ChatMessageModel(**row) if row else None
 
-    async def list_messages(self, chat_id: str) -> List[Dict[str, Any]]:
-        return await self.db.fetch_all(
+    async def list_messages(self, chat_id: str) -> List[ChatMessageModel]:
+        rows = await self.db.fetch_all(
             "SELECT * FROM chat_messages WHERE chat_id = ? ORDER BY created_date ASC",
             (chat_id,),
         )
+        return [ChatMessageModel(**row) for row in rows]
 
-    async def list_messages_for_user(self, user_id: str, providers: List[str]) -> List[Dict[str, Any]]:
+    async def list_messages_for_user(self, user_id: str, providers: List[str]) -> List[ChatMessageHitModel]:
         """Every message in the user's chats (for the providers this project owns), with its chat title."""
-        placeholders = ", ".join("?" for _ in providers)
-        return await self.db.fetch_all(
-            "SELECT m.*, c.title AS chat_title, c.user_id AS user_id FROM chat_messages m "
-            "JOIN chats c ON c.id = m.chat_id "
-            f"WHERE c.user_id = ? AND c.provider IN ({placeholders}) ORDER BY m.created_date ASC",
+        rows = await self.db.fetch_all(
+            f"{_SELECT_MESSAGE_HIT} WHERE c.user_id = ? AND c.provider IN ({_placeholders(providers)}) "
+            "ORDER BY m.created_date ASC",
             (user_id, *providers),
         )
+        return [self._to_hit(row) for row in rows]
 
-    async def get_messages_for_user(self, user_id: str, message_ids: List[str]) -> List[Dict[str, Any]]:
+    async def get_messages_for_user(self, user_id: str, message_ids: List[str]) -> List[ChatMessageHitModel]:
         if not message_ids:
             return []
 
-        placeholders = ", ".join("?" for _ in message_ids)
-        return await self.db.fetch_all(
-            "SELECT m.*, c.title AS chat_title, c.user_id AS user_id FROM chat_messages m "
-            "JOIN chats c ON c.id = m.chat_id "
-            f"WHERE c.user_id = ? AND m.id IN ({placeholders})",
+        rows = await self.db.fetch_all(
+            f"{_SELECT_MESSAGE_HIT} WHERE c.user_id = ? AND m.id IN ({_placeholders(message_ids)})",
             (user_id, *message_ids),
         )
+        return [self._to_hit(row) for row in rows]
 
     async def search_messages_by_keyword(
         self, user_id: str, term: str, providers: List[str], limit: int
-    ) -> List[Dict[str, Any]]:
-        placeholders = ", ".join("?" for _ in providers)
-        return await self.db.fetch_all(
-            "SELECT m.*, c.title AS chat_title, c.user_id AS user_id FROM chat_messages m "
-            "JOIN chats c ON c.id = m.chat_id "
-            f"WHERE c.user_id = ? AND c.provider IN ({placeholders}) AND m.content LIKE ? "
-            "ORDER BY m.created_date DESC LIMIT ?",
+    ) -> List[ChatMessageHitModel]:
+        rows = await self.db.fetch_all(
+            f"{_SELECT_MESSAGE_HIT} WHERE c.user_id = ? AND c.provider IN ({_placeholders(providers)}) "
+            "AND m.content LIKE ? ORDER BY m.created_date DESC LIMIT ?",
             (user_id, *providers, f"%{term}%", limit),
         )
+        return [self._to_hit(row) for row in rows]
+
+    @staticmethod
+    def _to_hit(row: Mapping[str, Any]) -> ChatMessageHitModel:
+        return ChatMessageHitModel(**row)

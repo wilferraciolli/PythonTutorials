@@ -1,10 +1,10 @@
 from typing import Any, Dict, List
 
 from assistant.tools.tool import Tool
-from chats.chat_search_service import SearchService
+from chats.chat_search_service import ChatSearchService
 
 
-def build_chat_tools(search: SearchService) -> List[Tool]:
+def build_chat_tools(search: ChatSearchService) -> List[Tool]:
     async def search_chats(user_id: str, args: Dict[str, Any]) -> Any:
         query = str(args.get("query") or "").strip()
         if not query:
