@@ -3,20 +3,29 @@ from typing import Optional
 
 from pydantic import BaseModel, Field, field_serializer
 
-from core.common.base_dto import LinkedResource
+from core.common.api_response import ApiResponse
+from core.common.base_dto import FieldMetadata, LinkedResource
 from core.common.serializers import format_utc_datetime
+from groups.posts.comments.constants import BODY_MAX_LENGTH
 
 
-class CommentCreate(BaseModel):
-    body: str = Field(min_length=1, max_length=5000)
-    parentCommentId: Optional[str] = None  # set to reply to a comment
+# --- Request: what the client sends -----------------------------------------
+
+class CommentCreateRequest(BaseModel):
+    """Body of `POST .../comments`. Send `parentCommentId` to reply to a comment."""
+    body: str = Field(min_length=1, max_length=BODY_MAX_LENGTH)
+    parentCommentId: Optional[str] = None
 
 
-class CommentUpdate(BaseModel):
-    body: str = Field(min_length=1, max_length=5000)
+class CommentUpdateRequest(BaseModel):
+    """Body of `PUT .../comments/{comment_id}`."""
+    body: str = Field(min_length=1, max_length=BODY_MAX_LENGTH)
 
 
-class Comment(LinkedResource):
+# --- DTO: what the application service returns ------------------------------
+
+class CommentDTO(LinkedResource):
+    """A comment as the caller sees it, with the links they may follow."""
     id: str
     postId: str
     parentCommentId: Optional[str] = None
@@ -32,3 +41,14 @@ class Comment(LinkedResource):
     @field_serializer("created_date", "updated_date")
     def serialize_comment_dates(self, value: datetime) -> str:
         return format_utc_datetime(value)
+
+
+class CommentMetadata(BaseModel):
+    """How the client should treat the fields of `CommentDTO`."""
+    body: FieldMetadata
+
+
+# --- Response: the envelopes the service builds -----------------------------
+
+CommentResponse = ApiResponse[CommentDTO, CommentMetadata]
+CommentListResponse = ApiResponse[list[CommentDTO], CommentMetadata]

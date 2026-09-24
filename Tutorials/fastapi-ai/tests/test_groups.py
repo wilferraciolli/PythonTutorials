@@ -12,11 +12,12 @@ from core.common.errors import ConflictError, ForbiddenError, NotFoundError
 from core.security.authorization import Caller
 from core.security.roles import UserRole
 from groups.enums import GroupVisibility
-from groups.schemas import GroupCreate, GroupUpdate
+from groups.schemas import GroupCreateRequest, GroupUpdateRequest
 from groups.group_repository import GroupRepository
 from users.user_repository import UserRepository
 from groups.group_service import GroupService
 from users.profiles.me_service import MeService
+from groups.posts.post_stats_repository import PostStatsRepository
 from users.user_service import UserService
 
 OWNER = Caller(external_id="owner", user_id="owner", role_ids=[])
@@ -39,16 +40,16 @@ async def env(tmp_path):
 
 
 async def make(service, caller=OWNER, name="Cyclists", visibility=GroupVisibility.PUBLIC):
-    return (await service.create_group(caller, GroupCreate(name=name, visibility=visibility))).group["id"]
+    return (await service.create_group(caller, GroupCreateRequest(name=name, visibility=visibility))).group.id
 
 
 async def test_creator_is_owner_member_and_follower(env):
     _, groups, _, service = env
-    access = await service.create_group(OWNER, GroupCreate(name="Cyclists", description="Bikes"))
+    access = await service.create_group(OWNER, GroupCreateRequest(name="Cyclists", description="Bikes"))
 
-    assert access.group["owner_id"] == "owner"
+    assert access.group.owner_id == "owner"
     assert access.is_member and access.is_following
-    assert access.group["member_count"] == 1 and access.group["follower_count"] == 1
+    assert access.group.member_count == 1 and access.group.follower_count == 1
 
 
 async def test_group_names_are_unique_ignoring_case(env):
@@ -64,10 +65,10 @@ async def test_private_group_is_invisible_to_outsiders_but_not_admins(env):
 
     with pytest.raises(NotFoundError):  # 404, not 403: existence isn't leaked
         await service.get_visible(OUTSIDER, group_id)
-    assert group_id not in [a.group["id"] for a in await service.list_groups(OUTSIDER)]
+    assert group_id not in [a.group.id for a in await service.list_groups(OUTSIDER)]
 
-    assert (await service.get_visible(ADMIN, group_id)).group["id"] == group_id
-    assert group_id in [a.group["id"] for a in await service.list_groups(ADMIN)]
+    assert (await service.get_visible(ADMIN, group_id)).group.id == group_id
+    assert group_id in [a.group.id for a in await service.list_groups(ADMIN)]
 
 
 async def test_members_can_add_people_to_a_private_group_and_they_auto_follow(env):
@@ -147,12 +148,12 @@ async def test_owner_who_leaves_leaves_the_group_ownerless_and_admin_reassigns(e
     await service.join(MEMBER, group_id)
 
     await service.remove_member(OWNER, group_id, "owner")
-    assert (await groups.get(group_id))["owner_id"] is None
+    assert (await groups.get(group_id)).owner_id is None
 
     with pytest.raises(ForbiddenError):  # no owner: only an admin can manage it
         await service.assign_owner(MEMBER, group_id, "member")
     access = await service.assign_owner(ADMIN, group_id, "member")
-    assert access.group["owner_id"] == "member"
+    assert access.group.owner_id == "member"
 
 
 async def test_new_owner_must_be_a_member(env):
@@ -168,11 +169,11 @@ async def test_edit_and_delete_are_owner_or_admin_only(env):
     await service.join(MEMBER, group_id)
 
     with pytest.raises(ForbiddenError):
-        await service.update_group(MEMBER, group_id, GroupUpdate(description="x"))
+        await service.update_group(MEMBER, group_id, GroupUpdateRequest(description="x"))
     with pytest.raises(ForbiddenError):
         await service.delete_group(MEMBER, group_id)
 
-    await service.update_group(ADMIN, group_id, GroupUpdate(description="by admin"))
+    await service.update_group(ADMIN, group_id, GroupUpdateRequest(description="by admin"))
     await service.delete_group(OWNER, group_id)
     assert await groups.get(group_id) is None
 
@@ -182,7 +183,7 @@ async def test_making_a_group_private_drops_non_member_followers(env):
     group_id = await make(service)
     await service.follow(OUTSIDER, group_id)
 
-    await service.update_group(OWNER, group_id, GroupUpdate(visibility=PRIVATE))
+    await service.update_group(OWNER, group_id, GroupUpdateRequest(visibility=PRIVATE))
 
     assert not await groups.is_following(group_id, "outsider")
     assert await groups.is_following(group_id, "owner")
@@ -200,17 +201,17 @@ async def test_list_filters(env):
     await make(service, caller=MEMBER, name="Runners")
     await service.follow(OWNER, cyclists)
 
-    assert [a.group["name"] for a in await service.list_groups(OWNER, term="run")] == ["Runners"]
-    assert [a.group["name"] for a in await service.list_groups(OWNER, mine=True)] == ["Cyclists"]
-    assert [a.group["name"] for a in await service.list_groups(OWNER, following=True)] == ["Cyclists"]
+    assert [a.group.name for a in await service.list_groups(OWNER, term="run")] == ["Runners"]
+    assert [a.group.name for a in await service.list_groups(OWNER, mine=True)] == ["Cyclists"]
+    assert [a.group.name for a in await service.list_groups(OWNER, following=True)] == ["Cyclists"]
 
 
 async def test_deleting_a_user_leaves_their_groups_ownerless(env):
     _, groups, users, service = env
     group_id = await make(service)
-    assert await UserService(users, groups).delete_user("owner", ADMIN)
+    assert await UserService(users, groups, PostStatsRepository(groups.db)).delete_user("owner", ADMIN)
     group = await groups.get(group_id)
-    assert group["owner_id"] is None and group["member_count"] == 0
+    assert group.owner_id is None and group.member_count == 0
 
 
 async def test_links_follow_permissions(env):

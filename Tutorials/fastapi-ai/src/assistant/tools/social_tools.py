@@ -2,7 +2,9 @@ from datetime import date, datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
 from assistant.tools.tool import Tool
+from core.common.serializers import format_utc_datetime
 from core.security.authorization import Caller
+from groups.posts.post_service import display_author
 from groups.social_query_repository import SocialQueryRepository
 from groups.posts.post_search_service import PostSearchService
 
@@ -42,7 +44,7 @@ def build_social_tools(
             group = await queries.find_visible_group(caller.user_id, caller.is_admin, str(args["group"]).strip())
             if group is None:
                 return {"error": f"no group called {args['group']!r} that you can see; call my_groups"}
-            filters["group_id"] = group["id"]
+            filters["group_id"] = group.id
         if args.get("mine") is True:
             filters["author_id"] = caller.user_id
         try:
@@ -70,19 +72,19 @@ def build_social_tools(
         if sort not in ("newest", "popular"):
             return {"error": "sort must be newest or popular"}
         limit = max(1, min(int(args.get("limit") or 10), MAX_LIST))
-        rows = await queries.list_posts(caller.user_id, caller.is_admin, sort == "popular", limit, **filters)
+        posts = await queries.list_posts(caller.user_id, caller.is_admin, sort == "popular", limit, **filters)
         return {
             "posts": [
                 {
-                    "title": r["title"],
-                    "group": r["group_name"],
-                    "author": r["author_name"] or ("System" if r["author_id"] is None else "[deleted user]"),
-                    "created_date": r["created_date"],
-                    "likes": r["like_count"],
-                    "comments": r["comment_count"],
-                    "score": r["score"],
+                    "title": post.title,
+                    "group": post.group_name,
+                    "author": display_author(None, post.author_id, post.author_name),
+                    "created_date": format_utc_datetime(post.created_date),
+                    "likes": post.like_count,
+                    "comments": post.comment_count,
+                    "score": post.score,
                 }
-                for r in rows
+                for post in posts
             ]
         }
 
@@ -95,20 +97,20 @@ def build_social_tools(
     async def my_groups(user_id: str, args: Dict[str, Any]) -> Any:
         if user_id != caller.user_id:
             return {"error": "not allowed"}
-        rows = await queries.my_groups(caller.user_id, caller.is_admin)
+        groups = await queries.my_groups(caller.user_id, caller.is_admin)
         return {
             "groups": [
                 {
-                    "name": r["name"],
-                    "visibility": r["visibility"],
-                    "owner": bool(r["is_owner"]),
-                    "member": bool(r["is_member"]),
-                    "following": bool(r["is_following"]),
-                    "members": r["member_count"],
-                    "posts": r["post_count"],
-                    "last_post_date": r["last_post_date"],
+                    "name": group.name,
+                    "visibility": group.visibility.value,
+                    "owner": group.is_owner,
+                    "member": group.is_member,
+                    "following": group.is_following,
+                    "members": group.member_count,
+                    "posts": group.post_count,
+                    "last_post_date": format_utc_datetime(group.last_post_date) if group.last_post_date else None,
                 }
-                for r in rows
+                for group in groups
             ]
         }
 
@@ -172,13 +174,16 @@ def build_social_tools(
                 group = await queries.find_visible_group(caller.user_id, caller.is_admin, str(args["group"]).strip())
                 if group is None:
                     return {"error": f"no group called {args['group']!r} that you can see; call my_groups"}
-                group_id = group["id"]
+                group_id = group.id
             matches = await search.search(caller, query, group_id, int(args.get("limit") or 5))
             return {
                 "matches": [
-                    {k: m[k] for k in ("title", "group", "author", "created_date", "likes", "comments",
-                                       "snippet", "matching_comment")}
-                    for m in matches
+                    match.model_dump(
+                        mode="json",
+                        include={"title", "group", "author", "created_date", "likes", "comments",
+                                 "snippet", "matching_comment"},
+                    )
+                    for match in matches
                 ]
             }
 

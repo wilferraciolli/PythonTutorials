@@ -1,19 +1,9 @@
-from typing import Any, Dict, List, Set
+from typing import Any, List, Set
 
 from core.config.database import Database
 from groups.group_repository import visible_group_clause
-
-_SELECT = (
-    "SELECT p.*, u.name AS author_name, g.name AS group_name, "
-    "g.visibility AS group_visibility, g.owner_id AS group_owner_id, g.created_date AS group_created_date, "
-    "COALESCE(s.like_count, 0) AS like_count, "
-    "COALESCE(s.comment_count, 0) AS comment_count, "
-    "COALESCE(s.score, 0) AS score "
-    "FROM posts p "
-    "JOIN groups g ON g.id = p.group_id "
-    "LEFT JOIN users u ON u.id = p.author_id "
-    "LEFT JOIN post_stats s ON s.post_id = p.id"
-)
+from groups.posts.models import PostModel
+from groups.posts.post_repository import SELECT_POST, to_post_model
 
 
 class TimelineRepository:
@@ -33,7 +23,7 @@ class TimelineRepository:
         following_only: bool,
         order_by_score: bool,
         limit: int,
-    ) -> List[Dict[str, Any]]:
+    ) -> List[PostModel]:
         visible, visible_params = visible_group_clause("g", user_id, is_admin)
         where = ["p.deleted_date IS NULL", "p.created_date >= ?", visible]
         params: List[Any] = [since, *visible_params]
@@ -44,9 +34,10 @@ class TimelineRepository:
 
         order = "score DESC, p.created_date DESC" if order_by_score else "p.created_date DESC"
         params.append(limit)
-        return await self.db.fetch_all(
-            f"{_SELECT} WHERE {' AND '.join(where)} ORDER BY {order} LIMIT ?", tuple(params)
+        rows = await self.db.fetch_all(
+            f"{SELECT_POST} WHERE {' AND '.join(where)} ORDER BY {order} LIMIT ?", tuple(params)
         )
+        return [to_post_model(row) for row in rows]
 
     async def member_group_ids(self, user_id: str) -> Set[str]:
         rows = await self.db.fetch_all("SELECT group_id FROM group_members WHERE user_id = ?", (user_id,))

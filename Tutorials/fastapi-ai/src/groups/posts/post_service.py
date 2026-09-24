@@ -1,49 +1,73 @@
 import logging
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional
 from uuid import uuid4
 
-from core.common.api_response import API_PREFIX, envelope
+from core.common.api_response import API_PREFIX
+from core.common.base_dto import EmbeddedRef, FieldMetadata, Link
 from core.common.errors import ConflictError, ForbiddenError, InvalidInputError, NotFoundError
 from core.security.authorization import Caller
 from groups.group_permissions import GroupAccess, GroupPermissions
-from media.media_providers import MediaLookup
-from core.common.base_dto import Link
-from groups.posts.schemas import MAX_TAGGED_PEOPLE, Post, PostCreate, PostMedia, PostUpdate
-from media.enums import MediaType
-from media.schemas import MediaRef
+from groups.group_service import GroupService
+from groups.posts.constants import (
+    BODY_MAX_LENGTH,
+    DEFAULT_LIMIT,
+    DELETED,
+    DELETED_USER,
+    LINK_ADD_COMMENT,
+    LINK_ADD_MEDIA,
+    LINK_COMMENTS,
+    LINK_CREATE_POST,
+    LINK_DELETE,
+    LINK_GROUP,
+    LINK_LIKE,
+    LINK_REMOVE_MEDIA,
+    LINK_SELF,
+    LINK_UNLIKE,
+    LINK_UPDATE,
+    MAX_LIMIT,
+    MAX_TAGGED_PEOPLE,
+    POST_DATA_NAME,
+    POST_NOT_FOUND,
+    POSTS_DATA_NAME,
+    SYSTEM_AUTHOR,
+    TITLE_MAX_LENGTH,
+)
+from groups.posts.models import PostModel
 from groups.posts.post_people_tag_repository import PostPeopleTagRepository
 from groups.posts.post_repository import PostRepository
 from groups.posts.post_stats_repository import PostStatsRepository
 from groups.posts.reaction_repository import ReactionRepository
-from groups.group_service import GroupService
+from groups.posts.schemas import (
+    PostCreateRequest,
+    PostDTO,
+    PostListResponse,
+    PostMediaDTO,
+    PostMetadata,
+    PostResponse,
+    PostUpdateRequest,
+)
+from media.enums import MediaType
+from media.media_providers import MediaLookup, ResolvedMedia
+from media.schemas import MediaRefRequest
 
 if TYPE_CHECKING:
     from groups.posts.post_search_service import PostSearchService
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_LIMIT = 50
-MAX_LIMIT = 100
-
-DELETED = "[deleted]"
-SYSTEM_AUTHOR = "System"
-DELETED_USER = "[deleted user]"
-
-POST_NOT_FOUND = "Post not found"
-
 
 def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def author_name(row: Dict[str, Any]) -> Optional[str]:
-    """ "System" for seeded content, "[deleted user]" for a removed author, None once deleted."""
-    if row.get("deleted_date"):
+def display_author(deleted_date: Optional[datetime], author_id: Optional[str], author_name: Optional[str]) -> Optional[str]:
+    """"System" for seeded content, "[deleted user]" for a removed author, None once the content is deleted."""
+    if deleted_date:
         return None
-    if row.get("author_id") is None:
+    if author_id is None:
         return SYSTEM_AUTHOR
-    return row.get("author_name") or DELETED_USER
+    return author_name or DELETED_USER
 
 
 class PostService:
@@ -52,7 +76,7 @@ class PostService:
 
     Every call first loads the group through GroupService.get_visible, so a
     private group's posts 404 for non-members exactly like the group itself.
-    Comments live in PostCommentService.
+    Comments live in CommentService.
     """
 
     def __init__(
@@ -75,14 +99,14 @@ class PostService:
         self.permissions = permissions or GroupPermissions()
         self.people = people or PostPeopleTagRepository(posts.db)
 
-    async def reindex(self, post: Dict[str, Any]) -> None:
+    async def reindex(self, post: PostModel) -> None:
         """Best effort: search indexing never fails a write. Admin reindex picks up anything missed."""
         if not self.search:
             return
         try:
             await self.search.index_post(post)
         except Exception:
-            logger.exception("failed to index post %s for search", post.get("id"))
+            logger.exception("failed to index post %s for search", post.id)
 
     async def unindex(self, post_id: str) -> None:
         if not self.search:
@@ -92,7 +116,7 @@ class PostService:
         except Exception:
             logger.exception("failed to remove post %s from search", post_id)
 
-    async def get_post(self, caller: Caller, group_id: str, post_id: str):
+    async def get_post(self, caller: Caller, group_id: str, post_id: str) -> tuple[GroupAccess, PostModel]:
         """The group access and the post (deleted ones included), or NotFoundError."""
         access = await self.group_service.get_visible(caller, group_id)
         post = await self.posts.get(group_id, post_id)
@@ -101,78 +125,81 @@ class PostService:
         await self.load_details(caller, [post])
         return access, post
 
-    async def load_details(self, caller: Caller, rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """What each post row needs for a response beyond the posts table: likes and tagged people."""
-        await self.mark_liked(caller, rows)
-        tagged = await self.people.for_posts(row["id"] for row in rows)
-        for row in rows:
-            row["tagged_people"] = tagged.get(row["id"], [])
-        return rows
+    async def load_details(self, caller: Caller, posts: List[PostModel]) -> List[PostModel]:
+        """Fill in what each post needs for a response beyond its row: likes and tagged people."""
+        liked = await self.reactions.liked_ids(caller.user_id, "post", (post.id for post in posts))
+        tagged = await self.people.for_posts(post.id for post in posts)
+        for post in posts:
+            post.liked_by_me = post.id in liked
+            post.tagged_people = tagged.get(post.id, [])
+        return posts
 
-    async def mark_liked(self, caller: Caller, rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        liked = await self.reactions.liked_ids(caller.user_id, "post", (row["id"] for row in rows))
-        for row in rows:
-            row["liked_by_me"] = row["id"] in liked
-        return rows
-
-    async def list_posts(self, caller: Caller, group_id: str, limit: int = DEFAULT_LIMIT):
+    async def list_posts(
+        self, caller: Caller, group_id: str, limit: int = DEFAULT_LIMIT
+    ) -> tuple[GroupAccess, List[PostModel]]:
         access = await self.group_service.get_visible(caller, group_id)
-        rows = await self.posts.list_for_group(group_id, max(1, min(limit, MAX_LIMIT)))
-        return access, await self.load_details(caller, rows)
+        posts = await self.posts.list_for_group(group_id, max(1, min(limit, MAX_LIMIT)))
+        return access, await self.load_details(caller, posts)
 
-    async def create_post(self, caller: Caller, group_id: str, payload: PostCreate):
+    async def create_post(
+        self, caller: Caller, group_id: str, request: PostCreateRequest
+    ) -> tuple[GroupAccess, PostModel]:
         access = await self.group_service.get_visible(caller, group_id)
         if not self.permissions.can_post(caller, access):
             raise ForbiddenError("Only members can post in this group")
         # Looked up before anything is saved, so a bad media id doesn't leave a post behind.
-        media = await self._resolve(payload.media) if payload.media else None
-        people = await self._known_people(payload.taggedUserIds)
+        media = await self._resolve(request.media) if request.media else None
+        people = await self._known_people(request.taggedUserIds)
 
         post_id = str(uuid4())
         now = now_iso()
-        await self.posts.create(post_id, group_id, caller.user_id, payload.title.strip(), payload.body.strip(), now)
+        await self.posts.create(post_id, group_id, caller.user_id, request.title.strip(), request.body.strip(), now)
         if media:
             await self.posts.set_media(post_id, media, now)
         if people:
             await self.people.replace(post_id, people, now)
         await self.stats.refresh(post_id, now)
-        access, row = await self.get_post(caller, group_id, post_id)
-        await self.reindex(row)
-        return access, row
+        access, post = await self.get_post(caller, group_id, post_id)
+        await self.reindex(post)
+        return access, post
 
-    async def update_post(self, caller: Caller, group_id: str, post_id: str, payload: PostUpdate):
+    async def update_post(
+        self, caller: Caller, group_id: str, post_id: str, request: PostUpdateRequest
+    ) -> tuple[GroupAccess, PostModel]:
         await self._own_post(caller, group_id, post_id)
-        people = await self._known_people(payload.taggedUserIds) if payload.taggedUserIds is not None else None
+        people = await self._known_people(request.taggedUserIds) if request.taggedUserIds is not None else None
         now = now_iso()
         await self.posts.update(
             post_id,
             now,
-            title=payload.title.strip() if payload.title is not None else None,
-            body=payload.body.strip() if payload.body is not None else None,
+            title=request.title.strip() if request.title is not None else None,
+            body=request.body.strip() if request.body is not None else None,
         )
         if people is not None:
             await self.people.replace(post_id, people, now)
-        access, row = await self.get_post(caller, group_id, post_id)
-        await self.reindex(row)
-        return access, row
+        access, post = await self.get_post(caller, group_id, post_id)
+        await self.reindex(post)
+        return access, post
 
     async def delete_post(self, caller: Caller, group_id: str, post_id: str) -> None:
         access, post = await self.get_post(caller, group_id, post_id)
-        if post["deleted_date"]:
+        if post.deleted_date:
             raise NotFoundError(POST_NOT_FOUND)
-        if not self.permissions.can_delete_content(caller, access, post["author_id"]):
+        if not self.permissions.can_delete_content(caller, access, post.author_id):
             raise ForbiddenError("Only the author, the group owner or an admin can delete a post")
         await self.posts.soft_delete(post_id, now_iso())
         await self.unindex(post_id)
 
     # --- media: one per post. Changing it is remove, then add another.
 
-    async def set_media(self, caller: Caller, group_id: str, post_id: str, ref: MediaRef):
+    async def set_media(
+        self, caller: Caller, group_id: str, post_id: str, ref: MediaRefRequest
+    ) -> tuple[GroupAccess, PostModel]:
         await self._own_post(caller, group_id, post_id)
         await self.posts.set_media(post_id, await self._resolve(ref), now_iso())
         return await self.get_post(caller, group_id, post_id)
 
-    async def remove_media(self, caller: Caller, group_id: str, post_id: str):
+    async def remove_media(self, caller: Caller, group_id: str, post_id: str) -> tuple[GroupAccess, PostModel]:
         await self._own_post(caller, group_id, post_id)
         await self.posts.set_media(post_id, None, now_iso())
         return await self.get_post(caller, group_id, post_id)
@@ -186,37 +213,37 @@ class PostService:
             raise InvalidInputError(f"Can't tag unknown users: {', '.join(unknown)}")
         return unique
 
-    async def _resolve(self, ref: MediaRef):
+    async def _resolve(self, ref: MediaRefRequest) -> ResolvedMedia:
         if self.media is None:
             raise ConflictError("Media isn't available")
         return await self.media.resolve(ref)
 
-    async def _own_post(self, caller: Caller, group_id: str, post_id: str):
+    async def _own_post(self, caller: Caller, group_id: str, post_id: str) -> PostModel:
         _, post = await self.get_post(caller, group_id, post_id)
-        if post["deleted_date"]:
+        if post.deleted_date:
             raise NotFoundError(POST_NOT_FOUND)
-        if post["author_id"] != caller.user_id:  # nobody edits someone else's words, not even admins
+        if post.author_id != caller.user_id:  # nobody edits someone else's words, not even admins
             raise ForbiddenError("Only the author can edit a post")
         return post
 
     # --- likes
 
-    async def like(self, caller: Caller, group_id: str, post_id: str):
-        access, post = await self._likeable(caller, group_id, post_id)
+    async def like(self, caller: Caller, group_id: str, post_id: str) -> tuple[GroupAccess, PostModel]:
+        await self._likeable(caller, group_id, post_id)
         now = now_iso()
         await self.reactions.add(caller.user_id, "post", post_id, now)
         await self.stats.refresh(post_id, now)
         return await self.get_post(caller, group_id, post_id)
 
-    async def unlike(self, caller: Caller, group_id: str, post_id: str):
+    async def unlike(self, caller: Caller, group_id: str, post_id: str) -> tuple[GroupAccess, PostModel]:
         await self._likeable(caller, group_id, post_id)
         await self.reactions.remove(caller.user_id, "post", post_id)
         await self.stats.refresh(post_id, now_iso())
         return await self.get_post(caller, group_id, post_id)
 
-    async def _likeable(self, caller: Caller, group_id: str, post_id: str):
+    async def _likeable(self, caller: Caller, group_id: str, post_id: str) -> tuple[GroupAccess, PostModel]:
         access, post = await self.get_post(caller, group_id, post_id)
-        if post["deleted_date"]:
+        if post.deleted_date:
             raise ConflictError("Can't like a deleted post")
         if not self.permissions.can_post(caller, access):
             raise ForbiddenError("Only members can like posts in this group")
@@ -224,105 +251,103 @@ class PostService:
 
     # --- responses
 
-    def to_post(self, caller: Caller, access: GroupAccess, row: Dict[str, Any]) -> Post:
-        deleted = bool(row.get("deleted_date"))
-        return Post(
-            id=row["id"],
-            groupId=row["group_id"],
-            groupName=row.get("group_name") or access.group["name"],
-            authorId=None if deleted else row.get("author_id"),
-            authorName=author_name(row),
-            title=DELETED if deleted else row["title"],
-            body=DELETED if deleted else row["body"],
-            media=None if deleted else self.to_media(row),
-            taggedUserIds=[] if deleted else [person["user_id"] for person in row.get("tagged_people", [])],
+    def to_dto(self, caller: Caller, access: GroupAccess, post: PostModel) -> PostDTO:
+        deleted = bool(post.deleted_date)
+        return PostDTO(
+            id=post.id,
+            groupId=post.group_id,
+            groupName=post.group_name,
+            authorId=None if deleted else post.author_id,
+            authorName=display_author(post.deleted_date, post.author_id, post.author_name),
+            title=DELETED if deleted else post.title,
+            body=DELETED if deleted else post.body,
+            media=None if deleted else self.to_media_dto(post),
+            taggedUserIds=[] if deleted else [person.user_id for person in post.tagged_people],
             isDeleted=deleted,
-            likeCount=row.get("like_count", 0),
-            commentCount=row.get("comment_count", 0),
-            likedByMe=bool(row.get("liked_by_me")),
-            created_date=row["created_date"],
-            updated_date=row["updated_date"],
-            links=self.build_post_links(caller, access, row),
+            likeCount=post.like_count,
+            commentCount=post.comment_count,
+            likedByMe=post.liked_by_me,
+            created_date=post.created_date,
+            updated_date=post.updated_date,
+            links=self.build_post_links(caller, access, post),
         )
 
     @staticmethod
-    def to_media(row: Dict[str, Any]) -> Optional[PostMedia]:
-        if not row.get("media_type"):
+    def to_media_dto(post: PostModel) -> Optional[PostMediaDTO]:
+        if not post.media_type:
             return None
-        return PostMedia(
-            type=row["media_type"],
-            id=row["media_id"],
-            url=row.get("media_url"),
-            title=row.get("media_title"),
-            authorName=row.get("media_author_name"),
-            authorUrl=row.get("media_author_url"),
+        return PostMediaDTO(
+            type=post.media_type,
+            id=post.media_id,
+            url=post.media_url,
+            title=post.media_title,
+            authorName=post.media_author_name,
+            authorUrl=post.media_author_url,
         )
 
-    def build_post_links(self, caller: Caller, access: GroupAccess, row: Dict[str, Any]) -> Dict[str, Link]:
-        group = f"{API_PREFIX}/groups/{row['group_id']}"
-        base = f"{group}/posts/{row['id']}"
+    def build_post_links(self, caller: Caller, access: GroupAccess, post: PostModel) -> Dict[str, Link]:
+        group = f"{API_PREFIX}/groups/{post.group_id}"
+        base = f"{group}/posts/{post.id}"
         links = {
-            "self": Link(href=base, method="GET"),
-            "group": Link(href=group, method="GET"),
-            "comments": Link(href=f"{base}/comments", method="GET"),
+            LINK_SELF: Link(href=base, method="GET"),
+            LINK_GROUP: Link(href=group, method="GET"),
+            LINK_COMMENTS: Link(href=f"{base}/comments", method="GET"),
         }
-        if row.get("deleted_date"):
+        if post.deleted_date:
             return links
         if self.permissions.can_post(caller, access):
-            links["addComment"] = Link(href=f"{base}/comments", method="POST")
-            if row.get("liked_by_me"):
-                links["unlike"] = Link(href=f"{base}/like", method="DELETE")
+            links[LINK_ADD_COMMENT] = Link(href=f"{base}/comments", method="POST")
+            if post.liked_by_me:
+                links[LINK_UNLIKE] = Link(href=f"{base}/like", method="DELETE")
             else:
-                links["like"] = Link(href=f"{base}/like", method="PUT")
-        if row.get("author_id") == caller.user_id:
-            links["update"] = Link(href=base, method="PUT")
-            if row.get("media_type"):
-                links["removeMedia"] = Link(href=f"{base}/media", method="DELETE")
+                links[LINK_LIKE] = Link(href=f"{base}/like", method="PUT")
+        if post.author_id == caller.user_id:
+            links[LINK_UPDATE] = Link(href=base, method="PUT")
+            if post.media_type:
+                links[LINK_REMOVE_MEDIA] = Link(href=f"{base}/media", method="DELETE")
             else:
-                links["addMedia"] = Link(href=f"{base}/media", method="PUT")
-        if self.permissions.can_delete_content(caller, access, row.get("author_id")):
-            links["delete"] = Link(href=base, method="DELETE")
+                links[LINK_ADD_MEDIA] = Link(href=f"{base}/media", method="PUT")
+        if self.permissions.can_delete_content(caller, access, post.author_id):
+            links[LINK_DELETE] = Link(href=base, method="DELETE")
         return links
 
-    def build_post_response(self, caller: Caller, access: GroupAccess, row: Dict[str, Any]) -> Dict[str, Any]:
-        return envelope(
-            data_name="post", data=self.to_post(caller, access, row), metadata=self._metadata([row]), meta_links={}
-        )
-
-    def build_posts_response(self, caller: Caller, access: GroupAccess, rows: List[Dict[str, Any]]) -> Dict[str, Any]:
-        meta_links = {}
-        if self.permissions.can_post(caller, access):
-            meta_links["createPost"] = Link(href=f"{API_PREFIX}/groups/{access.group['id']}/posts", method="POST")
-        return envelope(
-            data_name="posts",
-            data=[self.to_post(caller, access, row) for row in rows],
-            metadata=self._metadata(rows),
-            meta_links=meta_links,
-        )
-
     @staticmethod
-    def people_metadata(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def people_metadata(posts: List[PostModel]) -> FieldMetadata:
         """Every person tagged in these posts as {id, value: full name}, for resolving taggedUserIds."""
         people: Dict[str, str] = {}
-        for row in rows:
-            if row.get("deleted_date"):
+        for post in posts:
+            if post.deleted_date:
                 continue
-            for person in row.get("tagged_people", []):
-                people.setdefault(person["user_id"], person["name"])
-        return {
-            "mandatory": False,
-            "maxItems": MAX_TAGGED_PEOPLE,
-            "values": [{"id": user_id, "value": name} for user_id, name in people.items()],
-        }
+            for person in post.tagged_people:
+                people.setdefault(person.user_id, person.name)
+        return FieldMetadata(
+            mandatory=False,
+            maxItems=MAX_TAGGED_PEOPLE,
+            values=[EmbeddedRef(id=user_id, value=name) for user_id, name in people.items()],
+        )
 
-    def _metadata(self, rows: List[Dict[str, Any]]) -> Dict[str, Any]:
-        return {
-            "taggedUserIds": self.people_metadata(rows),
-            "title": {"mandatory": True, "maxLength": 200},
-            "body": {"mandatory": True, "maxLength": 10000},
-            "media": {
-                "mandatory": False,
-                "values": [{"id": t.value, "value": t.value.title()} for t in MediaType],
-            },
-            "authorName": {"readOnly": True},
-        }
+    def build_metadata(self, posts: List[PostModel]) -> PostMetadata:
+        return PostMetadata(
+            taggedUserIds=self.people_metadata(posts),
+            title=FieldMetadata(mandatory=True, maxLength=TITLE_MAX_LENGTH),
+            body=FieldMetadata(mandatory=True, maxLength=BODY_MAX_LENGTH),
+            media=FieldMetadata(
+                mandatory=False,
+                values=[EmbeddedRef(id=media.value, value=media.value.title()) for media in MediaType],
+            ),
+            authorName=FieldMetadata(readOnly=True),
+        )
+
+    def build_post_response(self, caller: Caller, access: GroupAccess, post: PostModel) -> PostResponse:
+        return PostResponse.of(POST_DATA_NAME, self.to_dto(caller, access, post), self.build_metadata([post]))
+
+    def build_posts_response(self, caller: Caller, access: GroupAccess, posts: List[PostModel]) -> PostListResponse:
+        meta_links = {}
+        if self.permissions.can_post(caller, access):
+            meta_links[LINK_CREATE_POST] = Link(href=f"{API_PREFIX}/groups/{access.group.id}/posts", method="POST")
+        return PostListResponse.of(
+            POSTS_DATA_NAME,
+            [self.to_dto(caller, access, post) for post in posts],
+            self.build_metadata(posts),
+            meta_links,
+        )

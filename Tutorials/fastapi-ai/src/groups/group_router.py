@@ -1,14 +1,21 @@
-from typing import Any, Optional
+from typing import Optional
 
 from fastapi import APIRouter, Depends, Request, Response
 
 from core.config.database import get_database
-from core.security.authorization import Caller
-from groups.schemas import GroupCreate, GroupOwnerUpdate, GroupUpdate
+from core.security.authorization import Caller, get_caller
 from groups.group_repository import GroupRepository
-from users.user_repository import UserRepository
-from core.security.authorization import get_caller
 from groups.group_service import GroupService
+from groups.schemas import (
+    GroupCreateRequest,
+    GroupFollowerListResponse,
+    GroupListResponse,
+    GroupMemberListResponse,
+    GroupOwnerUpdateRequest,
+    GroupResponse,
+    GroupUpdateRequest,
+)
+from users.user_repository import UserRepository
 
 # Groups are shared, not one person's data, so they are not under /users/{id}.
 # The caller is always the token's user (get_caller).
@@ -27,19 +34,19 @@ async def list_groups(
     mine: bool = False,
     caller: Caller = Depends(get_caller),
     service: GroupService = Depends(get_group_service),
-) -> dict[str, Any]:
+) -> GroupListResponse:
     """Groups you can see (admins: all). `q` searches name/description; `following`/`mine` narrow it."""
     return service.build_list_response(caller, await service.list_groups(caller, q, following, mine))
 
 
 @router.post("", status_code=201)
 async def create_group(
-    payload: GroupCreate,
+    request: GroupCreateRequest,
     caller: Caller = Depends(get_caller),
     service: GroupService = Depends(get_group_service),
-) -> dict[str, Any]:
+) -> GroupResponse:
     """Create a group; you become its owner, a member and a follower."""
-    return service.build_response(caller, await service.create_group(caller, payload))
+    return service.build_response(caller, await service.create_group(caller, request))
 
 
 @router.get("/{group_id}")
@@ -47,18 +54,18 @@ async def get_group(
     group_id: str,
     caller: Caller = Depends(get_caller),
     service: GroupService = Depends(get_group_service),
-) -> dict[str, Any]:
+) -> GroupResponse:
     return service.build_response(caller, await service.get_visible(caller, group_id))
 
 
 @router.put("/{group_id}")
 async def update_group(
     group_id: str,
-    payload: GroupUpdate,
+    request: GroupUpdateRequest,
     caller: Caller = Depends(get_caller),
     service: GroupService = Depends(get_group_service),
-) -> dict[str, Any]:
-    return service.build_response(caller, await service.update_group(caller, group_id, payload))
+) -> GroupResponse:
+    return service.build_response(caller, await service.update_group(caller, group_id, request))
 
 
 @router.delete("/{group_id}", status_code=204)
@@ -74,11 +81,11 @@ async def delete_group(
 @router.put("/{group_id}/owner")
 async def assign_owner(
     group_id: str,
-    payload: GroupOwnerUpdate,
+    request: GroupOwnerUpdateRequest,
     caller: Caller = Depends(get_caller),
     service: GroupService = Depends(get_group_service),
-) -> dict[str, Any]:
-    return service.build_response(caller, await service.assign_owner(caller, group_id, payload.userId))
+) -> GroupResponse:
+    return service.build_response(caller, await service.assign_owner(caller, group_id, request.userId))
 
 
 # --- members ("me" routes first so they aren't read as a user id)
@@ -89,7 +96,7 @@ async def list_members(
     group_id: str,
     caller: Caller = Depends(get_caller),
     service: GroupService = Depends(get_group_service),
-) -> dict[str, Any]:
+) -> GroupMemberListResponse:
     access, rows = await service.list_members(caller, group_id)
     return service.build_members_response(caller, access, rows)
 
@@ -99,7 +106,7 @@ async def join_group(
     group_id: str,
     caller: Caller = Depends(get_caller),
     service: GroupService = Depends(get_group_service),
-) -> dict[str, Any]:
+) -> GroupResponse:
     return service.build_response(caller, await service.join(caller, group_id))
 
 
@@ -119,7 +126,7 @@ async def add_member(
     user_id: str,
     caller: Caller = Depends(get_caller),
     service: GroupService = Depends(get_group_service),
-) -> dict[str, Any]:
+) -> GroupResponse:
     return service.build_response(caller, await service.add_member(caller, group_id, user_id))
 
 
@@ -142,7 +149,7 @@ async def list_followers(
     group_id: str,
     caller: Caller = Depends(get_caller),
     service: GroupService = Depends(get_group_service),
-) -> dict[str, Any]:
+) -> GroupFollowerListResponse:
     _, rows = await service.list_followers(caller, group_id)
     return service.build_followers_response(rows)
 
@@ -152,7 +159,7 @@ async def follow_group(
     group_id: str,
     caller: Caller = Depends(get_caller),
     service: GroupService = Depends(get_group_service),
-) -> dict[str, Any]:
+) -> GroupResponse:
     return service.build_response(caller, await service.follow(caller, group_id))
 
 
@@ -161,5 +168,5 @@ async def unfollow_group(
     group_id: str,
     caller: Caller = Depends(get_caller),
     service: GroupService = Depends(get_group_service),
-) -> dict[str, Any]:
+) -> GroupResponse:
     return service.build_response(caller, await service.unfollow(caller, group_id))

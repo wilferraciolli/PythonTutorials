@@ -2,17 +2,23 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
+from core.common.api_response import ApiResponse
+from core.common.base_dto import NoMetadata
 from media.enums import MediaType
 
 
-class MediaRef(BaseModel):
-    """What a client sends: the provider and its id. The server looks up the rest."""
+# --- Request: what the client sends -----------------------------------------
+
+class MediaRefRequest(BaseModel):
+    """What a client sends to attach media: the provider and its id. The server looks up the rest."""
     type: MediaType
     id: str = Field(min_length=1, max_length=100)
 
 
-class MediaSearchResult(BaseModel):
-    """One Unsplash photo or Giphy GIF from a search; send {type, id} back to attach it."""
+# --- DTO: what the service returns ------------------------------------------
+
+class MediaSearchResultDTO(BaseModel):
+    """One Unsplash photo from a search; send {type, id} back to attach it."""
     type: MediaType
     id: str
     title: Optional[str] = None
@@ -20,3 +26,8 @@ class MediaSearchResult(BaseModel):
     url: str
     authorName: Optional[str] = None
     authorUrl: Optional[str] = None
+
+
+# --- Response: the envelope the service builds ------------------------------
+
+MediaSearchResponse = ApiResponse[list[MediaSearchResultDTO], NoMetadata]

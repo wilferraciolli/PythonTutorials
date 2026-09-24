@@ -5,9 +5,11 @@ from typing import Any, Dict, List, Optional, Protocol
 
 import httpx
 
+from core.common.base_dto import NoMetadata
 from core.common.errors import AppError, NotConfiguredError, UpstreamError
+from media.constants import MEDIA_DATA_NAME
 from media.enums import MediaType
-from media.schemas import MediaRef, MediaSearchResult
+from media.schemas import MediaRefRequest, MediaSearchResponse, MediaSearchResultDTO
 
 logger = logging.getLogger(__name__)
 
@@ -35,9 +37,9 @@ class ResolvedMedia:
 
 
 class MediaLookup(Protocol):
-    async def search_unsplash(self, query: str, limit: int) -> List[MediaSearchResult]: ...
+    async def search_unsplash(self, query: str, limit: int) -> List[MediaSearchResultDTO]: ...
 
-    async def resolve(self, ref: MediaRef) -> ResolvedMedia: ...
+    async def resolve(self, ref: MediaRefRequest) -> ResolvedMedia: ...
 
 
 class MediaProviders:
@@ -56,11 +58,15 @@ class MediaProviders:
         self.unsplash_key = unsplash_key or None
         self.transport = transport  # tests pass an httpx.MockTransport
 
-    async def search_unsplash(self, query: str, limit: int) -> List[MediaSearchResult]:
+    async def search_unsplash(self, query: str, limit: int) -> List[MediaSearchResultDTO]:
         data = await self._unsplash("/search/photos", {"query": query, "per_page": limit})
         return [self._unsplash_result(photo) for photo in data.get("results", [])]
 
-    async def resolve(self, ref: MediaRef) -> ResolvedMedia:
+    @staticmethod
+    def build_search_response(results: List[MediaSearchResultDTO]) -> MediaSearchResponse:
+        return MediaSearchResponse.of(MEDIA_DATA_NAME, results, NoMetadata())
+
+    async def resolve(self, ref: MediaRefRequest) -> ResolvedMedia:
         media_id = ref.id.strip()
         if ref.type == MediaType.YOUTUBE:
             if not YOUTUBE_ID.match(media_id):
@@ -100,11 +106,11 @@ class MediaProviders:
         return response.json()
 
     @staticmethod
-    def _unsplash_result(photo: Dict[str, Any]) -> MediaSearchResult:
+    def _unsplash_result(photo: Dict[str, Any]) -> MediaSearchResultDTO:
         urls = photo.get("urls") or {}
         user = photo.get("user") or {}
         profile = (user.get("links") or {}).get("html")
-        return MediaSearchResult(
+        return MediaSearchResultDTO(
             type=MediaType.UNSPLASH,
             id=photo["id"],
             title=photo.get("alt_description") or photo.get("description"),

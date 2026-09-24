@@ -9,7 +9,7 @@ from pydantic import ValidationError
 from core.security.auth import AuthenticatedUser, get_authenticated_user
 from core.common.errors import ForbiddenError, NotFoundError
 from groups.enums import GroupVisibility
-from groups.posts.schemas import PostCreate, PostUpdate
+from groups.posts.schemas import PostCreateRequest, PostUpdateRequest
 from users.user_repository import UserRepository
 from social import ADMIN, MEMBER, NEWS_ID, OUTSIDER, OWNER, make_social
 
@@ -24,23 +24,23 @@ async def s(tmp_path):
 
 async def test_news_group_is_seeded_public_and_ownerless_with_posts(s):
     access = await s.groups.get_visible(OUTSIDER, NEWS_ID)
-    assert access.group["name"] == "News"
-    assert access.group["visibility"] == "PUBLIC" and access.group["owner_id"] is None
+    assert access.group.name == "News"
+    assert access.group.visibility == "PUBLIC" and access.group.owner_id is None
 
     _, rows = await s.posts.list_posts(OUTSIDER, NEWS_ID)
     assert len(rows) == 10
-    assert [r["created_date"] for r in rows] == sorted((r["created_date"] for r in rows), reverse=True)
-    assert s.posts.to_post(OUTSIDER, access, rows[0]).authorName == "System"
+    assert [r.created_date for r in rows] == sorted((r.created_date for r in rows), reverse=True)
+    assert s.posts.to_dto(OUTSIDER, access, rows[0]).authorName == "System"
 
     # post_stats was backfilled for the seeded posts: the cycle-lanes post has 3 comments
-    lanes = next(r for r in rows if r["title"] == "City approves new cycle lanes")
-    assert lanes["comment_count"] == 3 and lanes["score"] == 6
+    lanes = next(r for r in rows if r.title == "City approves new cycle lanes")
+    assert lanes.comment_count == 3 and lanes.score == 6
 
 
 async def test_outsiders_can_read_news_but_not_post(s):
     with pytest.raises(ForbiddenError):
         await s.post(NEWS_ID, caller=OUTSIDER)
-    assert (await s.post(NEWS_ID, caller=ADMIN))["title"] == "Bike lanes"  # admins post anywhere
+    assert (await s.post(NEWS_ID, caller=ADMIN)).title == "Bike lanes"  # admins post anywhere
 
 
 # --- posts
@@ -48,9 +48,9 @@ async def test_outsiders_can_read_news_but_not_post(s):
 
 async def test_title_and_body_are_required():
     with pytest.raises(ValidationError):
-        PostCreate(title="", body="x")
+        PostCreateRequest(title="", body="x")
     with pytest.raises(ValidationError):
-        PostCreate(title="x")  # type: ignore[call-arg]
+        PostCreateRequest(title="x")  # type: ignore[call-arg]
 
 
 async def test_members_post_and_list_newest_first(s):
@@ -59,8 +59,8 @@ async def test_members_post_and_list_newest_first(s):
     second = await s.post(group_id, caller=OWNER, title="Second")
 
     _, rows = await s.posts.list_posts(OUTSIDER, group_id)
-    assert [r["id"] for r in rows] == [second["id"], first["id"]]
-    assert first["like_count"] == 0 and first["comment_count"] == 0
+    assert [r.id for r in rows] == [second.id, first.id]
+    assert first.like_count == 0 and first.comment_count == 0
 
 
 async def test_private_group_posts_are_hidden_from_outsiders(s):
@@ -70,8 +70,8 @@ async def test_private_group_posts_are_hidden_from_outsiders(s):
     with pytest.raises(NotFoundError):
         await s.posts.list_posts(OUTSIDER, group_id)
     with pytest.raises(NotFoundError):
-        await s.posts.get_post(OUTSIDER, group_id, row["id"])
-    assert (await s.posts.get_post(ADMIN, group_id, row["id"]))[1]["id"] == row["id"]
+        await s.posts.get_post(OUTSIDER, group_id, row.id)
+    assert (await s.posts.get_post(ADMIN, group_id, row.id))[1].id == row.id
 
 
 async def test_a_post_cannot_be_reached_through_another_group(s):
@@ -80,7 +80,7 @@ async def test_a_post_cannot_be_reached_through_another_group(s):
     row = await s.post(private_id)
 
     with pytest.raises(NotFoundError):
-        await s.posts.get_post(OUTSIDER, public_id, row["id"])
+        await s.posts.get_post(OUTSIDER, public_id, row.id)
 
 
 async def test_only_the_author_edits(s):
@@ -89,9 +89,9 @@ async def test_only_the_author_edits(s):
 
     for caller in (OWNER, ADMIN):
         with pytest.raises(ForbiddenError):
-            await s.posts.update_post(caller, group_id, row["id"], PostUpdate(title="changed"))
-    _, updated = await s.posts.update_post(MEMBER, group_id, row["id"], PostUpdate(title="Better title"))
-    assert updated["title"] == "Better title" and updated["body"] == "Thoughts?"
+            await s.posts.update_post(caller, group_id, row.id, PostUpdateRequest(title="changed"))
+    _, updated = await s.posts.update_post(MEMBER, group_id, row.id, PostUpdateRequest(title="Better title"))
+    assert updated.title == "Better title" and updated.body == "Thoughts?"
 
 
 async def test_delete_by_author_owner_or_admin_and_it_is_soft(s):
@@ -100,16 +100,16 @@ async def test_delete_by_author_owner_or_admin_and_it_is_soft(s):
     rows = [await s.post(group_id) for _ in range(3)]
 
     with pytest.raises(ForbiddenError):  # another member
-        await s.posts.delete_post(OUTSIDER, group_id, rows[0]["id"])
+        await s.posts.delete_post(OUTSIDER, group_id, rows[0].id)
 
-    await s.posts.delete_post(MEMBER, group_id, rows[0]["id"])  # author
-    await s.posts.delete_post(OWNER, group_id, rows[1]["id"])  # group owner
-    await s.posts.delete_post(ADMIN, group_id, rows[2]["id"])  # admin
+    await s.posts.delete_post(MEMBER, group_id, rows[0].id)  # author
+    await s.posts.delete_post(OWNER, group_id, rows[1].id)  # group owner
+    await s.posts.delete_post(ADMIN, group_id, rows[2].id)  # admin
 
     _, listed = await s.posts.list_posts(MEMBER, group_id)
     assert listed == []
-    access, deleted = await s.posts.get_post(MEMBER, group_id, rows[0]["id"])
-    shown = s.posts.to_post(MEMBER, access, deleted)
+    access, deleted = await s.posts.get_post(MEMBER, group_id, rows[0].id)
+    shown = s.posts.to_dto(MEMBER, access, deleted)
     assert shown.isDeleted and shown.title == "[deleted]" and shown.authorName is None
     assert set(shown.links) == {"self", "group", "comments"}
 
@@ -119,24 +119,24 @@ async def test_deleted_user_shows_as_deleted_user(s):
     row = await s.post(group_id)
     await UserRepository(s.db).delete("member")
 
-    access, fresh = await s.posts.get_post(OWNER, group_id, row["id"])
-    assert s.posts.to_post(OWNER, access, fresh).authorName == "[deleted user]"
+    access, fresh = await s.posts.get_post(OWNER, group_id, row.id)
+    assert s.posts.to_dto(OWNER, access, fresh).authorName == "[deleted user]"
 
 
 async def test_deleting_a_group_removes_everything_in_it(s):
     group_id = await s.group()
     row = await s.post(group_id)
-    comment = await s.comment(group_id, row["id"])
-    await s.posts.like(OWNER, group_id, row["id"])
-    await s.comments.like(OWNER, group_id, row["id"], comment["id"])
+    comment = await s.comment(group_id, row.id)
+    await s.posts.like(OWNER, group_id, row.id)
+    await s.comments.like(OWNER, group_id, row.id, comment.id)
 
     await s.groups.delete_group(OWNER, group_id)
     for table, column, value in [
         ("posts", "group_id", group_id),
-        ("comments", "post_id", row["id"]),
-        ("post_stats", "post_id", row["id"]),
-        ("reactions", "target_id", row["id"]),
-        ("reactions", "target_id", comment["id"]),
+        ("comments", "post_id", row.id),
+        ("post_stats", "post_id", row.id),
+        ("reactions", "target_id", row.id),
+        ("reactions", "target_id", comment.id),
     ]:
         assert await s.db.fetch_all(f"SELECT 1 FROM {table} WHERE {column} = ?", (value,)) == []
 

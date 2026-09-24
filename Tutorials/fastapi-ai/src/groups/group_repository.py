@@ -1,6 +1,8 @@
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, List, Mapping, Optional, Tuple
 
 from core.config.database import Database
+from groups.models import GroupFollowerModel, GroupMemberModel, GroupModel
+
 
 def visible_group_clause(alias: str, user_id: str, is_admin: bool) -> Tuple[str, List[Any]]:
     """
@@ -41,7 +43,7 @@ class GroupRepository:
         visibility: str,
         owner_id: Optional[str],
         created_date: str,
-    ) -> Dict[str, Any]:
+    ) -> GroupModel:
         await self.db.execute(
             "INSERT INTO groups (id, name, description, visibility, owner_id, created_by, created_date) "
             "VALUES (?, ?, ?, ?, ?, ?, ?)",
@@ -52,11 +54,11 @@ class GroupRepository:
             raise RuntimeError(f"created group was not found: {group_id}")
         return created
 
-    async def get(self, group_id: str) -> Optional[Dict[str, Any]]:
-        return await self.db.fetch_one(f"{_SELECT_GROUP} WHERE g.id = ?", (group_id,))
+    async def get(self, group_id: str) -> Optional[GroupModel]:
+        return self._to_model(await self.db.fetch_one(f"{_SELECT_GROUP} WHERE g.id = ?", (group_id,)))
 
-    async def get_by_name(self, name: str) -> Optional[Dict[str, Any]]:
-        return await self.db.fetch_one("SELECT * FROM groups WHERE name = ? COLLATE NOCASE", (name,))
+    async def get_by_name(self, name: str) -> Optional[GroupModel]:
+        return self._to_model(await self.db.fetch_one("SELECT * FROM groups WHERE name = ? COLLATE NOCASE", (name,)))
 
     async def list_visible(
         self,
@@ -65,7 +67,7 @@ class GroupRepository:
         term: Optional[str] = None,
         following_only: bool = False,
         member_only: bool = False,
-    ) -> List[Dict[str, Any]]:
+    ) -> List[GroupModel]:
         visible, params = visible_group_clause("g", user_id, is_admin)
         where: List[str] = [visible]
 
@@ -79,23 +81,33 @@ class GroupRepository:
             where.append("EXISTS (SELECT 1 FROM group_members m WHERE m.group_id = g.id AND m.user_id = ?)")
             params.append(user_id)
 
-        return await self.db.fetch_all(
+        rows = await self.db.fetch_all(
             f"{_SELECT_GROUP} WHERE {' AND '.join(where)} ORDER BY g.name COLLATE NOCASE", tuple(params)
         )
+        return [self._to_model(row) for row in rows]
 
-    async def update(self, group_id: str, **fields: Any) -> Optional[Dict[str, Any]]:
-        updatable = {key: value for key, value in fields.items() if value is not None}
+    async def update(
+        self,
+        group_id: str,
+        name: Optional[str] = None,
+        description: Optional[str] = None,
+        visibility: Optional[str] = None,
+    ) -> None:
+        """Change only the arguments that are not None."""
+        updatable = {
+            key: value
+            for key, value in (("name", name), ("description", description), ("visibility", visibility))
+            if value is not None
+        }
         if updatable:
             set_clause = ", ".join(f"{key} = ?" for key in updatable)
-            await self.db.execute(
-                f"UPDATE groups SET {set_clause} WHERE id = ?", (*updatable.values(), group_id)
-            )
-        return await self.get(group_id)
+            await self.db.execute(f"UPDATE groups SET {set_clause} WHERE id = ?", (*updatable.values(), group_id))
 
     async def set_owner(self, group_id: str, owner_id: Optional[str]) -> None:
         await self.db.execute("UPDATE groups SET owner_id = ? WHERE id = ?", (owner_id, group_id))
 
     async def delete(self, group_id: str) -> None:
+        """The group and everything in it: posts, comments, likes, stats and search vectors."""
         in_group_posts = "SELECT id FROM posts WHERE group_id = ?"
         in_group_comments = f"SELECT id FROM comments WHERE post_id IN ({in_group_posts})"
         await self.db.execute(
@@ -132,12 +144,13 @@ class GroupRepository:
     async def remove_member(self, group_id: str, user_id: str) -> None:
         await self.db.execute("DELETE FROM group_members WHERE group_id = ? AND user_id = ?", (group_id, user_id))
 
-    async def list_members(self, group_id: str) -> List[Dict[str, Any]]:
-        return await self.db.fetch_all(
+    async def list_members(self, group_id: str) -> List[GroupMemberModel]:
+        rows = await self.db.fetch_all(
             "SELECT m.user_id, m.joined_date, u.name FROM group_members m "
             "LEFT JOIN users u ON u.id = m.user_id WHERE m.group_id = ? ORDER BY m.joined_date ASC",
             (group_id,),
         )
+        return [GroupMemberModel(**row) for row in rows]
 
     # --- followers
 
@@ -165,23 +178,26 @@ class GroupRepository:
             (group_id, group_id),
         )
 
-    async def list_followers(self, group_id: str) -> List[Dict[str, Any]]:
-        return await self.db.fetch_all(
+    async def list_followers(self, group_id: str) -> List[GroupFollowerModel]:
+        rows = await self.db.fetch_all(
             "SELECT f.user_id, f.created_date, u.name FROM group_followers f "
             "LEFT JOIN users u ON u.id = f.user_id WHERE f.group_id = ? ORDER BY f.created_date ASC",
             (group_id,),
         )
+        return [GroupFollowerModel(**row) for row in rows]
 
     # --- users being deleted
 
     async def forget_user(self, user_id: str) -> None:
-        """A deleted user leaves every group; groups they owned become ownerless."""
+        """
+        A deleted user leaves every group, groups they owned become ownerless,
+        and their likes go. The caller recomputes post stats afterwards.
+        """
         await self.db.execute("UPDATE groups SET owner_id = NULL WHERE owner_id = ?", (user_id,))
         await self.db.execute("DELETE FROM group_members WHERE user_id = ?", (user_id,))
         await self.db.execute("DELETE FROM group_followers WHERE user_id = ?", (user_id,))
-        # Their likes go too, and the affected posts' scores are recomputed.
         await self.db.execute("DELETE FROM reactions WHERE user_id = ?", (user_id,))
-        from groups.posts.post_stats_repository import PostStatsRepository
-        from datetime import datetime, timezone
 
-        await PostStatsRepository(self.db).rebuild_all(datetime.now(timezone.utc).isoformat())
+    @staticmethod
+    def _to_model(row: Optional[Mapping[str, Any]]) -> Optional[GroupModel]:
+        return GroupModel(**row) if row else None

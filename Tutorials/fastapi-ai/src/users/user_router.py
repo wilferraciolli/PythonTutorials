@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from core.config.database import get_database
 from core.security.authorization import Caller, get_caller, require_admin
 from groups.group_repository import GroupRepository
+from groups.posts.post_stats_repository import PostStatsRepository
 from users.schemas import (
     UserCreateRequest,
     UserListResponse,
@@ -22,7 +23,7 @@ router = APIRouter(prefix="/users", tags=["users"])
 
 def get_user_service(request: Request) -> UserService:
     db = get_database(request)
-    return UserService(UserRepository(db), GroupRepository(db))
+    return UserService(UserRepository(db), GroupRepository(db), PostStatsRepository(db))
 
 
 @router.get("")

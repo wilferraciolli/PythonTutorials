@@ -1,25 +1,25 @@
-from typing import Any, Optional
+from typing import Optional
 
 from fastapi import APIRouter, Depends, Request, Response
 
+from core.ai.embeddings import get_embedder
 from core.config.database import get_database
-from core.security.authorization import Caller
-from media.media_providers import MediaProviders
-from groups.posts.schemas import PostCreate, PostUpdate
-from media.schemas import MediaRef
+from core.security.authorization import Caller, get_caller
+from groups.group_router import get_group_service
+from groups.posts.constants import DEFAULT_LIMIT
 from groups.posts.post_repository import PostRepository
+from groups.posts.post_search_service import PostSearchService
+from groups.posts.post_service import PostService
 from groups.posts.post_stats_repository import PostStatsRepository
 from groups.posts.reaction_repository import ReactionRepository
-from core.ai.embeddings import get_embedder
+from groups.posts.schemas import PostCreateRequest, PostListResponse, PostResponse, PostUpdateRequest
+from media.media_providers import MediaProviders
 from media.media_router import get_media_providers
-from core.security.authorization import get_caller
-from groups.group_router import get_group_service
-from groups.posts.post_search_service import PostSearchService
-from groups.posts.post_service import DEFAULT_LIMIT, PostService
+from media.schemas import MediaRefRequest
 
 # Nested under the group on purpose: every request re-checks the group's
 # visibility, so a private group's post can't be reached any other way.
-# Comments are their own API: routers/post_comments.py.
+# Comments are their own API: comments/comment_router.py.
 router = APIRouter(prefix="/groups/{group_id}/posts", tags=["posts"])
 
 
@@ -52,21 +52,21 @@ async def list_posts(
     limit: int = DEFAULT_LIMIT,
     caller: Caller = Depends(get_caller),
     service: PostService = Depends(get_post_service),
-) -> dict[str, Any]:
+) -> PostListResponse:
     """The group's posts, newest first."""
-    access, rows = await service.list_posts(caller, group_id, limit)
-    return service.build_posts_response(caller, access, rows)
+    access, posts = await service.list_posts(caller, group_id, limit)
+    return service.build_posts_response(caller, access, posts)
 
 
 @router.post("", status_code=201)
 async def create_post(
     group_id: str,
-    payload: PostCreate,
+    request: PostCreateRequest,
     caller: Caller = Depends(get_caller),
     service: PostService = Depends(get_post_service),
-) -> dict[str, Any]:
-    access, row = await service.create_post(caller, group_id, payload)
-    return service.build_post_response(caller, access, row)
+) -> PostResponse:
+    access, post = await service.create_post(caller, group_id, request)
+    return service.build_post_response(caller, access, post)
 
 
 @router.get("/{post_id}")
@@ -75,21 +75,21 @@ async def get_post(
     post_id: str,
     caller: Caller = Depends(get_caller),
     service: PostService = Depends(get_post_service),
-) -> dict[str, Any]:
-    access, row = await service.get_post(caller, group_id, post_id)
-    return service.build_post_response(caller, access, row)
+) -> PostResponse:
+    access, post = await service.get_post(caller, group_id, post_id)
+    return service.build_post_response(caller, access, post)
 
 
 @router.put("/{post_id}")
 async def update_post(
     group_id: str,
     post_id: str,
-    payload: PostUpdate,
+    request: PostUpdateRequest,
     caller: Caller = Depends(get_caller),
     service: PostService = Depends(get_post_service),
-) -> dict[str, Any]:
-    access, row = await service.update_post(caller, group_id, post_id, payload)
-    return service.build_post_response(caller, access, row)
+) -> PostResponse:
+    access, post = await service.update_post(caller, group_id, post_id, request)
+    return service.build_post_response(caller, access, post)
 
 
 @router.delete("/{post_id}", status_code=204)
@@ -107,13 +107,13 @@ async def delete_post(
 async def set_post_media(
     group_id: str,
     post_id: str,
-    payload: MediaRef,
+    ref: MediaRefRequest,
     caller: Caller = Depends(get_caller),
     service: PostService = Depends(get_post_service),
-) -> dict[str, Any]:
+) -> PostResponse:
     """Attach an Unsplash photo, Giphy GIF or YouTube video (author only)."""
-    access, row = await service.set_media(caller, group_id, post_id, payload)
-    return service.build_post_response(caller, access, row)
+    access, post = await service.set_media(caller, group_id, post_id, ref)
+    return service.build_post_response(caller, access, post)
 
 
 @router.delete("/{post_id}/media")
@@ -122,9 +122,9 @@ async def remove_post_media(
     post_id: str,
     caller: Caller = Depends(get_caller),
     service: PostService = Depends(get_post_service),
-) -> dict[str, Any]:
-    access, row = await service.remove_media(caller, group_id, post_id)
-    return service.build_post_response(caller, access, row)
+) -> PostResponse:
+    access, post = await service.remove_media(caller, group_id, post_id)
+    return service.build_post_response(caller, access, post)
 
 
 @router.put("/{post_id}/like")
@@ -133,9 +133,9 @@ async def like_post(
     post_id: str,
     caller: Caller = Depends(get_caller),
     service: PostService = Depends(get_post_service),
-) -> dict[str, Any]:
-    access, row = await service.like(caller, group_id, post_id)
-    return service.build_post_response(caller, access, row)
+) -> PostResponse:
+    access, post = await service.like(caller, group_id, post_id)
+    return service.build_post_response(caller, access, post)
 
 
 @router.delete("/{post_id}/like")
@@ -144,6 +144,6 @@ async def unlike_post(
     post_id: str,
     caller: Caller = Depends(get_caller),
     service: PostService = Depends(get_post_service),
-) -> dict[str, Any]:
-    access, row = await service.unlike(caller, group_id, post_id)
-    return service.build_post_response(caller, access, row)
+) -> PostResponse:
+    access, post = await service.unlike(caller, group_id, post_id)
+    return service.build_post_response(caller, access, post)

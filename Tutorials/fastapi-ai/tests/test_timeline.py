@@ -5,7 +5,8 @@ import pytest
 
 from groups.enums import GroupVisibility
 from timeline.timeline_repository import TimelineRepository
-from timeline.timeline_service import TimelineService, TimelineType
+from timeline.enums import TimelineType
+from timeline.timeline_service import TimelineService
 from social import ADMIN, MEMBER, NEWS_ID, OUTSIDER, OWNER, make_social
 
 ALL, FOLLOWING, POPULAR = TimelineType.ALL, TimelineType.FOLLOWING, TimelineType.POPULAR
@@ -19,7 +20,7 @@ async def s(tmp_path):
 
 
 async def titles(s, caller, timeline_type=ALL, limit=100):
-    return [row["title"] for row in await s.timeline.list_posts(caller, timeline_type, limit)]
+    return [row.title for row in await s.timeline.list_posts(caller, timeline_type, limit)]
 
 
 async def backdate(s, post_id, days):
@@ -32,9 +33,9 @@ async def test_all_is_every_visible_post_newest_first(s):
     await s.post(public_id, title="Public post")
 
     feed = await s.timeline.list_posts(OUTSIDER, ALL)
-    assert feed[0]["title"] == "Public post"  # newer than every seeded News post
+    assert feed[0].title == "Public post"  # newer than every seeded News post
     assert len(feed) == 11  # plus the 10 News posts
-    dates = [row["created_date"] for row in feed]
+    dates = [row.created_date for row in feed]
     assert dates == sorted(dates, reverse=True)
 
 
@@ -88,27 +89,27 @@ async def test_popular_orders_by_score_then_newest(s):
     liked = await s.post(group_id, title="Two likes")
     discussed = await s.post(group_id, title="One comment and one like")
 
-    await s.posts.like(OWNER, group_id, liked["id"])
-    await s.posts.like(MEMBER, group_id, liked["id"])  # score 2
-    await s.comment(group_id, discussed["id"])
-    await s.posts.like(OWNER, group_id, discussed["id"])  # score 3
+    await s.posts.like(OWNER, group_id, liked.id)
+    await s.posts.like(MEMBER, group_id, liked.id)  # score 2
+    await s.comment(group_id, discussed.id)
+    await s.posts.like(OWNER, group_id, discussed.id)  # score 3
 
     feed = await s.timeline.list_posts(MEMBER, POPULAR)
-    ours = [row["title"] for row in feed if row["group_id"] == group_id]
+    ours = [row.title for row in feed if row.group_id == group_id]
     assert ours == ["One comment and one like", "Two likes", "Quiet"]
     # Two seeded News posts have 3 comments each (score 6): the tie goes to the newer one.
-    assert [row["title"] for row in feed[:2]] == ["What are you reading this month?", "City approves new cycle lanes"]
-    assert quiet["score"] == 0
+    assert [row.title for row in feed[:2]] == ["What are you reading this month?", "City approves new cycle lanes"]
+    assert quiet.score == 0
 
 
 async def test_one_year_window_applies_to_every_type(s):
     group_id = await s.group()
     old = await s.post(group_id, title="Old")
     recent = await s.post(group_id, title="Recent")
-    await s.comment(group_id, old["id"])
-    await s.comment(group_id, old["id"])  # popular, but too old
-    await backdate(s, old["id"], 400)
-    await backdate(s, recent["id"], 300)
+    await s.comment(group_id, old.id)
+    await s.comment(group_id, old.id)  # popular, but too old
+    await backdate(s, old.id, 400)
+    await backdate(s, recent.id, 300)
 
     for timeline_type in (ALL, FOLLOWING, POPULAR):
         feed = await titles(s, MEMBER, timeline_type)
@@ -118,7 +119,7 @@ async def test_one_year_window_applies_to_every_type(s):
 async def test_deleted_posts_are_left_out_and_limit_applies(s):
     group_id = await s.group()
     gone = await s.post(group_id, title="Gone")
-    await s.posts.delete_post(MEMBER, group_id, gone["id"])
+    await s.posts.delete_post(MEMBER, group_id, gone.id)
     assert "Gone" not in await titles(s, MEMBER)
     assert len(await s.timeline.list_posts(MEMBER, ALL, limit=3)) == 3
 
@@ -129,12 +130,12 @@ async def test_response_links_follow_the_callers_place_in_each_group(s):
 
     rows = await s.timeline.list_posts(MEMBER, ALL)
     body = await s.timeline.build_response(MEMBER, ALL, rows)
-    posts = {post.title: post for post in body["_data"]["posts"]}
+    posts = {post.title: post for post in body.data["posts"]}
 
     assert {"update", "delete", "like", "addComment"} <= posts["Mine"].links.keys()
     news = posts["Welcome to News"]
     assert news.authorName == "System" and not {"like", "addComment", "delete"} & news.links.keys()
-    assert set(body["_metaLinks"]) == {"self", "timelineAll", "timelineFollowing", "timelinePopular"}
+    assert set(body.meta_links) == {"self", "timelineAll", "timelineFollowing", "timelinePopular"}
 
 
 def test_api_timeline(tmp_path, monkeypatch):

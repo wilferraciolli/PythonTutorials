@@ -7,6 +7,7 @@ from core.common.base_dto import FieldMetadata, Link
 from core.security.authorization import Caller
 from core.security.roles import UserRole, role_options
 from groups.group_repository import GroupRepository
+from groups.posts.post_stats_repository import PostStatsRepository
 from users.constants import (
     LINK_CREATE_USER,
     LINK_DELETE_USER,
@@ -41,9 +42,15 @@ class UserService:
     handed to admins, matching the routes that require_admin guards.
     """
 
-    def __init__(self, user_repository: UserRepository, group_repository: GroupRepository) -> None:
+    def __init__(
+        self,
+        user_repository: UserRepository,
+        group_repository: GroupRepository,
+        post_stats_repository: PostStatsRepository,
+    ) -> None:
         self.user_repository = user_repository
         self.group_repository = group_repository
+        self.post_stats_repository = post_stats_repository
 
     async def create_user(self, request: UserCreateRequest, caller: Caller) -> UserDTO:
         model = await self.user_repository.create(
@@ -101,8 +108,10 @@ class UserService:
         if existing.id == caller.user_id:
             raise SelfLockoutError("You cannot delete yourself.")
 
-        # Groups they owned carry on without an owner (docs/social-groups.md).
+        # Groups they owned carry on without an owner, and posts they liked
+        # lose those likes (docs/social-groups.md).
         await self.group_repository.forget_user(user_id)
+        await self.post_stats_repository.rebuild_all(datetime.now(timezone.utc).isoformat())
         await self.user_repository.delete(user_id)
         return True
 

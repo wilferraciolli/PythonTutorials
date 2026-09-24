@@ -1,21 +1,28 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, List, Mapping, Optional
 
 from core.config.database import Database
+from groups.posts.models import PostModel
 from media.media_providers import ResolvedMedia
 
+# Every post read: the post, its author's name, its group and its counts.
 # author_name is NULL both for System (author_id NULL) and a deleted user
 # (author_id set, no users row); the service tells them apart.
 # Counts come from post_stats (kept up to date by the services).
-_SELECT_POST = (
+SELECT_POST = (
     "SELECT p.*, u.name AS author_name, g.name AS group_name, "
+    "g.visibility AS group_visibility, g.owner_id AS group_owner_id, g.created_date AS group_created_date, "
     "COALESCE(s.like_count, 0) AS like_count, "
     "COALESCE(s.comment_count, 0) AS comment_count, "
     "COALESCE(s.score, 0) AS score "
     "FROM posts p "
+    "JOIN groups g ON g.id = p.group_id "
     "LEFT JOIN users u ON u.id = p.author_id "
-    "LEFT JOIN post_stats s ON s.post_id = p.id "
-    "JOIN groups g ON g.id = p.group_id"
+    "LEFT JOIN post_stats s ON s.post_id = p.id"
 )
+
+
+def to_post_model(row: Optional[Mapping[str, Any]]) -> Optional[PostModel]:
+    return PostModel(**row) if row else None
 
 
 class PostRepository:
@@ -33,18 +40,24 @@ class PostRepository:
             (post_id, group_id, author_id, title, body, created_date, created_date),
         )
 
-    async def get(self, group_id: str, post_id: str) -> Optional[Dict[str, Any]]:
+    async def get(self, group_id: str, post_id: str) -> Optional[PostModel]:
         # Always looked up within its group, so a post can't be reached around the group's visibility.
-        return await self.db.fetch_one(f"{_SELECT_POST} WHERE p.group_id = ? AND p.id = ?", (group_id, post_id))
-
-    async def list_for_group(self, group_id: str, limit: int) -> List[Dict[str, Any]]:
-        return await self.db.fetch_all(
-            f"{_SELECT_POST} WHERE p.group_id = ? AND p.deleted_date IS NULL ORDER BY p.created_date DESC LIMIT ?",
-            (group_id, limit),
+        return to_post_model(
+            await self.db.fetch_one(f"{SELECT_POST} WHERE p.group_id = ? AND p.id = ?", (group_id, post_id))
         )
 
-    async def update(self, post_id: str, updated_date: str, **fields: Any) -> None:
-        updatable = {key: value for key, value in fields.items() if value is not None}
+    async def list_for_group(self, group_id: str, limit: int) -> List[PostModel]:
+        rows = await self.db.fetch_all(
+            f"{SELECT_POST} WHERE p.group_id = ? AND p.deleted_date IS NULL ORDER BY p.created_date DESC LIMIT ?",
+            (group_id, limit),
+        )
+        return [to_post_model(row) for row in rows]
+
+    async def update(
+        self, post_id: str, updated_date: str, title: Optional[str] = None, body: Optional[str] = None
+    ) -> None:
+        """Change only the arguments that are not None (and then updated_date)."""
+        updatable = {key: value for key, value in (("title", title), ("body", body)) if value is not None}
         if not updatable:
             return
         set_clause = ", ".join(f"{key} = ?" for key in updatable)

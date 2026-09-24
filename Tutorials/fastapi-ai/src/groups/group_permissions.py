@@ -1,23 +1,25 @@
 from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from typing import Optional
 
 from core.security.authorization import Caller
+from groups.enums import GroupVisibility
+from groups.models import GroupModel
 
 
 @dataclass(frozen=True)
 class GroupAccess:
     """What the permission checks need to know about one group and the caller's place in it."""
 
-    group: Dict[str, Any]
+    group: GroupModel
     is_member: bool
     is_following: bool
 
     @property
     def is_public(self) -> bool:
-        return self.group["visibility"] == "PUBLIC"
+        return self.group.visibility == GroupVisibility.PUBLIC
 
     def is_owner(self, caller: Caller) -> bool:
-        return self.group.get("owner_id") is not None and self.group["owner_id"] == caller.user_id
+        return self.group.owner_id is not None and self.group.owner_id == caller.user_id
 
 
 class GroupPermissions:
@@ -25,7 +27,7 @@ class GroupPermissions:
     Every "may this caller ...?" question about groups, in one place, so the
     API, the timeline and the AI tools can't disagree (docs/social-groups.md).
 
-    Rule zero: a system ADMIN (Clerk `roles` claim) bypasses all of it.
+    Rule zero: a system ADMIN (their saved roles) bypasses all of it.
     """
 
     def can_view(self, caller: Caller, access: GroupAccess) -> bool:

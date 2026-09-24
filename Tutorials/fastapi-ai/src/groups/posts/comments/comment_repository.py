@@ -1,6 +1,7 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, List, Mapping, Optional
 
 from core.config.database import Database
+from groups.posts.comments.models import CommentModel
 
 _SELECT_COMMENT = (
     "SELECT c.*, u.name AS author_name, "
@@ -9,7 +10,7 @@ _SELECT_COMMENT = (
 )
 
 
-class PostCommentRepository:
+class CommentRepository:
     """Comments and replies on posts. No permission logic here (see group_permissions.py)."""
 
     def __init__(self, db: Database) -> None:
@@ -30,13 +31,17 @@ class PostCommentRepository:
             (comment_id, post_id, parent_comment_id, author_id, body, created_date, created_date),
         )
 
-    async def get(self, post_id: str, comment_id: str) -> Optional[Dict[str, Any]]:
+    async def get(self, post_id: str, comment_id: str) -> Optional[CommentModel]:
         # Always looked up within its post (and the post within its group).
-        return await self.db.fetch_one(f"{_SELECT_COMMENT} WHERE c.post_id = ? AND c.id = ?", (post_id, comment_id))
+        row = await self.db.fetch_one(f"{_SELECT_COMMENT} WHERE c.post_id = ? AND c.id = ?", (post_id, comment_id))
+        return self._to_model(row)
 
-    async def list_for_post(self, post_id: str) -> List[Dict[str, Any]]:
+    async def list_for_post(self, post_id: str) -> List[CommentModel]:
         # Deleted ones are kept (shown as "[deleted]") so their replies keep a parent.
-        return await self.db.fetch_all(f"{_SELECT_COMMENT} WHERE c.post_id = ? ORDER BY c.created_date ASC", (post_id,))
+        rows = await self.db.fetch_all(
+            f"{_SELECT_COMMENT} WHERE c.post_id = ? ORDER BY c.created_date ASC", (post_id,)
+        )
+        return [self._to_model(row) for row in rows]
 
     async def update(self, comment_id: str, body: str, updated_date: str) -> None:
         await self.db.execute(
@@ -45,3 +50,7 @@ class PostCommentRepository:
 
     async def soft_delete(self, comment_id: str, deleted_date: str) -> None:
         await self.db.execute("UPDATE comments SET deleted_date = ? WHERE id = ?", (deleted_date, comment_id))
+
+    @staticmethod
+    def _to_model(row: Optional[Mapping[str, Any]]) -> Optional[CommentModel]:
+        return CommentModel(**row) if row else None
