@@ -6,8 +6,8 @@ from fastapi import Request
 
 
 def _load_dotenv() -> None:
-    """Load a root .env file for plain uvicorn/local runs if one exists."""
-    env_path = Path(__file__).resolve().parent.parent / ".env"
+    """Load the project's .env (in the working directory) for plain uvicorn/local runs, if one exists."""
+    env_path = Path.cwd() / ".env"
     if not env_path.exists():
         return
 
