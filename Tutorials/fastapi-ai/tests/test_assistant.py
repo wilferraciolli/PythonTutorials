@@ -8,14 +8,14 @@ from datetime import datetime, timezone
 
 import pytest
 
-from assistant.chat_tools import build_chat_tools
-from assistant.todo_tools import build_todo_tools
-from database import SQLiteDatabase
-from repositories.chat_repository import ChatRepository
-from repositories.todo_repository import TodoRepository
-from services.assistant_service import MAX_STEPS, AssistantService
-from services.search_service import SearchService
-from vector_store import DatabaseVectorStore
+from assistant.assistant_service import MAX_STEPS, AssistantService
+from assistant.tools.chat_tools import build_chat_tools
+from assistant.tools.todo_tools import build_todo_tools
+from chats.chat_repository import ChatRepository
+from chats.chat_search_service import ChatSearchService
+from core.ai.vector_store import DatabaseVectorStore
+from core.config.database import SQLiteDatabase
+from todos.todo_repository import TodoRepository
 
 NOW = datetime(2026, 6, 15, 12, 0, tzinfo=timezone.utc)
 
@@ -66,7 +66,7 @@ async def env(tmp_path):
         )
 
     repo = ChatRepository(db)
-    search = SearchService(repo, DatabaseVectorStore(db), fake_embed, "fake", ["cloudflare", "groq"])
+    search = ChatSearchService(repo, DatabaseVectorStore(db), fake_embed, "fake", ["cloudflare", "groq"])
     tools = [*build_todo_tools(TodoRepository(db), lambda: NOW), *build_chat_tools(search)]
 
     def make(llm):

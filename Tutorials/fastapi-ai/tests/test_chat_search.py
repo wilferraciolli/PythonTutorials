@@ -10,10 +10,10 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from database import SQLiteDatabase  # noqa: E402
-from repositories.chat_repository import ChatRepository  # noqa: E402
-from services.search_service import SearchService  # noqa: E402
-from vector_store import DatabaseVectorStore  # noqa: E402
+from chats.chat_repository import ChatRepository  # noqa: E402
+from chats.chat_search_service import ChatSearchService  # noqa: E402
+from core.ai.vector_store import DatabaseVectorStore  # noqa: E402
+from core.config.database import SQLiteDatabase  # noqa: E402
 
 TOPICS = [
     ("jvm", "java", "spring", "kotlin"),
@@ -40,7 +40,7 @@ async def env(tmp_path):
             "INSERT INTO users (id, name, email, created_date) VALUES (?, ?, ?, ?)",
             (user_id, user_id, f"{user_id}@x.io", "2026-01-01T00:00:00Z"),
         )
-    service = SearchService(repo, DatabaseVectorStore(db), fake_embed, "fake", ["cloudflare", "groq"])
+    service = ChatSearchService(repo, DatabaseVectorStore(db), fake_embed, "fake", ["cloudflare", "groq"])
     return db, repo, service
 
 

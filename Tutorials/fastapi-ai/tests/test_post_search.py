@@ -8,14 +8,16 @@ import json
 
 import pytest
 from fastapi.testclient import TestClient
-
-from assistant.social_tools import build_social_tools
-from auth import AuthenticatedUser, get_authenticated_user
-from models import GroupUpdate, GroupVisibility, PostUpdate
-from repositories.social_query_repository import SocialQueryRepository
-from services.assistant_service import AssistantService
-from services.post_search_service import PostSearchService
 from social import ADMIN, MEMBER, NEWS_ID, OUTSIDER, OWNER, make_social
+
+from assistant.assistant_service import AssistantService
+from assistant.tools.social_tools import build_social_tools
+from core.security.auth import AuthenticatedUser, get_authenticated_user
+from groups.enums import GroupVisibility
+from groups.posts.post_search_service import PostSearchService
+from groups.posts.schemas import PostUpdateRequest
+from groups.schemas import GroupUpdateRequest
+from groups.social_query_repository import SocialQueryRepository
 
 AXES = [("bike", "cycle", "lane"), ("pizza", "recipe", "cook"), ("rain", "storm", "weather")]
 
@@ -43,7 +45,7 @@ async def s(tmp_path):
 
 
 def titles(matches):
-    return [m["title"] for m in matches]
+    return [m.title for m in matches]
 
 
 # --- search
@@ -56,23 +58,23 @@ async def test_finds_posts_by_meaning_not_just_keywords(s):
 
     matches = await s.posts.search.search(OUTSIDER, "bike")  # public group: anyone can find it
     assert titles(matches)[0] == "Cycle lanes on Main St"
-    assert matches[0]["keywordMatch"] is False  # "bike" isn't in the text: found by meaning
+    assert matches[0].keywordMatch is False  # "bike" isn't in the text: found by meaning
 
 
 async def test_a_comment_match_returns_its_post(s):
     group_id = await s.group()
     post = await s.post(group_id, title="Council meeting notes", body="Agenda below")
-    await s.comment(group_id, post["id"], body="The new bike lane is great")
+    await s.comment(group_id, post.id, body="The new bike lane is great")
 
-    [match] = [m for m in await s.posts.search.search(MEMBER, "cycle") if m["title"] == "Council meeting notes"]
-    assert match["matching_comment"] == "The new bike lane is great"
+    [match] = [m for m in await s.posts.search.search(MEMBER, "cycle") if m.title == "Council meeting notes"]
+    assert match.matching_comment == "The new bike lane is great"
 
 
 async def test_lots_of_comments_do_not_outrank_a_relevant_post(s):
     group_id = await s.group()
     chatty = await s.post(group_id, title="Pizza night", body="Best recipe?")
     for body in ("Margherita", "Pepperoni", "Cook it hot", "Thin crust"):
-        await s.comment(group_id, chatty["id"], body=body)
+        await s.comment(group_id, chatty.id, body=body)
     await s.post(group_id, title="Storm warning", body="Heavy rain tonight")
 
     assert titles(await s.posts.search.search(MEMBER, "weather", group_id))[0] == "Storm warning"
@@ -92,7 +94,7 @@ async def test_making_a_group_private_hides_it_from_search_at_once(s):
     await s.post(group_id, title="Bike swap", body="Saturday")
     assert "Bike swap" in titles(await s.posts.search.search(OUTSIDER, "bike"))
 
-    await s.groups.update_group(OWNER, group_id, GroupUpdate(visibility=GroupVisibility.PRIVATE))
+    await s.groups.update_group(OWNER, group_id, GroupUpdateRequest(visibility=GroupVisibility.PRIVATE))
     assert "Bike swap" not in titles(await s.posts.search.search(OUTSIDER, "bike"))
 
 
@@ -103,10 +105,10 @@ async def test_edits_reindex_and_deletes_drop_out(s):
     post = await s.post(group_id, title="Weekend", body="Anything")
     assert titles(await s.posts.search.search(MEMBER, "storm", group_id))[0] == "Forecast"
 
-    await s.posts.update_post(MEMBER, group_id, post["id"], PostUpdate(body="Big storm and rain and weather"))
+    await s.posts.update_post(MEMBER, group_id, post.id, PostUpdateRequest(body="Big storm and rain and weather"))
     assert titles(await s.posts.search.search(MEMBER, "storm", group_id))[0] == "Weekend"
 
-    await s.posts.delete_post(MEMBER, group_id, post["id"])
+    await s.posts.delete_post(MEMBER, group_id, post.id)
     assert "Weekend" not in titles(await s.posts.search.search(MEMBER, "rain"))
 
 
@@ -120,18 +122,18 @@ async def test_deleting_a_group_removes_its_vectors(s):
 
 async def test_reindex_backfills_the_news_seed_once(s):
     indexed = await s.posts.search.reindex_missing()
-    assert indexed == {"posts": 10, "comments": 8}
-    assert await s.posts.search.reindex_missing() == {"posts": 0, "comments": 0}
-    assert any(m["group_id"] == NEWS_ID for m in await s.posts.search.search(OUTSIDER, "cycle lanes"))
+    assert indexed.model_dump() == {"posts": 10, "comments": 8}
+    assert (await s.posts.search.reindex_missing()).model_dump() == {"posts": 0, "comments": 0}
+    assert any(m.group_id == NEWS_ID for m in await s.posts.search.search(OUTSIDER, "cycle lanes"))
 
 
 async def test_indexing_failures_never_fail_a_write(tmp_path):
     s = await make_social(tmp_path, search=searcher(broken_embed))
     group_id = await s.group()
     post = await s.post(group_id, title="Still saved")  # Workers AI is down, the post is not
-    await s.comment(group_id, post["id"], body="So is this")
+    await s.comment(group_id, post.id, body="So is this")
     _, rows = await s.posts.list_posts(MEMBER, group_id)
-    assert [r["title"] for r in rows] == ["Still saved"]
+    assert [r.title for r in rows] == ["Still saved"]
 
 
 # --- tools
@@ -142,7 +144,7 @@ def tools_for(s, caller):
 
 
 async def run(s, caller, name, **args):
-    return await tools_for(s, caller)[name].handler(caller.id, args)
+    return await tools_for(s, caller)[name].handler(caller.user_id, args)
 
 
 async def test_count_and_list_posts_respect_visibility(s):
@@ -169,9 +171,9 @@ async def test_popular_posts_and_comment_counts(s):
     group_id = await s.group()
     quiet = await s.post(group_id, title="Quiet")
     busy = await s.post(group_id, title="Busy")
-    await s.comment(group_id, busy["id"])
-    await s.comment(group_id, busy["id"], caller=OWNER)
-    await s.posts.like(OWNER, group_id, quiet["id"])
+    await s.comment(group_id, busy.id)
+    await s.comment(group_id, busy.id, caller=OWNER)
+    await s.posts.like(OWNER, group_id, quiet.id)
 
     popular = await run(s, MEMBER, "list_posts", group="Cyclists", sort="popular")
     assert [p["title"] for p in popular["posts"]] == ["Busy", "Quiet"]  # 2 comments (4) beat 1 like (1)
@@ -209,7 +211,7 @@ async def test_search_posts_tool_is_scoped(s):
 
 async def test_tools_refuse_another_user_id(s):
     tool = tools_for(s, MEMBER)["count_posts"]
-    assert await tool.handler(OUTSIDER.id, {}) == {"error": "not allowed"}
+    assert await tool.handler(OUTSIDER.user_id, {}) == {"error": "not allowed"}
 
 
 class Scripted:
@@ -231,7 +233,7 @@ async def test_assistant_answers_a_social_question(s):
         ]
     )
     service = AssistantService(llm, "m", "groq", build_social_tools(MEMBER, SocialQueryRepository(s.db)))
-    answer = await service.ask(MEMBER.id, "how many posts have I written?")
+    answer = await service.ask(MEMBER.user_id, "how many posts have I written?")
     assert answer.answer == "You have written 2 posts."
     assert answer.toolCalls[0].result == {"count": 2}
 
@@ -242,9 +244,9 @@ async def test_assistant_answers_a_social_question(s):
 def test_admin_reindex_endpoint(tmp_path, monkeypatch):
     monkeypatch.setenv("DATABASE_MODE", "sqlite")
     monkeypatch.setenv("DATABASE_PATH", str(tmp_path / "api.db"))
-    from database import SQLiteDatabase
+    from core.config.database import SQLiteDatabase
+    from groups.posts.post_router import get_post_search_service
     from main import app
-    from routers.deps import get_post_search_service
 
     db = SQLiteDatabase(str(tmp_path / "api.db"))
     who = {"user": AuthenticatedUser(id="clerk-a", name="Alice", email="a@x.io", role_ids=[], claims={})}

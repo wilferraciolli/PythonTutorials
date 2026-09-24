@@ -1,3 +1,9 @@
+-- Snapshot of migrations 001-015 in order, for Cloudflare D1 (local SQLite
+-- applies the migrations themselves). Safe to re-run: everything is
+-- IF NOT EXISTS and seed rows use INSERT OR IGNORE. The News seed (010) is
+-- data, applied separately (see the note at the end). tests/test_schema.py
+-- fails if this file drifts from the migrations.
+
 CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
     external_user_id TEXT UNIQUE,
@@ -222,3 +228,31 @@ CREATE INDEX IF NOT EXISTS idx_post_people_tags_user ON post_people_tags(user_id
 -- Seed data (the News group and its dummy posts) lives in migrations/010_seed_news_group.sql;
 -- on D1 run it once: npx wrangler d1 execute demo-db --remote --file=./migrations/010_seed_news_group.sql
 -- then, as an admin, call POST /api/admin/post-stats/rebuild so the seeded posts get their comment counts.
+
+-- Migration 014: each user with their roles in one row (core/security reads
+-- the caller's roles through it).
+CREATE VIEW IF NOT EXISTS user_detail_view AS
+SELECT
+    u.id,
+    u.external_user_id,
+    u.name,
+    u.email,
+    u.created_date,
+    GROUP_CONCAT(r.role_id) AS role_ids
+FROM users u
+LEFT JOIN user_roles r ON r.user_id = u.id
+GROUP BY u.id;
+
+-- Migration 015: region settings. The SYSTEM row is the defaults every user
+-- falls back to (INSERT OR IGNORE: this file is re-run on D1).
+CREATE TABLE IF NOT EXISTS region_settings (
+    id                      TEXT PRIMARY KEY,
+    owner_type              TEXT NOT NULL,
+    timezone                TEXT NOT NULL,
+    language                TEXT NOT NULL,
+    currency                TEXT NOT NULL,
+    theme                   TEXT NOT NULL
+);
+
+INSERT OR IGNORE INTO region_settings (id, owner_type, timezone, language, currency, theme)
+VALUES ('92aaba5a-d56d-4128-8140-96f138e817bf', 'SYSTEM', 'Europe/London', 'en-GB', 'GBP', 'light');

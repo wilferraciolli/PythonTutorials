@@ -9,17 +9,17 @@ from datetime import date, datetime, timezone
 
 import pytest
 
-from assistant.date_tools import build_date_tools, resolve_period
-from assistant.todo_tools import build_todo_tools
-from database import SQLiteDatabase
-from repositories.tag_repository import TagRepository
-from repositories.todo_repository import TodoRepository
-from resource_vector_store import ResourceVectorStore
-from services.assistant_service import AssistantService
-from services.tag_service import TagService
-from services.todo_search_service import TodoSearchService
-from services.todo_service import TodoService
-from models import TodoCreate
+from assistant.assistant_service import AssistantService
+from assistant.tools.date_tools import build_date_tools, resolve_period
+from assistant.tools.todo_tools import build_todo_tools
+from core.ai.resource_vector_store import ResourceVectorStore
+from core.config.database import SQLiteDatabase
+from tags.tag_repository import TagRepository
+from tags.tag_service import TagService
+from todos.schemas import TodoCreateRequest
+from todos.todo_repository import TodoRepository
+from todos.todo_search_service import TodoSearchService
+from todos.todo_service import TodoService
 
 NOW = datetime(2026, 6, 15, 12, 0, tzinfo=timezone.utc)  # Q2 2026
 
@@ -156,8 +156,8 @@ async def test_bad_dates_return_an_error_the_model_can_fix(env):
 async def test_search_todos_by_meaning_is_scoped_to_user(env):
     _, _, search, make = env
     hits = await search.search("u1", "taxes")  # shares no word with the title: meaning only
-    assert hits[0]["title"] == "File HMRC self-assessment"
-    assert all(hit["title"] != "Someone else's tax thing" for hit in hits)
+    assert hits[0].title == "File HMRC self-assessment"
+    assert all(hit.title != "Someone else's tax thing" for hit in hits)
 
     answer = await make([call("search_todos", query="garden work"), {"content": "x", "tool_calls": []}]).ask("u1", "?")
     assert answer.toolCalls[0].result["matches"][0]["title"] == "Mow the lawn"
@@ -169,10 +169,10 @@ async def test_todo_service_keeps_the_index_in_step(env):
 
     created = await service.create_todo(
         "u1",
-        TodoCreate(title="Water the plant", complete_by=datetime(2027, 1, 1, tzinfo=timezone.utc)),
+        TodoCreateRequest(title="Water the plant", complete_by=datetime(2027, 1, 1, tzinfo=timezone.utc)),
     )
     assert created.id in await search.store.indexed_ids("u1")
-    assert "Water the plant" in [hit["title"] for hit in (await search.search("u1", "garden"))[:2]]
+    assert "Water the plant" in [hit.title for hit in (await search.search("u1", "garden"))[:2]]
 
     assert await service.delete_todo("u1", created.id)
     assert created.id not in await search.store.indexed_ids("u1")

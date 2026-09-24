@@ -63,7 +63,7 @@ Choosing what to look at is **not** done by embeddings or keyword rules. It is d
 the LLM through *tool calling*:
 
 1. Every request sends the model the list of tools: each has a **name, a plain-English
-   description and a JSON schema** for its arguments (see `assistant/todo_tools.py`).
+   description and a JSON schema** for its arguments (see `assistant/tools/todo_tools.py`).
 2. The model reads the question and those descriptions and replies, instead of text,
    with "call `count_todos` with `{"overdue": true}`". That is a structured request,
    not free text, so the server can validate it.
@@ -115,7 +115,7 @@ sequenceDiagram
 
 Supported periods: today, yesterday, last_7_days, last_30_days, this/last week, month,
 quarter and year. Quarters are calendar quarters; if you use fiscal quarters, change
-`assistant/date_tools.py` once and every question follows.
+`assistant/tools/date_tools.py` once and every question follows.
 
 ### "How many todos have the tag important?"
 
@@ -150,8 +150,8 @@ flowchart LR
     LLM --> Ans[Answer + tools used]
 ```
 
-Steps: write `build_xxx_tools(...)` in `src/assistant/`, and add it to the list in
-`routers/assistant.py`. No prompt or loop changes.
+Steps: write `build_xxx_tools(...)` in `src/assistant/tools/`, and add it to the list in
+`assistant/assistant_router.py`. No prompt or loop changes.
 
 Tool design tips:
 
@@ -162,7 +162,7 @@ Tool design tips:
 
 ## Shared data: posts, comments and groups
 
-Todos and chats belong to one user, so their tools are scoped by the path `user_id` alone. Posts and comments are shared, so the social tools (`count_posts`, `list_posts`, `count_comments`, `my_groups`, `search_posts` in `assistant/social_tools.py`) are built for the caller and every query applies the group visibility rule (`visible_group_clause`). Search vectors for posts and comments are scoped by group id instead of user id. Details and the tool table: [`social-groups.md`](social-groups.md#how-it-plugs-into-ai-search-and-ask).
+Todos and chats belong to one user, so their tools are scoped by the path `user_id` alone. Posts and comments are shared, so the social tools (`count_posts`, `list_posts`, `count_comments`, `my_groups`, `search_posts` in `assistant/tools/social_tools.py`) are built for the caller and every query applies the group visibility rule (`visible_group_clause`). Search vectors for posts and comments are scoped by group id instead of user id. Details and the tool table: [`social-groups.md`](social-groups.md#how-it-plugs-into-ai-search-and-ask).
 
 ## Safety rules the server enforces
 
@@ -191,7 +191,7 @@ flowchart TD
 ## Provider notes
 
 Both providers are called through their OpenAI-compatible chat-completions API
-(`llm.py`), so one client serves both:
+(`core/ai/llm.py`), so one client serves both:
 
 | Provider | Endpoint | Notes |
 |---|---|---|
@@ -205,13 +205,13 @@ did the model pick the right tool and arguments?
 
 ```mermaid
 flowchart TD
-    R[routers/assistant.py<br/>POST /assistant/ask] --> S[services/assistant_service.py<br/>the tool loop]
-    S --> LLM[llm.py<br/>OpenAICompatibleLlm]
-    S --> Tools[assistant/tools.py<br/>Tool]
-    R --> TT[assistant/todo_tools.py<br/>count_todos, list_todos]
-    R --> CT[assistant/chat_tools.py<br/>search_chats]
-    TT --> TR[repositories/todo_repository.py]
-    CT --> SS[services/search_service.py]
+    R[assistant/assistant_router.py<br/>POST /assistant/ask] --> S[assistant/assistant_service.py<br/>the tool loop]
+    S --> LLM[core/ai/llm.py<br/>OpenAICompatibleLlm]
+    S --> Tools[assistant/tools/tool.py<br/>Tool]
+    R --> TT[assistant/tools/todo_tools.py<br/>count_todos, list_todos]
+    R --> CT[assistant/tools/chat_tools.py<br/>search_chats]
+    TT --> TR[todos/todo_repository.py]
+    CT --> SS[chats/chat_search_service.py]
 ```
 
 Todos and tags are full APIs in this project (copied from `fastapi-cloudflare-d1`); the

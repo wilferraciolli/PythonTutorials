@@ -6,12 +6,14 @@ with an httpx.MockTransport, so the real request building and parsing run.
 import httpx
 import pytest
 from fastapi.testclient import TestClient
-
-from auth import AuthenticatedUser, get_authenticated_user
-from errors import AppError, ForbiddenError, NotConfiguredError, UpstreamError
-from media_providers import MediaProviders
-from models import MediaRef, MediaType, PostCreate
 from social import MEMBER, OWNER, make_social
+
+from core.common.errors import AppError, ForbiddenError, NotConfiguredError, UpstreamError
+from core.security.auth import AuthenticatedUser, get_authenticated_user
+from groups.posts.schemas import PostCreateRequest
+from media.enums import MediaType
+from media.media_providers import MediaProviders
+from media.schemas import MediaRefRequest
 
 PHOTO = {
     "id": "abc123",
@@ -74,15 +76,15 @@ async def test_unsplash_without_a_key_says_so(fake):
     with pytest.raises(NotConfiguredError):
         await fake.providers(unsplash=None).search_unsplash("bike", 5)
     with pytest.raises(NotConfiguredError):
-        await fake.providers(unsplash="").resolve(MediaRef(type=MediaType.UNSPLASH, id="abc123"))
+        await fake.providers(unsplash="").resolve(MediaRefRequest(type=MediaType.UNSPLASH, id="abc123"))
 
 
 async def test_giphy_and_youtube_need_no_key(fake):
     providers = fake.providers(unsplash=None)
-    gif = await providers.resolve(MediaRef(type=MediaType.GIPHY, id="gif42"))
+    gif = await providers.resolve(MediaRefRequest(type=MediaType.GIPHY, id="gif42"))
     assert (gif.type, gif.id, gif.url) == (MediaType.GIPHY, "gif42", GIF_URL)
 
-    video = await providers.resolve(MediaRef(type=MediaType.YOUTUBE, id="dQw4w9WgXcQ"))
+    video = await providers.resolve(MediaRefRequest(type=MediaType.YOUTUBE, id="dQw4w9WgXcQ"))
     assert (video.id, video.url) == ("dQw4w9WgXcQ", None)
     assert [c.url.host for c in fake.calls] == ["media.giphy.com"]  # YouTube is never called
 
@@ -94,12 +96,12 @@ async def test_any_fetch_failure_is_a_502_not_a_crash():
 
     providers = MediaProviders("key", transport=httpx.MockTransport(explode))
     with pytest.raises(UpstreamError) as err:
-        await providers.resolve(MediaRef(type=MediaType.GIPHY, id="gif42"))
+        await providers.resolve(MediaRefRequest(type=MediaType.GIPHY, id="gif42"))
     assert err.value.status_code == 502
 
 
 async def test_attaching_an_unsplash_photo_tracks_the_download(fake):
-    media = await fake.providers().resolve(MediaRef(type=MediaType.UNSPLASH, id="abc123"))
+    media = await fake.providers().resolve(MediaRefRequest(type=MediaType.UNSPLASH, id="abc123"))
     assert (media.type, media.id, media.title) == (MediaType.UNSPLASH, "abc123", "a red bike")
     assert (media.author_name, media.author_url) == (
         "Ana Lens",
@@ -120,17 +122,17 @@ async def test_searching_unsplash_does_not_track_downloads(fake):
 async def test_unknown_or_malformed_ids_are_rejected(fake):
     providers = fake.providers()
     for ref in (
-        MediaRef(type=MediaType.UNSPLASH, id="nope"),
-        MediaRef(type=MediaType.GIPHY, id="nope"),
-        MediaRef(type=MediaType.YOUTUBE, id="https://youtu.be/dQw4w9WgXcQ"),  # the id, not a URL
-        MediaRef(type=MediaType.YOUTUBE, id="short"),
+        MediaRefRequest(type=MediaType.UNSPLASH, id="nope"),
+        MediaRefRequest(type=MediaType.GIPHY, id="nope"),
+        MediaRefRequest(type=MediaType.YOUTUBE, id="https://youtu.be/dQw4w9WgXcQ"),  # the id, not a URL
+        MediaRefRequest(type=MediaType.YOUTUBE, id="short"),
     ):
         with pytest.raises(AppError) as err:
             await providers.resolve(ref)
         assert err.value.status_code == 400
 
     fake.calls.clear()
-    for ref in (MediaRef(type=MediaType.UNSPLASH, id="../me"), MediaRef(type=MediaType.GIPHY, id="a/../b")):
+    for ref in (MediaRefRequest(type=MediaType.UNSPLASH, id="../me"), MediaRefRequest(type=MediaType.GIPHY, id="a/../b")):
         with pytest.raises(AppError):
             await providers.resolve(ref)
     assert not fake.calls  # never reaches the provider's URL path
@@ -142,15 +144,15 @@ async def test_unknown_or_malformed_ids_are_rejected(fake):
 async def test_create_a_post_with_media(s):
     group_id = await s.group()
     _, row = await s.posts.create_post(
-        MEMBER, group_id, PostCreate(title="Ride", body="Sunday", media=MediaRef(type="GIPHY", id="gif42"))
+        MEMBER, group_id, PostCreateRequest(title="Ride", body="Sunday", media=MediaRefRequest(type="GIPHY", id="gif42"))
     )
-    access, _ = await s.posts.get_post(MEMBER, group_id, row["id"])
-    post = s.posts.to_post(MEMBER, access, row)
+    access, _ = await s.posts.get_post(MEMBER, group_id, row.id)
+    post = s.posts.to_dto(MEMBER, access, row)
     assert post.media.type == MediaType.GIPHY and post.media.url == GIF_URL
     assert "removeMedia" in post.links and "addMedia" not in post.links
 
     # someone else sees the media but can't change it
-    other = s.posts.to_post(OWNER, access, row)
+    other = s.posts.to_dto(OWNER, access, row)
     assert other.media is not None and "removeMedia" not in other.links
 
 
@@ -158,7 +160,7 @@ async def test_a_bad_media_id_saves_nothing(s):
     group_id = await s.group()
     with pytest.raises(AppError):
         await s.posts.create_post(
-            MEMBER, group_id, PostCreate(title="Ride", body="x", media=MediaRef(type="UNSPLASH", id="nope"))
+            MEMBER, group_id, PostCreateRequest(title="Ride", body="x", media=MediaRefRequest(type="UNSPLASH", id="nope"))
         )
     _, rows = await s.posts.list_posts(MEMBER, group_id)
     assert rows == []
@@ -167,18 +169,18 @@ async def test_a_bad_media_id_saves_nothing(s):
 async def test_change_media_by_removing_then_adding(s):
     group_id = await s.group()
     row = await s.post(group_id)
-    access, _ = await s.posts.get_post(MEMBER, group_id, row["id"])
-    assert s.posts.to_post(MEMBER, access, row).media is None
-    assert "addMedia" in s.posts.to_post(MEMBER, access, row).links
+    access, _ = await s.posts.get_post(MEMBER, group_id, row.id)
+    assert s.posts.to_dto(MEMBER, access, row).media is None
+    assert "addMedia" in s.posts.to_dto(MEMBER, access, row).links
 
-    _, row = await s.posts.set_media(MEMBER, group_id, row["id"], MediaRef(type="YOUTUBE", id="dQw4w9WgXcQ"))
-    assert s.posts.to_post(MEMBER, access, row).media.id == "dQw4w9WgXcQ"
+    _, row = await s.posts.set_media(MEMBER, group_id, row.id, MediaRefRequest(type="YOUTUBE", id="dQw4w9WgXcQ"))
+    assert s.posts.to_dto(MEMBER, access, row).media.id == "dQw4w9WgXcQ"
 
-    _, row = await s.posts.remove_media(MEMBER, group_id, row["id"])
-    assert row["media_type"] is None and row["media_url"] is None
+    _, row = await s.posts.remove_media(MEMBER, group_id, row.id)
+    assert row.media_type is None and row.media_url is None
 
-    _, row = await s.posts.set_media(MEMBER, group_id, row["id"], MediaRef(type="UNSPLASH", id="abc123"))
-    media = s.posts.to_post(MEMBER, access, row).media
+    _, row = await s.posts.set_media(MEMBER, group_id, row.id, MediaRefRequest(type="UNSPLASH", id="abc123"))
+    media = s.posts.to_dto(MEMBER, access, row).media
     assert (media.authorName, media.title) == ("Ana Lens", "a red bike")
 
 
@@ -186,12 +188,12 @@ async def test_only_the_author_changes_media_and_deleted_posts_hide_it(s):
     group_id = await s.group()
     row = await s.post(group_id)
     with pytest.raises(ForbiddenError):
-        await s.posts.set_media(OWNER, group_id, row["id"], MediaRef(type="YOUTUBE", id="dQw4w9WgXcQ"))
+        await s.posts.set_media(OWNER, group_id, row.id, MediaRefRequest(type="YOUTUBE", id="dQw4w9WgXcQ"))
 
-    await s.posts.set_media(MEMBER, group_id, row["id"], MediaRef(type="YOUTUBE", id="dQw4w9WgXcQ"))
-    await s.posts.delete_post(OWNER, group_id, row["id"])
-    access, deleted = await s.posts.get_post(MEMBER, group_id, row["id"])
-    assert s.posts.to_post(MEMBER, access, deleted).media is None
+    await s.posts.set_media(MEMBER, group_id, row.id, MediaRefRequest(type="YOUTUBE", id="dQw4w9WgXcQ"))
+    await s.posts.delete_post(OWNER, group_id, row.id)
+    access, deleted = await s.posts.get_post(MEMBER, group_id, row.id)
+    assert s.posts.to_dto(MEMBER, access, deleted).media is None
 
 
 # --- API
@@ -202,7 +204,7 @@ def api(tmp_path, monkeypatch, fake):
     monkeypatch.setenv("DATABASE_MODE", "sqlite")
     monkeypatch.setenv("DATABASE_PATH", str(tmp_path / "api.db"))
     from main import app
-    from routers.deps import get_media_providers
+    from media.media_router import get_media_providers
 
     user = AuthenticatedUser(id="clerk-a", name="Alice", email="a@x.io", role_ids=[], claims={})
     app.dependency_overrides[get_authenticated_user] = lambda: user

@@ -6,17 +6,29 @@ from fastapi import Request
 
 from core.config.config import get_config
 
-# Allow MIGRATIONS_DIR to be overridden by environment variable for flexibility
-# across local and Docker environments. Falls back to ./migrations relative to
-# the current working directory (typical for uvicorn from project root).
+# Where the SQL migrations live. Set MIGRATIONS_DIR (Docker: /app/migrations);
+# otherwise ./migrations relative to the working directory, i.e. the project
+# root that uvicorn and pytest run from. Never derived from __file__, which
+# breaks whenever this module moves.
 _env_migrations = os.environ.get("MIGRATIONS_DIR")
 MIGRATIONS_DIR = Path(_env_migrations) if _env_migrations else Path.cwd() / "migrations"
 
-if not MIGRATIONS_DIR.exists():
-    raise RuntimeError(
-        f"Migrations directory not found at {MIGRATIONS_DIR}. "
-        f"Set MIGRATIONS_DIR environment variable or ensure migrations folder exists."
-    )
+
+def migrations_dir() -> Path:
+    """
+    MIGRATIONS_DIR, or a RuntimeError if it doesn't exist: a missing folder
+    must never silently mean "no migrations to run".
+
+    Checked when SQLite applies migrations, not at import: a Cloudflare Worker
+    ships only src/ and uses D1 (migrated with wrangler), so it has no
+    migrations folder and must still start.
+    """
+    if not MIGRATIONS_DIR.is_dir():
+        raise RuntimeError(
+            f"Migrations directory not found at {MIGRATIONS_DIR}. "
+            "Set MIGRATIONS_DIR or run from the project root."
+        )
+    return MIGRATIONS_DIR
 
 
 class Database(Protocol):
@@ -50,7 +62,7 @@ class SQLiteDatabase:
             cursor = await conn.execute("SELECT filename FROM schema_migrations")
             applied = {row[0] for row in await cursor.fetchall()}
 
-            for migration in sorted(MIGRATIONS_DIR.glob("*.sql")):
+            for migration in sorted(migrations_dir().glob("*.sql")):
                 if migration.name in applied:
                     continue
                 await conn.executescript(migration.read_text())

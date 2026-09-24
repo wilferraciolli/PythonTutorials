@@ -63,16 +63,20 @@ answering".
 ```mermaid
 flowchart LR
     S[User registers with Clerk] --> T[UI gets a token]
-    T --> Me["GET /api/me"]
+    T --> Me["GET /api/me<br/>(or any other route)"]
     Me --> Q{users row with<br/>this Clerk id?}
-    Q -- yes --> R[return it]
+    Q -- yes --> A[add any new Clerk roles<br/>never remove one]
     Q -- no --> N[create users row + roles<br/>copy of the Clerk identity]
-    N --> R
+    N --> R[return it]
+    A --> R
 ```
 
 So the `users` table is a local copy of Clerk users who have called the API at least
-once. `GET /api/users` lists them and `GET /api/users/search?q=` finds them by name or
-email.
+once. `/me` does this, and so does `ensure_current_user` (`users/dependencies.py`), which
+`main.py` runs before every other router, so a route always finds its caller. After
+that, roles are ours: permissions read the saved roles, and admins grant or revoke them
+through `PUT /api/users/{id}`. `GET /api/users` lists users and
+`GET /api/users/search?q=` finds them by name or email.
 
 ## Layers (every project)
 
@@ -93,17 +97,25 @@ flowchart LR
 The service layer doesn't know which adapter is behind the protocols, which is what
 lets the same code run locally and in a Cloudflare Worker.
 
+The code is organised by domain (`users/`, `todos/`, `chats/`, `groups/posts/comments/`,
+...), each with its router, service, repository, `models.py` (database rows),
+`schemas.py` (Request, DTO, Metadata and the typed `ApiResponse`) and `constants.py`.
+Cross-cutting code lives in `core/` and never imports a domain. See the README's
+"Code conventions".
+
 ## Who may see what (business-logic seams)
 
 ```mermaid
 flowchart TD
-    Req[Request with user id in the path] --> Caller[Resolve caller:<br/>Clerk token → users row]
+    Req[Request with user id in the path] --> Caller["get_caller():<br/>Clerk token → saved user + roles"]
     Caller --> Profile{{"/users/{id}/profile<br/>can_view_profile(caller, target)<br/>currently: allow"}}
-    Caller --> Chats{{"/users/{id}/chats/…<br/>get_current_user_id()<br/>currently: owner only, else 403"}}
+    Caller --> Chats{{"/users/{id}/chats, todos, assistant, settings<br/>require_owner() / NotOwnerError<br/>owner only, not even admins, else 403"}}
+    Caller --> Admin{{"/users writes, /admin/…<br/>require_admin()<br/>saved ADMIN role, else 403"}}
 ```
 
-These two functions are the places to add rules such as "admins can see anyone" or
-"members of a team can see each other's chats".
+These are the places to add rules such as "admins can see anyone" or "members of a team
+can see each other's chats". The profile only offers links the caller may follow:
+personal ones on your own profile, admin ones to admins.
 
 ## Chat and search together
 

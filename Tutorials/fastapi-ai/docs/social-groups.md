@@ -13,21 +13,21 @@ user has a **timeline** built from the groups they can see.
 
 | Term | Where it comes from | Scope |
 |---|---|---|
-| **Admin** | The user's system role: `ADMIN` in the `users` / `user_roles` tables, copied from the Clerk token's `roles` claim | Whole app. **Bypasses group security** |
-| **Standard user** | Same place: `STANDARD` (assigned when the Clerk `roles` array is empty or has no `ADMIN`) | Whole app |
+| **Admin** | The user's system role: `ADMIN` in the `user_roles` table. Clerk's `roles` claim seeds it; admins can also grant it through `PUT /api/users/{id}` | Whole app. **Bypasses group security** |
+| **Standard user** | Same place: `STANDARD` (the fallback for a user with no roles) | Whole app |
 | **Owner** | A standard user who owns a group (`groups.owner_id`) | One group |
 | **Member** | A user in `group_members` | One group |
 | **Follower** | A user in `group_followers` | One group |
 
 There is **no group-level admin role**. "Admin" always means the system `ADMIN` role.
 
-How a user's role is set (existing code, `MeService`): on `/me`, the Clerk `roles` claim is
-read; if it contains `ADMIN` the user gets `ADMIN`, otherwise (including an empty array) they
-get `STANDARD`.
-
-> **Gap to fix in step 1:** today roles are copied only when the `users` row is **first
-> created**. If someone is made admin in Clerk later, our row stays `STANDARD`. The plan is
-> to re-sync roles from the token on every `/me` call, so Clerk stays the source of truth.
+How a user's roles are set (`MeService`): the first time a Clerk user is seen, their row is
+created with the token's `roles` claim (matched case-insensitively; `STANDARD` if there are
+none). On every later request, roles in the token that the user lacks are **added**; none is
+ever removed. After that our database is the source of truth: permission checks read the
+saved roles (`core/security/authorization.py`, through `user_detail_view`), an admin granted
+through the API stays an admin even if Clerk stops sending the role, and revoking is done
+through the API. See the README's "Roles" section.
 
 ## Concepts
 
@@ -465,8 +465,8 @@ the admin area's "Social engagement" section. Admins only (403 otherwise); the a
   every day of the window (zeros included); `previousTotals` covers the `days` before
   `from`, for "vs previous period".
 - `_metadata.metric.values` names the metrics (`{id: "groups", value: "Groups created"}`, ...).
-- Code: `routers/engagement_analytics.py` → `services/engagement_analytics_service.py`
-  → `repositories/engagement_repository.py` (one `GROUP BY day` query per metric).
+- Code: `admin/analytics/engagement_router.py` → `engagement_service.py`
+  → `engagement_repository.py` (one `GROUP BY day` query per metric).
 
 ## How it plugs into AI search and Ask
 
@@ -523,8 +523,8 @@ are merged with reciprocal rank fusion, so a post isn't boosted just for having 
 ## Build plan
 
 1. **Groups, membership, owner, followers:** migrations, models, repositories, services,
-   `GroupPermissions` (admin bypass first), routers, tests, profile links. Also re-sync the
-   user's roles from the Clerk token on every `/me`.
+   `GroupPermissions` (admin bypass first), routers, tests, profile links. Also pick up new
+   roles from the Clerk token on every request (added, never removed).
 2. **Posts and comments** under `/groups/{groupId}`: visibility check on every route, threaded
    replies, soft delete, permission links, tests. Seed migration for the **News** group and its
    dummy posts and comments.
