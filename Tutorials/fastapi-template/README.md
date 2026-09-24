@@ -35,28 +35,40 @@ when you start a real project from this.
 
 ## Project Structure
 
+Code is organised by domain, not by file type: each package holds its own
+router, service, repository and schemas.
+
 ```
 fastapi-template/
 ├── src/
-│   ├── entry.py                 # FastAPI app + Workers ASGI entrypoint
-│   ├── main.py                  # Plain FastAPI app for uvicorn/Docker; wires
-│   │                             # routers + the Clerk auth dependency
-│   ├── auth.py                  # Clerk JWT verification (JWKS fetch/cache)
-│   ├── database.py              # SQLite, D1 binding, and D1 HTTP adapters
-│   ├── config.py                # Runtime config from Worker env / .env / OS env
-│   ├── api_response.py          # Shared response envelope + API_PREFIX
-│   ├── models.py                # Pydantic DTOs and UTC date formatting
-│   ├── repositories/
-│   │   └── user_repository.py   # Example: raw parameterized SQL via Database protocol
-│   ├── services/
-│   │   ├── user_service.py          # /api/users CRUD — copy this pattern per resource
-│   │   ├── user_profile_service.py  # /api/users/{id}/profile navigation hub
-│   │   └── me_service.py            # /api/me — maps the Clerk identity to a users row
-│   └── routers/
-│       ├── health.py
-│       ├── me.py
-│       ├── user_profile.py
-│       └── users.py
+│   ├── entry.py                      # FastAPI app + Workers ASGI entrypoint
+│   ├── main.py                       # Plain FastAPI app for uvicorn/Docker; wires
+│   │                                  # routers + the Clerk auth dependency
+│   ├── core/                         # Cross-cutting, no domain knowledge
+│   │   ├── common/
+│   │   │   ├── api_response.py       # ApiResponse envelope + API_PREFIX
+│   │   │   ├── base_dto.py           # Link, LinkedResource, EmbeddedRef, FieldMetadata
+│   │   │   └── serializers.py        # UTC date formatting
+│   │   ├── config/
+│   │   │   ├── config.py             # Runtime config from Worker env / .env / OS env
+│   │   │   └── database.py           # SQLite, D1 binding, and D1 HTTP adapters + migrations
+│   │   └── security/
+│   │       └── auth.py               # Clerk JWT verification (JWKS fetch/cache)
+│   ├── metrics/
+│   │   └── status_router.py          # /api/health
+│   ├── shared/                       # Data owned by several domains
+│   │   └── settings/
+│   │       ├── region/               # region_settings table: enums, models, repository
+│   │       └── configuration/        # configuration_settings table: enums, schemas, repository
+│   └── users/
+│       ├── user_router.py            # /api/users CRUD — copy this pattern per resource
+│       ├── user_service.py
+│       ├── user_repository.py        # Raw parameterized SQL via the Database protocol
+│       ├── schemas.py
+│       ├── enums.py
+│       ├── profiles/                 # /api/me and /api/users/{id}/profile
+│       └── settings/                 # /api/users/{id}/settings — reference for the
+│                                      # typed Model / Request / DTO / Response layers
 ├── migrations/
 │   ├── 001_create_users_table.sql   # Auto-applied against local SQLite
 │   └── 002_settings.sql
@@ -71,6 +83,56 @@ fastapi-template/
 └── .gitignore
 ```
 
+## Code conventions
+
+The full rules live in [`../PYTHON_APP_CONVENTIONS.md`](../PYTHON_APP_CONVENTIONS.md).
+The ones you'll hit first when adding a resource:
+
+**One class per layer, named for the layer.** `users/settings/` is the
+reference implementation:
+
+| Layer | Suffix | Example | Built by |
+|---|---|---|---|
+| Database row (entity) | `Model` | `RegionSettingModel` in `models.py` | repository |
+| Request body | `Request` | `UserSettingsUpdateRequest` in `schemas.py` | client; FastAPI validates it |
+| What the service returns | `DTO` | `UserSettingsDTO` in `schemas.py` (with `links`) | application service |
+| Field rules for the client | `Metadata` | `UserSettingsMetadata` in `schemas.py` | application service |
+| HTTP response envelope | `Response` | `UserSettingsResponse = ApiResponse[UserSettingsDTO, UserSettingsMetadata]` in `schemas.py` | application service |
+
+The classes don't inherit from each other. A Request holds only the fields the
+client may change; the DTO adds what the server decides (`id`, `links`, ...).
+
+**Every non-delete response uses the generic envelope** in
+`core/common/api_response.py`, so a resource never defines its own
+`_data`/`_metadata` classes:
+
+```python
+# user_settings_service.py — metadata gets the DTO, so business rules can
+# change it based on the resource's current state
+def build_response(self, user_settings: UserSettingsDTO) -> UserSettingsResponse:
+    return UserSettingsResponse.of(
+        USER_SETTINGS_DATA_NAME,
+        user_settings,
+        self.build_metadata(user_settings),
+    )
+
+# user_settings_router.py
+return service.build_response(user_settings)
+```
+
+- The `_data` key name (`"userSettings"`) is a constant in the domain's
+  `constants.py`, together with the link names.
+- Shared building blocks live in `core/common/base_dto.py`: `Link`,
+  `LinkedResource`, `EmbeddedRef` (an `{id, value}` option), and
+  `FieldMetadata` (`readOnly` / `hidden` / `mandatory` / `values`).
+- `_messages` is always present (an empty array when there's nothing to
+  say). `FieldMetadata` drops its own unset flags, so routes don't need
+  `response_model_exclude_none`, and a DTO's `None` fields still come back as
+  `null`.
+
+`users/user_service.py` and `users/profiles/` still use the older dict-based
+`envelope()` helper; move them to `ApiResponse` when you next touch them.
+
 ## Starting a new project from this template
 
 1. Copy this folder to `../your-new-project`.
@@ -79,10 +141,10 @@ fastapi-template/
    purpose (see the note above). Only stop-one-start-the-next, never a new
    port per project.
 4. Set `compatibility_date` in `wrangler.jsonc` to today, if deploying.
-5. Delete or repurpose the `user_router.py` resource: keep it if you want user
-   accounts, otherwise use it as the reference implementation and add your
-   own `repositories/`, `services/`, `routers/` per resource, following the
-   same layering.
+5. Delete or repurpose the `users/` package: keep it if you want user
+   accounts, otherwise use it (especially `users/settings/`) as the reference
+   implementation and add one package per domain with its own router,
+   service, repository and schemas, following the conventions above.
 6. Add bindings to `wrangler.jsonc` as needed (a commented D1 example is
    already there — `database.py` supports it out of the box).
 7. `uv sync`, then run locally (see below).
@@ -209,6 +271,9 @@ above) except `/api/health`, `/docs`, and `/openapi.json`.
 | POST | `/api/users` | Create a user |
 | PUT | `/api/users/{id}` | Update a user |
 | DELETE | `/api/users/{id}` | Delete a user (returns `204 No Content`) |
+| GET | `/api/users/{id}/settings` | The user's region settings (timezone, language, currency, theme); falls back to the system defaults (`owner_type: SYSTEM`) until the user saves their own |
+| PUT | `/api/users/{id}/settings` | Save the user's region settings |
+| DELETE | `/api/users/{id}/settings` | Drop the user's own settings so they fall back to the system defaults (returns `204 No Content`) |
 | GET | `/api/users/{id}/profile` | **Where links live.** `/me` only returns the `userProfile` link; this returns the user (`id`, `externalId`, `name`, `email`, `roleIds`) plus every link the UI follows, built from the `{id}` in the path. `UserProfileService.can_view_profile` is the seam for "may the caller see this user's resources?" |
 | GET | `/docs` | Interactive Swagger UI |
 | GET | `/openapi.json` | OpenAPI schema |

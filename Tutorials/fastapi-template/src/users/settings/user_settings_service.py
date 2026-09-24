@@ -1,7 +1,8 @@
-from typing import Any, Dict, Optional
+from enum import Enum
+from typing import Optional, Type
 
-from core.common.api_response import API_PREFIX, envelope
-from core.common.base_dto import Link
+from core.common.api_response import API_PREFIX
+from core.common.base_dto import EmbeddedRef, FieldMetadata, Link
 from shared.settings.region.enums import (
     SupportedCurrencies,
     SupportedLanguages,
@@ -9,12 +10,18 @@ from shared.settings.region.enums import (
     SupportedTimeZones,
 )
 from shared.settings.region.region_settings_repository import RegionSettingsRepository
-from shared.settings.region.schemas import RegionSettingDTO, RegionSettingPayload
+from shared.settings.region.models import RegionSettingModel
 from users.settings.constants import (
     LINK_RESET_SETTINGS,
     LINK_SELF,
     LINK_UPDATE_SETTINGS,
     USER_SETTINGS_DATA_NAME,
+)
+from users.settings.schemas import (
+    UserSettingsDTO,
+    UserSettingsMetadata,
+    UserSettingsResponse,
+    UserSettingsUpdateRequest,
 )
 from users.user_repository import UserRepository
 
@@ -35,53 +42,53 @@ class UserSettingsService:
         self.user_repository = user_repository
         self.region_repository = region_repository
 
-    async def get_region_settings(self, user_id: str) -> Optional[RegionSettingDTO]:
+
+    async def get_user_settings(self, user_id: str) -> Optional[UserSettingsDTO]:
         if not await self.user_repository.get_by_id(user_id):
             return None
 
-        row = await self.region_repository.get_user_settings(user_id)
-        if row is None:
-            row = await self.region_repository.get_system_settings()
-        if row is None:
+        model = await self.region_repository.get_user_settings(user_id)
+        if model is None:
+            model = await self.region_repository.get_system_settings()
+        if model is None:
             raise RuntimeError("system region settings are missing; run the migrations")
 
-        return self.to_region_setting(user_id, row)
+        return self.to_dto(user_id, model)
 
-    async def update_region_settings(
+
+    async def update_user_settings(
         self,
         user_id: str,
-        payload: RegionSettingPayload,
-    ) -> Optional[RegionSettingDTO]:
+        request: UserSettingsUpdateRequest,
+    ) -> Optional[UserSettingsDTO]:
         if not await self.user_repository.get_by_id(user_id):
             return None
 
-        row = await self.region_repository.upsert_user_settings(
+        model = await self.region_repository.upsert_user_settings(
             user_id,
-            timezone=payload.timezone.value,
-            language=payload.language.value,
-            currency=payload.currency.value,
-            theme=payload.theme.value,
+            timezone=request.timezone.value,
+            language=request.language.value,
+            currency=request.currency.value,
+            theme=request.theme.value,
         )
 
-        return self.to_region_setting(user_id, row)
+        return self.to_dto(user_id, model)
 
-    async def reset_region_settings(self, user_id: str) -> bool:
+
+    async def reset_user_settings(self, user_id: str) -> bool:
         if not await self.user_repository.get_by_id(user_id):
             return False
 
         await self.region_repository.delete_user_settings(user_id)
         return True
 
-    def to_region_setting(self, user_id: str, row: Dict[str, Any]) -> RegionSettingDTO:
-        return RegionSettingDTO(
-            id=row["id"],
-            owner_type=row["owner_type"],
-            timezone=row["timezone"],
-            language=row["language"],
-            currency=row["currency"],
-            theme=row["theme"],
+
+    def to_dto(self, user_id: str, model: RegionSettingModel) -> UserSettingsDTO:
+        return UserSettingsDTO(
+            **model.model_dump(),
             links=self.build_links(user_id),
         )
+
 
     def build_links(self, user_id: str) -> dict[str, Link]:
         url = f"{API_PREFIX}/users/{user_id}/settings"
@@ -91,24 +98,31 @@ class UserSettingsService:
             LINK_RESET_SETTINGS: Link(href=url, method="DELETE"),
         }
 
-    def build_metadata(self) -> dict[str, Any]:
-        return {
-            "id": {"readOnly": True, "hidden": True},
-            "owner_type": {"readOnly": True},
-            "timezone": {"mandatory": True, "values": self._options(SupportedTimeZones)},
-            "language": {"mandatory": True, "values": self._options(SupportedLanguages)},
-            "currency": {"mandatory": True, "values": self._options(SupportedCurrencies)},
-            "theme": {"mandatory": True, "values": self._options(SupportedThemes)},
-        }
+
+    def build_metadata(self, user_settings: UserSettingsDTO) -> UserSettingsMetadata:
+        # Receives the DTO so rules can depend on its current state
+        # (e.g. restrict `values` or make a field readOnly).
+        return UserSettingsMetadata(
+            id=FieldMetadata(readOnly=True, hidden=True),
+            owner_type=FieldMetadata(readOnly=True),
+            timezone=self._choice_field(SupportedTimeZones),
+            language=self._choice_field(SupportedLanguages),
+            currency=self._choice_field(SupportedCurrencies),
+            theme=self._choice_field(SupportedThemes),
+        )
+
 
     @staticmethod
-    def _options(enum_type: Any) -> list[dict[str, str]]:
-        return [{"id": member.value, "value": member.value} for member in enum_type]
+    def _choice_field(enum_type: Type[Enum]) -> FieldMetadata:
+        return FieldMetadata(
+            mandatory=True,
+            values=[EmbeddedRef(id=member.value, value=member.value) for member in enum_type],
+        )
 
-    def build_response(self, settings: RegionSettingDTO) -> Dict[str, Any]:
-        return envelope(
-            data_name=USER_SETTINGS_DATA_NAME,
-            data=settings,
-            metadata=self.build_metadata(),
-            meta_links={},
+
+    def build_response(self, user_settings: UserSettingsDTO) -> UserSettingsResponse:
+        return UserSettingsResponse.of(
+            USER_SETTINGS_DATA_NAME,
+            user_settings,
+            self.build_metadata(user_settings),
         )

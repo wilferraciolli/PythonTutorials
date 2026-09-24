@@ -1,6 +1,6 @@
-from typing import Dict
+from typing import Dict, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, SerializerFunctionWrapHandler, model_serializer
 
 
 # Shared HATEOAS-style link, reused by any response DTO
@@ -19,6 +19,22 @@ class EmbeddedRef(BaseModel):
     """
     id: str
     value: str
+
+
+class FieldMetadata(BaseModel):
+    """
+    Describes how a client should treat one field of a resource: whether it
+    is read-only, hidden or mandatory, and the allowed `values` for a
+    choice field. Unset flags are omitted from the response.
+    """
+    readOnly: Optional[bool] = None
+    hidden: Optional[bool] = None
+    mandatory: Optional[bool] = None
+    values: Optional[list[EmbeddedRef]] = None
+
+    @model_serializer(mode="wrap")
+    def _omit_unset_flags(self, handler: SerializerFunctionWrapHandler):
+        return {key: value for key, value in handler(self).items() if value is not None}
 
 
 class LinkedResource(BaseModel):

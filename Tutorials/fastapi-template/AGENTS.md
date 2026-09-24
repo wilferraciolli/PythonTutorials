@@ -12,7 +12,7 @@ Follow those conventions for:
 - router -> service -> repository -> database adapter layering;
 - UUID identifiers;
 - UTC date formatting;
-- response envelopes using `_data`, `_metadata`, `_metaLinks`, and optional `_messages`;
+- response envelopes using `_data`, `_metadata`, `_metaLinks`, and `_messages` (an empty array when there are none);
 - dynamic metadata and links built in the application service layer;
 - `204 No Content` delete responses.
 

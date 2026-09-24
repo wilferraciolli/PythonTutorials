@@ -18,8 +18,8 @@ The default target is a **portable local-development-first FastAPI app**:
 2. Prefer local development that works without cloud login.
 3. Do not couple repositories or services directly to Cloudflare, Wrangler, or
    any other hosting-specific SDK.
-4. Build metadata, links, permissions, and response shape in the application
-   service layer per request.
+4. Build metadata, links, permissions, and the typed `ApiResponse` envelope
+   in the application service layer per request.
 5. Use UUIDs for public resource identifiers.
 6. Use UTC date-times in API responses.
 7. Keep delete endpoints simple: `204 No Content`, no response body.
@@ -51,8 +51,8 @@ my-python-api/
 │   ├── models.py                  # Shared DTOs / Pydantic models
 ├── {domain}/           # e.g., auth/, posts/, aws/
 │   │   ├── router.py       # API endpoints
-│   │   ├── schemas.py      # Pydantic models
-│   │   ├── models.py       # SQLAlchemy ORM models
+│   │   ├── schemas.py      # Request, DTO and Metadata classes
+│   │   ├── models.py       # Database row models (entities): {Name}Model
 │   │   ├── service.py      # Business logic
 │   │   ├── dependencies.py # Route dependencies
 │   │   ├── config.py       # Domain-scoped BaseSettings
@@ -71,8 +71,9 @@ my-python-api/
 └── README.md
 ```
 
-For simple APIs, it is acceptable to keep all DTOs in `models.py`. For larger
-APIs, split them by domain:
+`models.py` is only for database row models (`{Name}Model`); Request, DTO and
+Metadata classes go in `schemas.py` (see "Model, Request, DTO and Response
+conventions"). For larger APIs, split them by domain:
 
 ```text
 src/
@@ -492,7 +493,7 @@ Routers should:
 - Parse route/query/body inputs.
 - Call the application service.
 - Convert known service failures into HTTP errors.
-- Return service responses.
+- Return the service's response (`service.build_response(...)`).
 
 Routers should not:
 
@@ -507,9 +508,10 @@ Example:
 ```python
 from fastapi import APIRouter, Depends, HTTPException, Request
 
-from database import get_database
-from repositories.todo_repository import TodoRepository
-from services.todo_service import TodoService
+from core.config.database import get_database
+from todos.schemas import TodoResponse
+from todos.todo_repository import TodoRepository
+from todos.todo_service import TodoService
 
 router = APIRouter(prefix="/todos", tags=["todos"])
 
@@ -523,11 +525,11 @@ def get_todo_service(request: Request) -> TodoService:
 async def get_todo(
     todo_id: str,
     service: TodoService = Depends(get_todo_service),
-):
+) -> TodoResponse:
     todo = await service.get_by_id(todo_id)
     if not todo:
         raise HTTPException(status_code=404, detail="Todo not found")
-    return service.build_response("todo", todo)
+    return service.build_response(todo)
 ```
 
 ### Application service layer
@@ -537,7 +539,9 @@ Application services should:
 - Own business rules.
 - Generate UUIDs.
 - Apply state transitions.
-- Build response envelopes.
+- Turn the repository's `Model` into a `DTO`.
+- Build the `ApiResponse` envelope (`build_response`), passing the DTO into
+  `build_metadata` so metadata can depend on the resource's current state.
 - Build resource links.
 - Build metadata per request.
 - Build meta links per request.
@@ -566,7 +570,7 @@ Repositories should:
 
 - Contain SQL.
 - Accept a `Database` protocol implementation.
-- Return raw rows or simple dictionaries.
+- Return typed `Model` objects (one per table row), not raw dictionaries.
 - Use parameterized SQL only.
 
 Repositories should not:
@@ -616,8 +620,99 @@ Rules:
 - `_data` is required.
 - `_metadata` is required, but may be an empty object.
 - `_metaLinks` is required, but may be an empty object.
-- `_messages` is optional and should be omitted when empty.
+- `_messages` is required, but may be an empty array.
 - Delete endpoints return `204 No Content` and no response body.
+
+### Typed envelope: `ApiResponse`
+
+Build the envelope with the one generic class in
+`core/common/api_response.py`. Do not write per-resource `...Data` or
+`...Response` envelope classes, and do not return hand-built dicts.
+
+```python
+from typing import Dict, Generic, List, Optional, TypeVar
+
+from pydantic import BaseModel, ConfigDict, Field
+
+from core.common.base_dto import Link
+
+DataT = TypeVar("DataT")
+MetadataT = TypeVar("MetadataT")
+
+
+class ApiResponse(BaseModel, Generic[DataT, MetadataT]):
+    model_config = ConfigDict(populate_by_name=True)
+
+    data: Dict[str, DataT] = Field(alias="_data")
+    metadata: MetadataT = Field(alias="_metadata")
+    meta_links: Dict[str, Link] = Field(default_factory=dict, alias="_metaLinks")
+    messages: List[Dict[str, str]] = Field(default_factory=list, alias="_messages")
+
+    @classmethod
+    def of(
+            cls,
+            data_name: str,
+            data: DataT,
+            metadata: MetadataT,
+            meta_links: Optional[Dict[str, Link]] = None,
+            messages: Optional[List[Dict[str, str]]] = None,
+    ) -> "ApiResponse[DataT, MetadataT]":
+        return cls(
+            data={data_name: data},
+            metadata=metadata,
+            meta_links=meta_links or {},
+            messages=messages or [],
+        )
+```
+
+Each domain names its concrete response type once in `schemas.py`. The
+service builds it; the router uses it as the endpoint's return type, so the
+OpenAPI schema is fully typed:
+
+```python
+# schemas.py
+UserSettingsResponse = ApiResponse[UserSettingsDTO, UserSettingsMetadata]
+
+
+# user_settings_service.py
+def build_metadata(self, user_settings: UserSettingsDTO) -> UserSettingsMetadata:
+    # Rules can depend on the resource's current state.
+    ...
+
+def build_response(self, user_settings: UserSettingsDTO) -> UserSettingsResponse:
+    return UserSettingsResponse.of(
+        USER_SETTINGS_DATA_NAME,
+        user_settings,
+        self.build_metadata(user_settings),
+    )
+
+
+# user_settings_router.py
+@router.get("")
+async def get_user_settings(...) -> UserSettingsResponse:
+    ...
+    return service.build_response(user_settings)
+```
+
+Rules:
+
+- The `_data` key name is a constant in the domain's `constants.py` (e.g.
+  `USER_SETTINGS_DATA_NAME = "userSettings"`), next to the link names. Never
+  inline the string.
+- Use a camelCase resource name for the key: `userSettings`, not `settings`
+  or `user_settings`.
+- `_messages` is always present; it is an empty array when there is nothing
+  to say.
+- `FieldMetadata` drops its own unset flags. Do not add
+  `response_model_exclude_none=True` to routes; it would also strip `None`
+  fields out of the DTO, and a client expects an optional field to be present
+  as `null`.
+- Do not put a return type annotation on that `model_serializer` method.
+  Pydantic uses it for the OpenAPI schema, so `-> Dict[str, Any]` would turn
+  the documented response into a bare `object`.
+- `_data` is typed `Dict[str, DataT]`, so OpenAPI shows the key as "any
+  string". That is the accepted trade-off for not writing one envelope class
+  per resource.
 
 ### Single resource response
 
@@ -884,6 +979,28 @@ Unhelpful metadata:
 }
 ```
 
+Type metadata with a per-resource `{Resource}Metadata` class whose fields are
+the shared `FieldMetadata` from `core/common/base_dto.py`. Use `EmbeddedRef`
+(`{id, value}`) for each option in `values`:
+
+```python
+class FieldMetadata(BaseModel):
+    readOnly: Optional[bool] = None
+    hidden: Optional[bool] = None
+    mandatory: Optional[bool] = None
+    values: Optional[list[EmbeddedRef]] = None
+
+    @model_serializer(mode="wrap")
+    def _omit_unset_flags(self, handler: SerializerFunctionWrapHandler):
+        # Only the flags that were set appear in the response.
+        return {key: value for key, value in handler(self).items() if value is not None}
+
+
+class TodoMetadata(BaseModel):
+    title: FieldMetadata
+    state: FieldMetadata
+```
+
 Metadata should be built in the application service layer because it may depend
 on:
 
@@ -970,19 +1087,19 @@ request.
 
 ## Message conventions
 
-`_messages` is optional.
-
-Omit it when there are no messages:
+`_messages` is always present. It is an empty array when there are no
+messages:
 
 ```json
 {
   "_data": {},
   "_metadata": {},
-  "_metaLinks": {}
+  "_metaLinks": {},
+  "_messages": []
 }
 ```
 
-Include it only when there is something useful for the client/user:
+Add entries only when there is something useful for the client/user:
 
 ```json
 {
@@ -1034,11 +1151,44 @@ async def delete_todo(todo_id: str, service: TodoService = Depends(get_todo_serv
     return Response(status_code=204)
 ```
 
-## DTO conventions
+## Model, Request, DTO and Response conventions
 
-Use Pydantic models for request and response DTOs.
+Use typed Pydantic classes at every layer, one class per layer, with the layer
+as the class-name suffix. Do not pass `dict[str, Any]` between layers.
 
-Separate create/update DTOs from persisted DTOs:
+| Layer | Suffix | Lives in | Built by | Holds |
+|---|---|---|---|---|
+| Database row (entity) | `Model` | `models.py` | repository | exactly the table's columns |
+| Request body | `Request` | `schemas.py` | client; FastAPI validates it | only the fields the client may send |
+| Service result | `DTO` | `schemas.py` | application service | the resource plus its `links` |
+| Field rules | `Metadata` | `schemas.py` | application service | one `FieldMetadata` per field with a rule |
+| HTTP response | `Response` | `schemas.py` | application service | `ApiResponse[{Name}DTO, {Name}Metadata]` |
+
+How a `PUT` flows through them:
+
+```text
+client JSON ──► TodoUpdateRequest   router: FastAPI validates the body
+                  ▼
+              service.update_todo() ─► repository writes, reads back
+                  ▼
+              TodoModel              the database row
+                  ▼  service adds links
+              TodoDTO
+                  ▼  service.build_response() adds metadata
+              TodoResponse           {"_data": {"todo": ...}, "_metadata": ..., "_metaLinks": ...}
+```
+
+Rules:
+
+- The layers do not inherit from each other, even when their fields match
+  today. They diverge as soon as a column is hidden, a field is renamed, or a
+  computed value is added. Keeping them separate makes that a one-place
+  change.
+- The repository converts rows to `Model` in one private helper
+  (`_to_model`). The service converts `Model` to `DTO` in one method
+  (`to_dto`), which is where links are added.
+- Put reusable building blocks in `core/common/base_dto.py`, not in a domain:
+  `Link`, `LinkedResource`, `EmbeddedRef`, `FieldMetadata`.
 
 ```python
 from datetime import datetime
@@ -1047,6 +1197,8 @@ from typing import Optional
 
 from pydantic import BaseModel, field_serializer
 
+from core.common.base_dto import FieldMetadata, LinkedResource
+
 
 class TodoState(str, Enum):
     NEW = "NEW"
@@ -1054,30 +1206,34 @@ class TodoState(str, Enum):
     CLOSED = "CLOSED"
 
 
-class TodoCreate(BaseModel):
+# models.py
+class TodoModel(BaseModel):
+    """A `todos` database row."""
+    id: str
+    title: str
+    description: Optional[str] = None
+    complete_by: datetime
+    state: TodoState
+    created_date: datetime
+
+
+# schemas.py — Request
+class TodoCreateRequest(BaseModel):
     title: str
     description: Optional[str] = None
     complete_by: datetime
     state: TodoState = TodoState.NEW
 
 
-class TodoUpdate(BaseModel):
+class TodoUpdateRequest(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
     complete_by: Optional[datetime] = None
     state: Optional[TodoState] = None
 
 
-class Link(BaseModel):
-    href: str
-    method: str = "GET"
-
-
-class LinkedResource(BaseModel):
-    links: dict[str, Link] = {}
-
-
-class Todo(LinkedResource):
+# schemas.py — DTO
+class TodoDTO(LinkedResource):
     id: str
     title: str
     description: Optional[str] = None
@@ -1088,9 +1244,14 @@ class Todo(LinkedResource):
     @field_serializer("complete_by", "created_date")
     def serialize_datetime(self, value: datetime) -> str:
         return format_utc_datetime(value)
+
+
+class TodoMetadata(BaseModel):
+    title: FieldMetadata
+    state: FieldMetadata
 ```
 
-Do not force create DTOs to contain fields generated by the server:
+Do not force Request classes to contain fields generated by the server:
 
 - `id`
 - `created_date`
@@ -1256,17 +1417,19 @@ must:
 4. Create a database protocol before writing repositories.
 5. Keep repositories backend-agnostic.
 6. Put business rules in services.
-7. Build `_data`, `_metadata`, `_metaLinks`, and optional `_messages` in the
-   service layer.
-8. Return `204 No Content` for delete endpoints.
-9. Use UUID strings for IDs.
-10. Format dates as UTC `YYYY-MM-DDTHH:MM:SSZ`.
-11. Include template endpoints for create forms when useful.
-12. Add `.env.example`.
-13. Add Docker support when requested or when useful for local reproducibility.
-14. Add Cloudflare support only as an adapter/entrypoint, not as a dependency
+7. Build links, metadata, meta links and the generic `ApiResponse` envelope
+   (`ApiResponse[{Name}DTO, {Name}Metadata].of(...)`) in the service layer.
+8. Use one typed class per layer — `{Name}Model`, `{Name}...Request`,
+   `{Name}DTO`, `{Name}Metadata` — never `dict[str, Any]` between layers.
+9. Return `204 No Content` for delete endpoints.
+10. Use UUID strings for IDs.
+11. Format dates as UTC `YYYY-MM-DDTHH:MM:SSZ`.
+12. Include template endpoints for create forms when useful.
+13. Add `.env.example`.
+14. Add Docker support when requested or when useful for local reproducibility.
+15. Add Cloudflare support only as an adapter/entrypoint, not as a dependency
     throughout the app.
-15. Validate the app with at least compile/import checks and a local smoke test.
+16. Validate the app with at least compile/import checks and a local smoke test.
 
 If the user asks for a quick prototype, the agent may simplify, but it should
 not violate the core boundaries:
@@ -1330,6 +1493,27 @@ Classes:
 TodoService
 TodoRepository
 SQLiteDatabase
+```
+
+Data classes carry their layer as a suffix (see "Model, Request, DTO and
+Response conventions"):
+
+```text
+TodoModel            # database row, models.py
+TodoCreateRequest    # POST body, schemas.py
+TodoUpdateRequest    # PUT body, schemas.py
+TodoDTO              # service result, schemas.py
+TodoMetadata         # field rules, schemas.py
+TodoResponse         # = ApiResponse[TodoDTO, TodoMetadata], schemas.py
+```
+
+Per-domain constants (the `_data` key name and link names) live in the
+domain's `constants.py`:
+
+```python
+TODO_DATA_NAME = "todo"
+LINK_SELF = "self"
+LINK_UPDATE_TODO = "updateTodo"
 ```
 
 Functions and variables:
@@ -1440,11 +1624,12 @@ The default response shape is:
 {
   "_data": {},
   "_metadata": {},
-  "_metaLinks": {}
+  "_metaLinks": {},
+  "_messages": []
 }
 ```
 
-With optional messages:
+With messages:
 
 ```json
 {

@@ -1,7 +1,8 @@
-from typing import Any, Dict, Optional
+from typing import Any, Mapping, Optional
 
 from core.config.database import Database
 from shared.settings.region.enums import RegionSettingOwnerType
+from shared.settings.region.models import RegionSettingModel
 
 
 class RegionSettingsRepository:
@@ -18,17 +19,21 @@ class RegionSettingsRepository:
     def __init__(self, db: Database) -> None:
         self.db = db
 
-    async def get_system_settings(self) -> Optional[Dict[str, Any]]:
-        return await self.db.fetch_one(
+    async def get_system_settings(self) -> Optional[RegionSettingModel]:
+        row = await self.db.fetch_one(
             "SELECT * FROM region_settings WHERE owner_type = ?",
             (RegionSettingOwnerType.SYSTEM.value,),
         )
 
-    async def get_user_settings(self, user_id: str) -> Optional[Dict[str, Any]]:
-        return await self.db.fetch_one(
+        return self._to_model(row)
+
+    async def get_user_settings(self, user_id: str) -> Optional[RegionSettingModel]:
+        row = await self.db.fetch_one(
             "SELECT * FROM region_settings WHERE id = ? AND owner_type = ?",
             (user_id, RegionSettingOwnerType.USER.value),
         )
+
+        return self._to_model(row)
 
     async def upsert_user_settings(
         self,
@@ -37,7 +42,7 @@ class RegionSettingsRepository:
         language: str,
         currency: str,
         theme: str,
-    ) -> Dict[str, Any]:
+    ) -> RegionSettingModel:
         await self.db.execute(
             "INSERT INTO region_settings (id, owner_type, timezone, language, currency, theme) "
             "VALUES (?, ?, ?, ?, ?, ?) "
@@ -50,6 +55,7 @@ class RegionSettingsRepository:
         saved = await self.get_user_settings(user_id)
         if saved is None:
             raise RuntimeError(f"saved region settings were not found: {user_id}")
+
         return saved
 
     async def delete_user_settings(self, user_id: str) -> None:
@@ -57,3 +63,7 @@ class RegionSettingsRepository:
             "DELETE FROM region_settings WHERE id = ? AND owner_type = ?",
             (user_id, RegionSettingOwnerType.USER.value),
         )
+
+    @staticmethod
+    def _to_model(row: Optional[Mapping[str, Any]]) -> Optional[RegionSettingModel]:
+        return RegionSettingModel(**row) if row else None
