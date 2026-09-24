@@ -221,6 +221,7 @@ new app, copy `scripts/sync-conventions.mjs` and the two npm scripts with it.
 | `secondary-container` / `on-secondary-container` | Selected nav indicator, secondary avatars |
 | `tertiary-container` / `on-tertiary-container` | The one semantic accent (in this house style: AI features and "Owner" badges) |
 | `error` / `error-container` / `on-error-container` | Failures, banners, overdue, destructive actions |
+| `--app-chart-1` (app token, not M3) | Chart marks only: bars, lines, dots. Never text |
 | `scrim` | Modal scrim at 32% |
 
 #### Type — which token for which job
@@ -812,6 +813,12 @@ html {
   --app-ease-accelerate: cubic-bezier(0.3, 0, 0.8, 0.15);
   --app-duration-short: 200ms;
   --app-duration-medium: 300ms;
+
+  // Chart marks. M3's tonal steps are too muted for a data mark (they read
+  // grey next to the grid), so charts get one validated teal per mode, near
+  // the brand seed: >= 3:1 on surface-container-low, in the lightness band,
+  // above the chroma floor (dataviz validator). Text never wears it.
+  --app-chart-1: light-dark(#00897b, #12a3a8);
 
   @include bp.up(sm) {
     --app-gutter: 24px;
@@ -1912,6 +1919,25 @@ then "Sep 12") inside `<time datetime>` with the full timestamp in `title`.
 A toggle button with `aria-pressed` keeps a stable name ("Like (12)"), never
 one that flips between Like and Unlike.
 
+**Insights / charts** (the admin engagement page is the reference). Decide the
+form before the colour: a handful of headline numbers is a **KPI row** of stat
+tiles (label, value in `headline-medium`, a delta "vs previous N days" with a
+`trending_up/down/flat` icon — direction is never colour alone); change over time
+is a **column chart per metric**. Measures on different scales (likes vs groups)
+get **small multiples**, never two y-axes. A single series has no legend — its
+title names it. Marks: columns ≤ 24px wide with a 2px gap, 4px rounded top and
+square at the baseline, hairline `outline-variant` grid with clean ticks
+(1/2/5×10ⁿ), the peak labelled and nothing else, text in text tokens. Marks wear
+`--app-chart-1` (M3 tonal steps read grey as data marks; this token was run
+through a palette validator for contrast ≥ 3:1, lightness band and chroma in both
+modes — re-validate if you change it). Every chart is interactive: hover and
+arrow keys show a tooltip (value first, date second) and it has an `aria-label`
+summary; every number is also in a table view (`<details>` "Daily numbers").
+Filters (a period segmented button) sit in one row above everything they scope;
+switching keeps the previous numbers on screen dimmed until the new ones arrive
+(`linkedSignal` over the resource). Lay out in real pixels (measure the width
+with a `ResizeObserver`, guarded for tests/SSR) so text and corners stay crisp.
+
 **Expandable detail** (`<details>`): a 32px `label-large` summary with a chevron
 icon that rotates 180° when open; the revealed block on `surface-container`,
 `corner-medium`.
@@ -1960,6 +1986,11 @@ else competes with it.
   `data = computed(() => (res.hasValue() ? res.value() : undefined))` — and derive
   everything else from `data()`. Test it: flush a 500 and assert the store reads
   empty with an error message.
+- **Screenshot full pages at the height you need.** A Playwright `fullPage`
+  capture of a page taller than the viewport resizes the viewport mid-capture;
+  anything laid out from a `ResizeObserver` (charts) can be caught half
+  re-rendered — blank or stretched — even though the app is fine. Use a viewport
+  tall enough for the page, or `clip`.
 - **Keep the class names your specs query** (`.TodosList-empty`, `.TodoForm-title`,
   `mat-button-toggle button`) when restyling.
 - **Tests that stub a store's `me()`**: `Object.defineProperty(store, 'me', { value: () => … })`
