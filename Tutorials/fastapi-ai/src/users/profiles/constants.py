@@ -16,6 +16,7 @@ LINK_TODO_TEMPLATE = "todoTemplate"
 LINK_AI_CHATS = "aiChats"
 LINK_AI_CHAT_SEARCH = "aiChatSearch"
 LINK_AI_ASSISTANT = "aiAssistant"
+LINK_USER_SETTINGS = "userSettings"
 
 # Shared data every signed-in user may use.
 LINK_TAGS = "tags"
@@ -30,3 +31,4 @@ LINK_SEARCH_UNSPLASH = "searchUnsplash"
 
 # Admins only.
 LINK_ADMIN = "admin"
+LINK_SYSTEM_SETTINGS = "systemSettings"

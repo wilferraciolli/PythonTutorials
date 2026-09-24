@@ -236,3 +236,17 @@ SELECT
 FROM users u
 LEFT JOIN user_roles r ON r.user_id = u.id
 GROUP BY u.id;
+
+-- Migration 015: region settings. The SYSTEM row is the defaults every user
+-- falls back to (INSERT OR IGNORE: this file is re-run on D1).
+CREATE TABLE IF NOT EXISTS region_settings (
+    id                      TEXT PRIMARY KEY,
+    owner_type              TEXT NOT NULL,
+    timezone                TEXT NOT NULL,
+    language                TEXT NOT NULL,
+    currency                TEXT NOT NULL,
+    theme                   TEXT NOT NULL
+);
+
+INSERT OR IGNORE INTO region_settings (id, owner_type, timezone, language, currency, theme)
+VALUES ('92aaba5a-d56d-4128-8140-96f138e817bf', 'SYSTEM', 'Europe/London', 'en-GB', 'GBP', 'light');

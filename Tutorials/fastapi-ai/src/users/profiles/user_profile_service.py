@@ -16,6 +16,7 @@ from users.profiles.constants import (
     LINK_SEARCH_UNSPLASH,
     LINK_SEARCH_USERS,
     LINK_SELF,
+    LINK_SYSTEM_SETTINGS,
     LINK_TAG_TEMPLATE,
     LINK_TAGS,
     LINK_TIMELINE_ALL,
@@ -24,6 +25,7 @@ from users.profiles.constants import (
     LINK_TODO_TEMPLATE,
     LINK_TODOS,
     LINK_USER,
+    LINK_USER_SETTINGS,
     LINK_USER_TEMPLATE,
     LINK_USERS,
     USER_PROFILE_DATA_NAME,
@@ -46,9 +48,10 @@ class UserProfileService:
     - Any signed-in caller may view any profile.
     - Only the owner may change a profile. There is no PUT yet; when one is
       added, guard it with `can_edit_profile`.
-    - Personal links (todos, AI chats, the assistant) only appear on your
-      own profile: those APIs refuse anyone else (require_owner).
-    - Admin links (`userTemplate`, `admin`) only appear for admins.
+    - Personal links (todos, AI chats, the assistant, `userSettings`) only
+      appear on your own profile: those APIs refuse anyone else.
+    - Admin links (`userTemplate`, `systemSettings`, `admin`) only appear
+      for admins.
     """
 
     def __init__(self, user_repository: UserRepository) -> None:
@@ -111,18 +114,21 @@ class UserProfileService:
             LINK_SEARCH_UNSPLASH: Link(href=f"{API_PREFIX}/media/unsplash/search", method="GET"),
         }
 
-        # Todos, AI chats and the assistant are personal: only offered on
-        # your own profile.
+        # Todos, AI chats, the assistant and settings are personal: only
+        # offered on your own profile.
         if caller.user_id == user_id:
+            links[LINK_USER_SETTINGS] = Link(href=f"{API_PREFIX}/users/{user_id}/settings", method="GET")
             links[LINK_TODOS] = Link(href=f"{API_PREFIX}/users/{user_id}/todos", method="GET")
             links[LINK_TODO_TEMPLATE] = Link(href=f"{API_PREFIX}/users/{user_id}/todos/template", method="GET")
             links[LINK_AI_CHATS] = Link(href=f"{API_PREFIX}/users/{user_id}/chats", method="GET")
             links[LINK_AI_CHAT_SEARCH] = Link(href=f"{API_PREFIX}/users/{user_id}/chats/search", method="GET")
             links[LINK_AI_ASSISTANT] = Link(href=f"{API_PREFIX}/users/{user_id}/assistant/ask", method="POST")
 
-        # Creating users is admin-only, so only admins get the way in.
+        # Creating users and the system-wide settings are admin-only, so only
+        # admins get the way in.
         if caller.is_admin:
             links[LINK_USER_TEMPLATE] = Link(href=f"{API_PREFIX}/users/template", method="GET")
+            links[LINK_SYSTEM_SETTINGS] = Link(href=f"{API_PREFIX}/admin/settings", method="GET")
 
         # The admin area, only on an admin's own profile.
         if caller.is_admin and caller.user_id == user_id:
