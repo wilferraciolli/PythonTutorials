@@ -38,6 +38,7 @@
               (input)="editBody.set($any($event.target).value)"
             ></textarea>
           </mat-form-field>
+          <app-people-picker [(people)]="editPeople" />
           <div class="PostPage-replyActions">
             <button matButton type="button" (click)="editingPost.set(false)">Cancel</button>
             <button
@@ -52,6 +53,12 @@
       } @else {
         <h1 class="PostPage-title">{{ post.title }}</h1>
         <p class="PostPage-body">{{ post.body }}</p>
+        @if (withPeople(); as names) {
+          <p class="PostPage-people">
+            <mat-icon aria-hidden="true">group</mat-icon>
+            {{ names }}
+          </p>
+        }
       }
       @if (post.media; as media) {
         <app-post-media [media]="media" />

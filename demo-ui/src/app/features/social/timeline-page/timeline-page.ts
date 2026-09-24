@@ -39,6 +39,9 @@ export class TimelinePage {
   );
 
   protected readonly posts = computed(() => this.feed.value()?._data['posts'] ?? []);
+  protected readonly people = computed(() =>
+    this.feed.hasValue() ? (this.feed.value()._metadata?.['taggedUserIds']?.values ?? []) : [],
+  );
   protected readonly isLoading = computed(() => this.feed.isLoading());
   protected readonly errorMessage = computed(() => {
     const error = this.feed.error();

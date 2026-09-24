@@ -71,7 +71,7 @@ export class SocialActions {
 
   createPost(
     group: Group,
-    payload: { title: string; body: string; media: MediaRef | null },
+    payload: { title: string; body: string; media: MediaRef | null; taggedUserIds: string[] },
   ): Promise<Post> {
     return this.api.post('post', this.require(group.links['createPost'], 'post here'), payload);
   }
@@ -85,7 +85,10 @@ export class SocialActions {
     return this.api.delete(this.require(post.links['removeMedia'], 'remove the media'));
   }
 
-  updatePost(post: Post, payload: { title: string; body: string }): Promise<Post> {
+  updatePost(
+    post: Post,
+    payload: { title: string; body: string; taggedUserIds: string[] },
+  ): Promise<Post> {
     return this.api.put('post', this.require(post.links['update'], 'edit this post'), payload);
   }
 

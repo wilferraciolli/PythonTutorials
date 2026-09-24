@@ -1,0 +1,17 @@
+:host {
+  display: block;
+}
+
+.PeoplePicker {
+  width: 100%;
+
+  // Name first, email quieter on the same option row.
+  &-name {
+    margin-right: 8px;
+  }
+
+  &-email {
+    font: var(--mat-sys-body-small);
+    color: var(--mat-sys-on-surface-variant);
+  }
+}

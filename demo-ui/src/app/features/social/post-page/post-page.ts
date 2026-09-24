@@ -10,6 +10,7 @@ import { Router, RouterLink } from '@angular/router';
 import {
   ApiClientService,
   CollectionEnvelope,
+  IdValue,
   SingleEnvelope,
 } from '@wiliamferraciolli/ngx-api-client';
 
@@ -17,10 +18,19 @@ import { describeApiError } from '../../../core/api/api-error';
 import { CurrentUserStore } from '../../../core/user/current-user.store';
 import { RelativeTimePipe } from '../../../shared/relative-time.pipe';
 import { MediaPicker } from '../media-picker/media-picker';
+import { PeoplePicker } from '../people-picker/people-picker';
 import { PostByline } from '../post-byline/post-byline';
 import { PostMedia } from '../post-media/post-media';
 import { SocialActions } from '../social-actions';
-import { Group, MediaSelection, Post, PostComment, threadComments } from '../social.models';
+import {
+  Group,
+  MediaSelection,
+  Post,
+  PostComment,
+  formatPeople,
+  taggedNames,
+  threadComments,
+} from '../social.models';
 
 const MAX_INDENT = 6;
 
@@ -37,6 +47,7 @@ const MAX_INDENT = 6;
     MatMenuModule,
     MediaPicker,
     PostByline,
+    PeoplePicker,
     RelativeTimePipe,
     PostMedia,
   ],
@@ -66,6 +77,16 @@ export class PostPage {
     return posts ? `${posts}/${this.postId()}` : undefined;
   });
   protected readonly post = computed(() => this.postResource.value()?._data['post']);
+  // {id, value: full name} of everyone tagged, from the response metadata.
+  protected readonly people = computed<IdValue[]>(() =>
+    this.postResource.hasValue()
+      ? (this.postResource.value()._metadata?.['taggedUserIds']?.values ?? [])
+      : [],
+  );
+  protected readonly withPeople = computed(() => {
+    const post = this.post();
+    return post ? formatPeople(taggedNames(post, this.people())) : '';
+  });
 
   private readonly commentsResource = httpResource<CollectionEnvelope<'comments', PostComment>>(
     () => this.api.resolve(this.post()?.links['comments']),
@@ -88,12 +109,17 @@ export class PostPage {
   protected readonly editingPost = signal(false);
   protected readonly editTitle = signal('');
   protected readonly editBody = signal('');
+  protected readonly editPeople = signal<IdValue[]>([]);
   protected readonly editingComment = signal<string | null>(null);
   protected readonly editCommentBody = signal('');
 
   protected startEditPost(post: Post): void {
     this.editTitle.set(post.title);
     this.editBody.set(post.body);
+    const names = new Map(this.people().map((person) => [person.id, person.value]));
+    this.editPeople.set(
+      (post.taggedUserIds ?? []).map((id) => ({ id, value: names.get(id) ?? 'Unknown' })),
+    );
     this.editingPost.set(true);
   }
 
@@ -102,6 +128,7 @@ export class PostPage {
       await this.actions.updatePost(post, {
         title: this.editTitle().trim(),
         body: this.editBody().trim(),
+        taggedUserIds: this.editPeople().map((person) => person.id),
       });
       this.editingPost.set(false);
     }, "Couldn't save the post.");

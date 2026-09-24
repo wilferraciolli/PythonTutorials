@@ -1,0 +1,34 @@
+<mat-form-field class="PeoplePicker" appearance="outline" subscriptSizing="dynamic">
+  <mat-label>Tag people</mat-label>
+  <mat-icon matPrefix aria-hidden="true">person_add</mat-icon>
+  <mat-chip-grid #grid aria-label="Tagged people">
+    @for (person of people(); track person.id) {
+      <mat-chip-row (removed)="remove(person)">
+        {{ person.value }}
+        <button matChipRemove [attr.aria-label]="'Remove ' + person.value">
+          <mat-icon>cancel</mat-icon>
+        </button>
+      </mat-chip-row>
+    }
+    <input
+      #input
+      [placeholder]="full() ? 'That’s the most you can tag' : 'Search by name or email'"
+      [disabled]="full()"
+      [matChipInputFor]="grid"
+      [matAutocomplete]="auto"
+      (input)="term.set(input.value)"
+    />
+  </mat-chip-grid>
+  <mat-autocomplete
+    #auto="matAutocomplete"
+    [displayWith]="blank"
+    (optionSelected)="add($event, input)"
+  >
+    @for (user of matches(); track user.id) {
+      <mat-option [value]="user">
+        <span class="PeoplePicker-name">{{ user.name }}</span>
+        <span class="PeoplePicker-email">{{ user.email }}</span>
+      </mat-option>
+    }
+  </mat-autocomplete>
+</mat-form-field>

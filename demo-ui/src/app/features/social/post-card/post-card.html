@@ -15,6 +15,13 @@
     <p class="PostCard-body">{{ post().body }}</p>
   }
 
+  @if (withPeople(); as names) {
+    <p class="PostCard-people">
+      <mat-icon aria-hidden="true">group</mat-icon>
+      {{ names }}
+    </p>
+  }
+
   @if (post().media; as media) {
     <app-post-media class="PostCard-media" [media]="media" [deferVideo]="true" [fill]="true" />
   }

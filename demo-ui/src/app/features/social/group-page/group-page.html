@@ -200,6 +200,7 @@
                   (cancelled)="pickingMedia.set(false)"
                 />
               }
+              <app-people-picker [(people)]="tagged" />
               <div class="GroupPage-formActions">
                 @if (!media() && !pickingMedia()) {
                   <button matButton type="button" (click)="pickingMedia.set(true)">
@@ -223,7 +224,12 @@
 
         <section class="GroupPage-posts" aria-label="Posts">
           @for (post of posts(); track post.id) {
-            <app-post-card [post]="post" [showGroup]="false" (changed)="reloadPosts()" />
+            <app-post-card
+              [post]="post"
+              [showGroup]="false"
+              [people]="people()"
+              (changed)="reloadPosts()"
+            />
           } @empty {
             <p class="GroupPage-muted">{{ postsLoading() ? 'Loading…' : 'No posts yet.' }}</p>
           }

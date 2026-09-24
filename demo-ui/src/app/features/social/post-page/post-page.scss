@@ -42,6 +42,15 @@
     overflow-wrap: anywhere;
   }
 
+  &-people {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    font: var(--mat-sys-label-large);
+    color: var(--mat-sys-on-surface-variant);
+  }
+
   &-commentAuthor {
     font-weight: 500;
     color: var(--mat-sys-on-surface);

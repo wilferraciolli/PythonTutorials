@@ -41,7 +41,7 @@
     } @else {
       <div class="TimelinePage-list">
         @for (post of posts(); track post.id) {
-          <app-post-card [post]="post" (changed)="reload()" />
+          <app-post-card [post]="post" [people]="people()" (changed)="reload()" />
         } @empty {
           <p class="TimelinePage-muted">{{ tab().empty }}</p>
         }
