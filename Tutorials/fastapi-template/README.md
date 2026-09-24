@@ -58,7 +58,8 @@ fastapi-template/
 │       ├── user_profile.py
 │       └── users.py
 ├── migrations/
-│   └── 001_create_users_table.sql   # Auto-applied against local SQLite
+│   ├── 001_create_users_table.sql   # Auto-applied against local SQLite
+│   └── 002_settings.sql
 ├── Dockerfile
 ├── docker-compose.yml
 ├── .env.example
