@@ -6,6 +6,7 @@ import { RegionSettingsForm } from './region-settings-form';
 const SETTINGS: RegionSettingsPayload = {
   timezone: 'Europe/London',
   language: 'en-GB',
+  locale: 'en-GB',
   currency: 'GBP',
   theme: 'light',
 };
@@ -16,6 +17,7 @@ const OPTIONS: RegionSettingsOptions = {
     { value: 'Asia/Nicosia', viewValue: 'Asia/Nicosia' },
   ],
   language: [{ value: 'en-GB', viewValue: 'en-GB' }],
+  locale: [{ value: 'en-GB', viewValue: 'en-GB' }],
   currency: [{ value: 'GBP', viewValue: 'GBP' }],
   theme: [
     { value: 'light', viewValue: 'light' },
@@ -38,7 +40,7 @@ describe('RegionSettingsForm', () => {
   it('renders one select per field with the API options', () => {
     const { element } = setup();
     const selects = element.querySelectorAll('select');
-    expect(selects.length).toBe(4);
+    expect(selects.length).toBe(5);
     expect(selects[0].querySelectorAll('option').length).toBe(2);
   });
 
@@ -46,7 +48,7 @@ describe('RegionSettingsForm', () => {
     const { fixture, element, submit } = setup();
     expect(submit.disabled).toBe(true);
 
-    const theme = element.querySelectorAll('select')[3];
+    const theme = element.querySelectorAll('select')[4];
     theme.value = 'dark';
     theme.dispatchEvent(new Event('input'));
     fixture.detectChanges();
@@ -60,7 +62,7 @@ describe('RegionSettingsForm', () => {
     const emitted: RegionSettingsPayload[] = [];
     fixture.componentInstance.save.subscribe((value) => emitted.push(value));
 
-    const theme = element.querySelectorAll('select')[3];
+    const theme = element.querySelectorAll('select')[4];
     theme.value = 'dark';
     theme.dispatchEvent(new Event('input'));
     fixture.detectChanges();

@@ -5,6 +5,7 @@ from core.common.base_dto import FieldMetadata, LinkedResource
 from shared.settings.region.enums import (
     SupportedCurrencies,
     SupportedLanguages,
+    SupportedLocales,
     SupportedThemes,
     SupportedTimeZones,
 )
@@ -21,6 +22,7 @@ class SystemSettingsUpdateRequest(BaseModel):
     """
     timezone: SupportedTimeZones
     language: SupportedLanguages
+    locale: SupportedLocales
     currency: SupportedCurrencies
     theme: SupportedThemes
 
@@ -32,6 +34,7 @@ class SystemSettingsDTO(LinkedResource):
     id: str
     timezone: SupportedTimeZones
     language: SupportedLanguages
+    locale: SupportedLocales
     currency: SupportedCurrencies
     theme: SupportedThemes
 
@@ -41,6 +44,7 @@ class SystemSettingsMetadata(BaseModel):
     id: FieldMetadata
     timezone: FieldMetadata
     language: FieldMetadata
+    locale: FieldMetadata
     currency: FieldMetadata
     theme: FieldMetadata
 

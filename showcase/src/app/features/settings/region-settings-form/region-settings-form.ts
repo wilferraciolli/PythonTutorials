@@ -7,11 +7,11 @@ import { MatInputModule } from '@angular/material/input';
 import { RegionSettingsOptions, RegionSettingsPayload } from '../region-settings.store';
 
 function toPayload(settings: RegionSettingsPayload): RegionSettingsPayload {
-  const { timezone, language, currency, theme } = settings;
-  return { timezone, language, currency, theme };
+  const { timezone, language, locale, currency, theme } = settings;
+  return { timezone, language, locale, currency, theme };
 }
 
-// Presentational: the four region fields as <select>s, shared by the user's
+// Presentational: the five region fields as <select>s, shared by the user's
 // own settings and the system settings. The page owns loading and saving.
 @Component({
   selector: 'app-region-settings-form',

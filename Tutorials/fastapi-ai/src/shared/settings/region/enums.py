@@ -14,9 +14,18 @@ class SupportedTimeZones(str, Enum):
     CYPRUS = "Asia/Nicosia"
 
 
-# BCP 47 / ISO standards languages
+# BCP 47 language tags: which translation set the UI shows
 class SupportedLanguages(str, Enum):
     EN_GB = "en-GB"
+    EN_US = "en-US"
+    EL_CY = "el-CY"
+    PT_BR = "pt-BR"
+
+
+# BCP 47 locale tags: how dates, numbers and currency are formatted
+class SupportedLocales(str, Enum):
+    EN_GB = "en-GB"
+    EN_US = "en-US"
     EL_CY = "el-CY"
     PT_BR = "pt-BR"
 

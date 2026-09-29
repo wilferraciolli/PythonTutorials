@@ -19,6 +19,15 @@
     </mat-form-field>
 
     <mat-form-field appearance="outline">
+      <mat-label>Locale</mat-label>
+      <select matNativeControl [formField]="settingsForm.locale">
+        @for (option of options().locale; track option.value) {
+          <option [value]="option.value">{{ option.viewValue }}</option>
+        }
+      </select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
       <mat-label>Currency</mat-label>
       <select matNativeControl [formField]="settingsForm.currency">
         @for (option of options().currency; track option.value) {

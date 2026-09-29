@@ -10,7 +10,7 @@ from core.security.auth import AuthenticatedUser, get_authenticated_user
 ALICE = AuthenticatedUser(id="clerk-a", name="Alice", email="a@x.io", role_ids=[], claims={})
 ZED = AuthenticatedUser(id="clerk-z", name="Zed", email="z@x.io", role_ids=["ADMIN"], claims={})
 
-GREEK = {"timezone": "Asia/Nicosia", "language": "el-CY", "currency": "EUR", "theme": "dark"}
+GREEK = {"timezone": "Asia/Nicosia", "language": "el-CY", "locale": "el-CY", "currency": "EUR", "theme": "dark"}
 
 
 @pytest.fixture
@@ -40,7 +40,7 @@ def test_your_settings_fall_back_to_the_system_defaults(client):
     assert {"id": "dark", "value": "dark"} in body["_metadata"]["theme"]["values"]
 
     saved = http.put(settings["links"]["updateSettings"]["href"], json=GREEK).json()["_data"]["userSettings"]
-    assert saved["owner_type"] == "USER" and saved["language"] == "el-CY"
+    assert saved["owner_type"] == "USER" and saved["language"] == "el-CY" and saved["locale"] == "el-CY"
     assert http.put(href, json={**GREEK, "theme": "neon"}).status_code == 422
 
     assert http.delete(saved["links"]["resetSettings"]["href"]).status_code == 204

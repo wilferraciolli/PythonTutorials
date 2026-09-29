@@ -301,7 +301,7 @@ above) except `/api/health`, `/docs`, and `/openapi.json`.
 | POST | `/api/users` | **Admin only.** Create a user |
 | PUT | `/api/users/{id}` | **Admin only.** Update a user, including their roles. You can't remove your own `ADMIN` role (`400`) |
 | DELETE | `/api/users/{id}` | **Admin only.** Delete a user (returns `204 No Content`). You can't delete yourself (`400`) |
-| GET | `/api/users/{id}/settings` | **Your own only** (`403` for anyone else, admins included). Your region settings (timezone, language, currency, theme); falls back to the system defaults (`owner_type: SYSTEM`) until the user saves their own |
+| GET | `/api/users/{id}/settings` | **Your own only** (`403` for anyone else, admins included). Your region settings (timezone, language, locale, currency, theme); falls back to the system defaults (`owner_type: SYSTEM`) until the user saves their own |
 | PUT | `/api/users/{id}/settings` | **Your own only.** Save your region settings |
 | DELETE | `/api/users/{id}/settings` | **Your own only.** Drop your settings so you fall back to the system defaults (returns `204 No Content`) |
 | GET | `/api/admin/settings` | **Admin only.** The system default region settings every user falls back to |

@@ -746,6 +746,12 @@ Rules:
   or `user_settings`.
 - `_messages` is always present; it is an empty array when there is nothing
   to say.
+- Region settings keep `language` and `locale` apart. `language` picks the
+  translation set and `locale` picks date, number and currency formatting, so
+  a user can read Greek with UK-style formats. Both are BCP 47 tags with a
+  region (`en-GB`, `en-US`, `el-CY`, `pt-BR`); never a bare `el`. Timezone
+  (IANA) and currency (ISO 4217) are their own fields, and the UI takes every
+  option list from the API metadata instead of hardcoding it.
 - `FieldMetadata` drops its own unset flags. Do not add
   `response_model_exclude_none=True` to routes; it would also strip `None`
   fields out of the DTO, and a client expects an optional field to be present

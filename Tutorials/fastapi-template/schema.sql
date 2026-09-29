@@ -22,12 +22,13 @@ CREATE TABLE IF NOT EXISTS region_settings (
     owner_type              TEXT NOT NULL,
     timezone                TEXT NOT NULL,
     language                TEXT NOT NULL,
+    locale                  TEXT NOT NULL,
     currency                TEXT NOT NULL,
     theme                   TEXT NOT NULL
 );
 
-INSERT OR IGNORE INTO region_settings (id, owner_type, timezone, language, currency, theme)
-VALUES ('92aaba5a-d56d-4128-8140-96f138e817bf', 'SYSTEM', 'Europe/London', 'en-GB', 'GBP', 'light');
+INSERT OR IGNORE INTO region_settings (id, owner_type, timezone, language, locale, currency, theme)
+VALUES ('92aaba5a-d56d-4128-8140-96f138e817bf', 'SYSTEM', 'Europe/London', 'en-GB', 'en-GB', 'GBP', 'light');
 
 CREATE TABLE IF NOT EXISTS configuration_settings (
     id                      TEXT PRIMARY KEY,

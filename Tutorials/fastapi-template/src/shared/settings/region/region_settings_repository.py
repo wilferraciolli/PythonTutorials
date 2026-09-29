@@ -32,14 +32,15 @@ class RegionSettingsRepository:
             self,
             timezone: str,
             language: str,
+            locale: str,
             currency: str,
             theme: str,
     ) -> RegionSettingModel:
         # The SYSTEM row is seeded by the migrations, so this is a plain update.
         await self.db.execute(
-            "UPDATE region_settings SET timezone = ?, language = ?, currency = ?, theme = ? "
+            "UPDATE region_settings SET timezone = ?, language = ?, locale = ?, currency = ?, theme = ? "
             "WHERE owner_type = ?",
-            (timezone, language, currency, theme, RegionSettingOwnerType.SYSTEM.value),
+            (timezone, language, locale, currency, theme, RegionSettingOwnerType.SYSTEM.value),
         )
 
         saved = await self.get_system_settings()
@@ -62,16 +63,17 @@ class RegionSettingsRepository:
         user_id: str,
         timezone: str,
         language: str,
+        locale: str,
         currency: str,
         theme: str,
     ) -> RegionSettingModel:
         await self.db.execute(
-            "INSERT INTO region_settings (id, owner_type, timezone, language, currency, theme) "
-            "VALUES (?, ?, ?, ?, ?, ?) "
+            "INSERT INTO region_settings (id, owner_type, timezone, language, locale, currency, theme) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?) "
             "ON CONFLICT(id) DO UPDATE SET "
-            "timezone = excluded.timezone, language = excluded.language, "
+            "timezone = excluded.timezone, language = excluded.language, locale = excluded.locale, "
             "currency = excluded.currency, theme = excluded.theme",
-            (user_id, RegionSettingOwnerType.USER.value, timezone, language, currency, theme),
+            (user_id, RegionSettingOwnerType.USER.value, timezone, language, locale, currency, theme),
         )
 
         saved = await self.get_user_settings(user_id)

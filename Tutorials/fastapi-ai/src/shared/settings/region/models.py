@@ -4,6 +4,7 @@ from shared.settings.region.enums import (
     RegionSettingOwnerType,
     SupportedCurrencies,
     SupportedLanguages,
+    SupportedLocales,
     SupportedThemes,
     SupportedTimeZones,
 )
@@ -15,5 +16,6 @@ class RegionSettingModel(BaseModel):
     owner_type: RegionSettingOwnerType
     timezone: SupportedTimeZones
     language: SupportedLanguages
+    locale: SupportedLocales
     currency: SupportedCurrencies
     theme: SupportedThemes

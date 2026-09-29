@@ -6,6 +6,7 @@ from shared.settings.region.enums import (
     RegionSettingOwnerType,
     SupportedCurrencies,
     SupportedLanguages,
+    SupportedLocales,
     SupportedThemes,
     SupportedTimeZones,
 )
@@ -22,6 +23,7 @@ class UserSettingsUpdateRequest(BaseModel):
     """
     timezone: SupportedTimeZones
     language: SupportedLanguages
+    locale: SupportedLocales
     currency: SupportedCurrencies
     theme: SupportedThemes
 
@@ -34,6 +36,7 @@ class UserSettingsDTO(LinkedResource):
     owner_type: RegionSettingOwnerType
     timezone: SupportedTimeZones
     language: SupportedLanguages
+    locale: SupportedLocales
     currency: SupportedCurrencies
     theme: SupportedThemes
 
@@ -44,6 +47,7 @@ class UserSettingsMetadata(BaseModel):
     owner_type: FieldMetadata
     timezone: FieldMetadata
     language: FieldMetadata
+    locale: FieldMetadata
     currency: FieldMetadata
     theme: FieldMetadata
 

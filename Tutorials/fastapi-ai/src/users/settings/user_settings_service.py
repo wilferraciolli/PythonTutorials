@@ -7,6 +7,7 @@ from core.security.authorization import Caller
 from shared.settings.region.enums import (
     SupportedCurrencies,
     SupportedLanguages,
+    SupportedLocales,
     SupportedThemes,
     SupportedTimeZones,
 )
@@ -64,6 +65,7 @@ class UserSettingsService:
             user_id,
             timezone=request.timezone.value,
             language=request.language.value,
+            locale=request.locale.value,
             currency=request.currency.value,
             theme=request.theme.value,
         )
@@ -95,6 +97,7 @@ class UserSettingsService:
             owner_type=FieldMetadata(readOnly=True),
             timezone=self._choice_field(SupportedTimeZones),
             language=self._choice_field(SupportedLanguages),
+            locale=self._choice_field(SupportedLocales),
             currency=self._choice_field(SupportedCurrencies),
             theme=self._choice_field(SupportedThemes),
         )

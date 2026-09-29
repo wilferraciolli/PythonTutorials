@@ -50,10 +50,18 @@ the brief: it wins over a skill's generic aesthetic defaults.
   stays plain injectable signal stores.
 - RxJS interop (`toSignal()`/`toObservable()`) is fine for bridging
   Reactive Forms into signals, but signals are the default state model.
-- Signals Forms (`model` / typed forms) for form handling.
-- One typed API service per feature via `HttpClient`. Prefer
-  `httpResource()`/`resource()` over manual `subscribe()` plumbing for
-  data fetches.
+- Signals Forms (`@angular/forms/signals`) for form handling, rendered
+  with `@wiltech-labs/ngx-forms` (see "Shared libraries").
+- One typed API service per feature, delegating HTTP mechanics to
+  `ApiClientService` from `@wiltech-labs/ngx-api-client` rather than
+  calling `HttpClient` directly. Prefer its `resource()` /
+  `collectionResource()` (`httpResource` underneath) over manual
+  `subscribe()` plumbing for data fetches.
+- Dates and times travel as strings and are computed with `Temporal`,
+  never `Date` arithmetic (see "Dates and times").
+- Before building a loader, form field, chart, chat, AI surface or
+  websocket client, check "Shared libraries" — reach for the package, not
+  a local copy.
 - Vitest for tests. Prefer testing signal-based store behavior directly
   (it's plain TypeScript) over over-mocking component internals.
 - Prettier for formatting (100 col, single quotes, Angular parser for
@@ -88,6 +96,213 @@ src/app/
 ├── shared/          # reusable UI components (same one-folder-per-component rule)
 └── app.routes.ts
 ```
+
+## Shared libraries (`@wiltech-labs/ngx-*`)
+Recurring building blocks — API client, forms, loaders, charts, AI surfaces,
+websockets — are published as standalone Angular libraries on npm under the
+`@wiltech-labs` scope. Apps install them instead of keeping local copies. The
+libraries are built to this document's rules (standalone, signals, M3 tokens,
+the SCSS naming rule), so using one never reopens a design decision.
+
+Each package's `README.md` is its API reference. This section covers *when*
+to use which package and the rules for using it in an app.
+
+> The packages are being brought in line with this section (`ngx-` selectors,
+> M3-token theming defaults, class names). Until a package's README says so,
+> check the README for its current selectors and theming variables.
+
+### What to use for what
+| Need | Package | Use | Replaces in an app |
+|---|---|---|---|
+| Talk to the backend API | `ngx-api-client` | `ApiClientService`, `LinkService`, `MetadataService`, `convertIdToValues` pipe, `ApiErrorResponse` helpers | Hand-rolled `HttpClient` calls, `_data[root]` unwrapping, local envelope/link/metadata/error helpers |
+| Forms | `ngx-forms` | `formConfig<T>()`, `DynamicForm`, the `*Field` components, `toSchema()` | Hand-written `mat-form-field` markup, template-level validators, a `forms` SCSS partial |
+| Date and time input | `ngx-forms` | `BusinessDateField`, `BusinessTimeField`, `InstantDateTimeField`, `ZonedDateTimeService` | Raw `matDatepicker` bound to `Date` values |
+| Relative times ("5 hours ago") | `ngx-dates` *(planned)* | `relativeTime` pipe | An app-local pipe |
+| Loading states | `ngx-media` | `ContentLoader`, `CardLoader` | "Loading…" text, spinners for content, `ngx-skeleton-loader` |
+| Embedded video | `ngx-media` | `YoutubePlayer` | Hand-built `<iframe>` embeds |
+| Charts | `ngx-graphs` | `graphConfig()` + `BarGraph`/`LineGraph`/`PieGraph`/`DoughnutGraph`/`PolarAreaGraph`/`RadarGraph`; `pointGraphConfig()` + `BubbleGraph`/`ScatterGraph` | App-local chart wrappers, direct `ng2-charts` use, hand-drawn charts |
+| AI interaction surfaces | `ngx-ai-tools` | `AiTextBox`, `AiButton`, `AiPanel`, `AiSparkleIcon` | Ad hoc gradient styling |
+| Realtime / websockets | `ngx-web-sockets` | `provideWebSocket()`, `WebSocketService`, `ChatRoom`, `ChatMessageBubble` | `ngx-socket-io`, hand-rolled socket services |
+
+### Setup
+Install only the packages the app uses (`npm i @wiltech-labs/ngx-forms …`).
+Four of them need an app-level provider in `app.config.ts`:
+```ts
+import { provideHttpClient } from '@angular/common/http';
+import { API_ORIGIN } from '@wiltech-labs/ngx-api-client';
+import { provideWebSocket } from '@wiltech-labs/ngx-web-sockets';
+import { provideCharts, withDefaultRegisterables } from 'ng2-charts';
+
+provideHttpClient(),                                         // ngx-api-client
+{ provide: API_ORIGIN, useValue: environment.apiOrigin },    // ngx-api-client — only when the API is on another origin
+provideCharts(withDefaultRegisterables()),                   // ngx-graphs — chart.js registration, once per app
+provideWebSocket({ url: environment.socketUrl }),            // ngx-web-sockets
+```
+- `API_ORIGIN` is the API's **bare origin** (`https://api.example.com`), not the
+  `/api`-prefixed `apiUrl`. It defaults to `''` (same origin).
+- `apiOrigin`/`socketUrl` live in the environment files, like `apiUrl` (see
+  "Environment config"); never hardcode them.
+- `provideCharts` comes from `ng2-charts`, so add `ng2-charts` as a direct
+  dependency of the app. Don't rely on it arriving through `ngx-graphs`.
+- `ngx-forms` fields are Angular Material components and take the house M3 theme
+  from "Design system: Material 3". Skip the prebuilt-theme import in the
+  package README; that's for apps without their own theme.
+
+### How the libraries fit the design system
+- **Selectors are `ngx-`** (`<ngx-dynamic-form>`, `<ngx-card-loader>`), so a
+  template shows at a glance what is library and what is the app's own
+  component.
+- **Material-based packages** (`ngx-forms`) inherit the app theme directly.
+- **Material-free packages** (`ngx-media`, `ngx-ai-tools`, `ngx-graphs`,
+  `ngx-web-sockets`) read `--ngx-*` custom properties that default to the
+  matching `--mat-sys-*` role. In an M3 app they are correct in light and dark
+  with no configuration. Set an `--ngx-*` variable only for a genuine one-off,
+  and only to a token (`--ngx-chat-bubble-self-background: var(--mat-sys-tertiary-container);`),
+  never a hex value. Rule 1 ("tokens, never values") applies to these variables
+  too.
+- **Library class names follow "Component SCSS class naming"**
+  (`.CardLoader-header`, `.ChatMessageBubble.is-self`). Don't restyle a library
+  component's internals from an app stylesheet. If you need to, an input or an
+  `--ngx-*` variable is missing: add it to the library instead.
+
+### Using each package
+**`ngx-api-client`**
+- Each feature keeps its own typed `*ApiService`. `ApiClientService` owns the
+  HTTP mechanics (GET/POST/PUT/DELETE, envelope unwrap, link guard). URL
+  construction and "reload the list after a mutation" stay in the feature
+  service.
+- Follow the API's HATEOAS links: show an action only when
+  `LinkService.hasLink(…)` is true, and call it through
+  `api.requireLink(link, message)`. Never build a mutation URL by hand.
+- `resource()`/`collectionResource()` already read through `hasValue()`: a
+  failed request gives `undefined`/`[]` plus `error()`, never a throw. Render
+  `error()` in a `role="alert"` banner. The `httpResource` gotcha (section 6)
+  still applies to any raw `httpResource` an app writes itself.
+- Server validation errors: `fieldErrorsByField()` maps them onto form fields,
+  and `summarizeApiError()` gives the one-line banner text.
+- Options from API metadata: `MetadataService.resolveMetadataIdValues()` for a
+  select's options, and the `convertIdToValues` pipe to display a stored id as
+  its label.
+
+**`ngx-forms`**
+- Describe a form once with `formConfig<T>()`; a misspelled field name is a
+  compile error. Validation lives in that config (turned into Signals Forms
+  rules by `toSchema()`), never in the template or the component.
+- Use `DynamicForm` for a plain create/edit form. When a form needs grouping or
+  columns, place the individual field components in your own layout. Every
+  field takes the same `[fieldDef]` + `[field]` inputs.
+- The fields already use `appearance="outline"` and `subscriptSizing="dynamic"`
+  and render their own label, hint and errors. Don't wrap them in another
+  `mat-form-field`.
+- Short forms still sit in the tonal panel recipe (section 5). The panel is the
+  app's; the fields are the library's.
+
+**`ngx-graphs`**
+- Decide the form first (the "Insights / charts" recipe: KPI row, chart per
+  metric, small multiples), then pick the component.
+- Describe data with `graphConfig()` or `pointGraphConfig()`. Don't pass chart.js
+  options or colours from the app. The library applies the chart recipe as its
+  defaults: marks in `--app-chart-1`, grid and text from M3 tokens, no legend
+  for a single series, an `aria-label` summary and a table view. A canvas can't
+  read CSS variables, so the library resolves the tokens at render time and
+  redraws when the colour scheme changes.
+- Several series or slices take the library's categorical palette. Categorical
+  data colours are rule 1's allowed exception, so the app never supplies one.
+- Give the graph's host a height (`display: block; height: 320px`); the canvas
+  fills it.
+
+**`ngx-media`**
+- A content loading state is a skeleton shaped like the content:
+  `ContentLoader [lines]` for a text block, and `CardLoader` repeated for a
+  list of cards (as many as the page usually shows). No bare "Loading…" text
+  and no spinner for arriving content. A spinner is only for an action in
+  flight (a Save in progress).
+- Skeletons are decorative (`aria-hidden`). Put `aria-busy="true"` on the region
+  being filled, and announce the result or error with the usual `role="status"`
+  / `role="alert"`.
+- `YoutubePlayer` takes a video id, never a URL or embed code.
+
+**`ngx-ai-tools`**
+- The AI accent has two jobs:
+  - **Static AI markers** (an AI destination in the nav, an AI badge, an icon
+    well) use `tertiary-container`, per the colour-role table.
+  - **AI interaction surfaces**, where the user asks the AI something or reads
+    its answer, use this package: `AiTextBox` for the prompt, `AiButton` to run
+    it, `AiPanel` around the result, and `AiSparkleIcon` to mark it. The
+    gradient's stops default to M3 tokens, so it follows the theme and dark
+    mode.
+- `AiButton` counts as the view's filled button (rule 4). Don't put a second
+  filled button beside it.
+
+**`ngx-web-sockets`**
+- One socket per app: `WebSocketService` is root-provided. Join and leave rooms
+  on it; never create a second connection per feature.
+- `connected` is a signal. Event streams are `Observable`s; subscribe with
+  `takeUntilDestroyed()`.
+- `ChatRoom` implements the "Chat / composer" recipe. To switch rooms, render
+  a fresh instance behind `@if`; don't change `roomName` on a live one.
+- The server contract (event names and payloads) is in the package README. A
+  backend has to match it.
+
+**`ngx-dates`** *(planned)*
+- Will hold the `relativeTime` pipe (see "Dates and times"). Until it's
+  published, keep an app-local pipe with the same name and behaviour, so the
+  switch is only an import change.
+
+### Migrating an existing app
+Work through what the app actually has:
+- [ ] Local API envelope/link/metadata/error helpers → delete them and move each
+      `*ApiService` onto `ApiClientService`. Mutation URLs come from links.
+- [ ] Hand-written form markup and validators → `formConfig<T>()` with
+      `DynamicForm` or the field components. Delete any local `forms` SCSS
+      partial.
+- [ ] Date inputs → one of the three date/time fields, chosen by meaning. Then
+      convert `Date` logic following "Dates and times".
+- [ ] "Loading…" text or spinners for content → `ngx-media` skeletons.
+- [ ] Local chart components, chart palettes and direct `ng2-charts` markup →
+      `ngx-graphs`. Keep `provideCharts` in `app.config.ts`.
+- [ ] Ad hoc AI styling → `ngx-ai-tools` surfaces. Static AI markers stay
+      `tertiary-container`.
+- [ ] Socket services or `ngx-socket-io` → `ngx-web-sockets`.
+- [ ] Remove any `--ngx-*` override set to a hex value.
+- [ ] Run the review checklist (section 7) on every screen touched, light and
+      dark.
+
+## Dates and times
+Every date or time is one of three kinds. Choose the kind by what the value
+means, not by what the picker looks like:
+
+| Kind | Examples | Wire and model format | Compute with | Form field |
+|---|---|---|---|---|
+| Business date | Birthday, holiday, due date | `'YYYY-MM-DD'` | `Temporal.PlainDate` | `BusinessDateField` |
+| Business time | Opening hours, a daily schedule | `'HH:mm'` | `Temporal.PlainTime` | `BusinessTimeField` |
+| Instant | Meeting, deadline, "created at" | UTC ISO `'YYYY-MM-DDTHH:mm:ssZ'` | `Temporal.Instant` (`ZonedDateTime` to show it in a zone) | `InstantDateTimeField` |
+
+- **Strings everywhere except where you compute.** Models, API payloads, signals
+  and form values hold the string. Parse to `Temporal` only to compare,
+  add/subtract, diff or convert zones (`Temporal.PlainDate.from(s)`,
+  `Temporal.Instant.from(s)`), then `.toString()` back.
+- **Never store a business date as an instant.** Midnight UTC is the previous
+  day west of Greenwich. Never store an instant without its `Z`.
+- **No `Date` arithmetic**: no `getTime()` differences, no `setDate(d + 1)`, no
+  date-fns/moment/luxon. `new Date()` is acceptable only as input to Angular's
+  `date` pipe or a Material picker, and `ngx-forms` handles the picker case.
+- **"Now"** is `Temporal.Now.instant()`, or `Temporal.Now.plainDateISO(zone)` for
+  today's date. Code that depends on "now" takes it as a parameter or from an
+  injectable, so tests can pin it.
+- **Import `Temporal` from `temporal-polyfill`**, and add the polyfill as a
+  direct dependency of the app when app code imports it. Don't rely on it
+  arriving through `ngx-forms`.
+- **Display**:
+  - Angular's `date` pipe formats instants and business dates
+    (`{{ createdAt | date: 'medium' }}`; it reads a `'YYYY-MM-DD'` string as a
+    local date, so the day doesn't shift).
+  - Business times: `Temporal.PlainTime.from(t).toLocaleString(locale, { hour: 'numeric', minute: '2-digit' })`.
+  - Relative times: the `relativeTime` pipe, inside `<time [attr.datetime]="iso">`
+    with the full timestamp in `title`.
+- **Time zones**: show instants in the user's zone by default. A feature tied to
+  a place (a flight, a branch, an event venue) shows that place's zone and
+  labels it, the same as `InstantDateTimeField`'s `dateTimeConfig.timeZone`.
 
 ## Authentication (Clerk)
 Clerk is the auth provider. One gotcha hits every new app that reaches for
@@ -219,9 +434,9 @@ new app, copy `scripts/sync-conventions.mjs` and the two npm scripts with it.
 | `primary` | Filled buttons, links, the selected check, active tab indicator |
 | `primary-container` / `on-primary-container` | Avatars, icon wells, the user's chat bubble |
 | `secondary-container` / `on-secondary-container` | Selected nav indicator, secondary avatars |
-| `tertiary-container` / `on-tertiary-container` | The one semantic accent (in this house style: AI features and "Owner" badges) |
+| `tertiary-container` / `on-tertiary-container` | The one semantic accent (in this house style: static AI markers such as nav destinations and badges, and "Owner" badges). AI *interaction* surfaces use `ngx-ai-tools`, whose gradient is built from these tokens |
 | `error` / `error-container` / `on-error-container` | Failures, banners, overdue, destructive actions |
-| `--app-chart-1` (app token, not M3) | Chart marks only: bars, lines, dots. Never text |
+| `--app-chart-1` (app token, not M3) | Chart marks only: bars, lines, dots. Never text. `ngx-graphs` reads it, so every chart picks it up |
 | `scrim` | Modal scrim at 32% |
 
 #### Type — which token for which job
@@ -313,7 +528,8 @@ budget (see gotchas).
 4. Add `_breakpoints.scss`, `_spacing.scss`, `_ui.scss`, then `styles.scss`
    (all below).
 5. Replace the `<head>` fonts in `src/index.html` (below).
-6. Add the three providers to `app.config.ts` (below).
+6. Add the three providers to `app.config.ts` (below), plus the providers of any
+   `@wiltech-labs/ngx-*` package the app uses (see "Shared libraries" → Setup).
 7. Add the shell: `shared/destinations.ts`, `shared/nav-menu`, `shared/nav-bar`,
    `shared/profile-menu`, and `app.ts/html/scss` (section 4). Replace `AppName`,
    the destination list, and — if you don't have Clerk/`CurrentUserStore` — the
@@ -1866,13 +2082,19 @@ card, not a dialog — an inline panel that opens above the list.
   background: var(--mat-sys-surface-container-low);
 }
 ```
-Fields are `mat-form-field appearance="outline" subscriptSizing="dynamic"`; native
-selects use `matNativeControl`. Actions right-aligned: text **Cancel**, filled
+Fields are `ngx-forms` field components, or a whole `DynamicForm` (see "Shared
+libraries"). They already render `mat-form-field appearance="outline"
+subscriptSizing="dynamic"`. Actions right-aligned: text **Cancel**, filled
 **Save**.
 
 **Empty state.** `@include ui.empty-state;` with a 48px primary icon, a
 `title-large` heading and one `body-medium` line saying what to do next. Keep the
 class name your spec looks for (`.TodosList-empty`).
+
+**Loading state.** A skeleton shaped like the content arriving, from `ngx-media`:
+`ContentLoader` for a text block, and `CardLoader` repeated for a list of cards.
+The region being filled carries `aria-busy="true"`. Never bare "Loading…" text,
+and no spinner for content.
 
 **Error / notice banner.**
 ```scss
@@ -1917,7 +2139,9 @@ text, `display: grid; grid-template-columns: auto 1fr`); from `sm`: a tall colum
 tile. Unavailable destinations render the same shape without the link and with
 the error colour.
 
-**Chat / composer.** Bubbles: the user's in `primary-container` (right), the
+**Chat / composer.** A realtime room is `ChatRoom` from `ngx-web-sockets`, which
+implements this recipe; build by hand only a thread that isn't socket-based.
+Bubbles: the user's in `primary-container` (right), the
 other party's in `surface-container-high` (left); large corners with one
 `extra-small` corner on the speaker's side. Composer: outlined field + a filled
 icon button (`ui.filled-icon-button`, `aria-label="Send message"`), pinned at the
@@ -1931,7 +2155,8 @@ padding 16 (20/24 from `sm`). Top to bottom: a **byline** (40px avatar, author i
 `title-small`, then context and a relative time in `body-small`), the **title** in
 `title-large` (an `h2`), the **description** in `body-medium`
 `on-surface-variant` clamped to three lines, **media** full-width at 16:9
-(`object-fit: cover`, `corner-medium`), then a row of text-button **actions**.
+(`object-fit: cover`, `corner-medium`; video via `ngx-media`'s `YoutubePlayer`),
+then a row of text-button **actions**.
 The whole card opens the item: the title link carries a stretched `::after`
 (`position: absolute; inset: 0`), the card tints on
 `:has(.X-title:hover)` and shows the focus ring on `:has(.X-title:focus-visible)`,
@@ -1939,12 +2164,15 @@ and everything else interactive inside (links in the byline, the action row's
 buttons, media players, credit links) is `position: relative; z-index: 1` so it
 stays its own target. Don't nest interactive elements inside the title link.
 The detail page uses the same surface for the item itself, with its discussion
-below it. Times read relative (`relativeTime` pipe: "5 hours ago", "yesterday",
-then "Sep 12") inside `<time datetime>` with the full timestamp in `title`.
+below it. Times read relative (`relativeTime` pipe, see "Dates and times": "5
+hours ago", "yesterday", then "Sep 12") inside `<time datetime>` with the full
+timestamp in `title`.
 A toggle button with `aria-pressed` keeps a stable name ("Like (12)"), never
 one that flips between Like and Unlike.
 
-**Insights / charts** (the admin engagement page is the reference). Decide the
+**Insights / charts.** Charts are `ngx-graphs` components. The styling rules
+below are what that library applies by default, so an app supplies data, not
+chart options. Decide the
 form before the colour: a handful of headline numbers is a **KPI row** of stat
 tiles (label, value in `headline-medium`, a delta "vs previous N days" with a
 `trending_up/down/flat` icon — direction is never colour alone); change over time
@@ -1960,8 +2188,8 @@ arrow keys show a tooltip (value first, date second) and it has an `aria-label`
 summary; every number is also in a table view (`<details>` "Daily numbers").
 Filters (a period segmented button) sit in one row above everything they scope;
 switching keeps the previous numbers on screen dimmed until the new ones arrive
-(`linkedSignal` over the resource). Lay out in real pixels (measure the width
-with a `ResizeObserver`, guarded for tests/SSR) so text and corners stay crisp.
+(`linkedSignal` over the resource). Give each graph's host a fixed height; the
+chart sizes itself to the width.
 
 **Expandable detail** (`<details>`): a 32px `label-large` summary with a chevron
 icon that rotates 180° when open; the revealed block on `surface-container`,
@@ -2010,7 +2238,9 @@ else competes with it.
   "Loading…" instead of showing its error. Read through a guard —
   `data = computed(() => (res.hasValue() ? res.value() : undefined))` — and derive
   everything else from `data()`. Test it: flush a 500 and assert the store reads
-  empty with an error message.
+  empty with an error message. `ngx-api-client`'s `resource()` /
+  `collectionResource()` already do this; the guard is only needed on a raw
+  `httpResource`.
 - **Put `position: sticky` on the component's host, not an element inside it.**
   A sticky element only stays put within its parent's box; a sticky `<header>`
   inside an `<app-nav-bar>` host of the same height scrolls away with the page.
@@ -2046,7 +2276,12 @@ Review checklist:
 - [ ] Lists are grouped surfaces with hairlines; rows ≥ 56px; touch targets ≥ 48px.
 - [ ] `h1` present once; landmarks and labels correct; icon-only buttons labelled.
 - [ ] Visible focus on custom interactive elements (`ui.focus-ring` / `ui.state-layer`).
-- [ ] Error `role="alert"`, results `role="status"`; empty and loading states written.
+- [ ] Error `role="alert"`, results `role="status"`; empty state written; loading state
+      is an `ngx-media` skeleton, not "Loading…" text.
+- [ ] Nothing re-implements a shared library (API client, form fields, loaders, charts,
+      AI surfaces, sockets); no `--ngx-*` variable set to a hex value.
+- [ ] Dates: string models in the right kind (business date / time / instant), `Temporal`
+      for any arithmetic, no `Date` maths.
 - [ ] Mobile-first (`bp.up`), no horizontal scroll at 390px, content capped on wide screens —
       check at 1920px and 2560px too, not just 1280px.
 - [ ] Motion only in response to the user or a route change; reduced motion respected.
@@ -2190,10 +2425,6 @@ per app.
   `@use 'ui';` then `@include ui.page-title;` on the component's own class.
 - `theme-colors` — the generated M3 tonal palettes, `@use`d only by
   `styles.scss`.
-- A `forms` partial (Material `mat-form-field` layout helpers —
-  `forms.field-grid`, `forms.field-columns($n, $stack-below)`,
-  `forms.full-row`, `forms.actions`) is part of the portable template
-  this section is copied from, but only apply it in an app that actually
-  uses Angular Material forms. This app hand-rolls its own form markup
-  (see e.g. `doctor-form.scss`), so it isn't ported here — don't add it
-  speculatively.
+- No `forms` partial: form field layout and styling come from
+  `ngx-forms` (see "Shared libraries"). Don't add a local
+  `mat-form-field` layout partial.

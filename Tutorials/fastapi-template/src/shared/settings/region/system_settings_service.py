@@ -4,7 +4,7 @@ from typing import Type
 from core.common.api_response import API_PREFIX
 from core.common.base_dto import Link, FieldMetadata, EmbeddedRef
 from shared.settings.region.constants import LINK_SELF, LINK_UPDATE_SETTINGS, SYSTEM_SETTINGS_DATA_NAME
-from shared.settings.region.enums import SupportedTimeZones, SupportedLanguages, SupportedCurrencies, SupportedThemes
+from shared.settings.region.enums import SupportedTimeZones, SupportedLanguages, SupportedLocales, SupportedCurrencies, SupportedThemes
 from shared.settings.region.models import RegionSettingModel
 from shared.settings.region.region_settings_repository import RegionSettingsRepository
 from shared.settings.region.schemas import SystemSettingsDTO, SystemSettingsMetadata, SystemSettingsResponse, \
@@ -37,6 +37,7 @@ class SystemSettingsService:
         model = await self.region_repository.update_system_settings(
             timezone=request.timezone.value,
             language=request.language.value,
+            locale=request.locale.value,
             currency=request.currency.value,
             theme=request.theme.value,
         )
@@ -56,6 +57,7 @@ class SystemSettingsService:
             id=FieldMetadata(readOnly=True, hidden=True),
             timezone=self._choice_field(SupportedTimeZones),
             language=self._choice_field(SupportedLanguages),
+            locale=self._choice_field(SupportedLocales),
             currency=self._choice_field(SupportedCurrencies),
             theme=self._choice_field(SupportedThemes),
         )

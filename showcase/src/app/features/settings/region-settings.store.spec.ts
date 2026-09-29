@@ -27,6 +27,7 @@ const USER_SETTINGS_ENVELOPE = {
       owner_type: 'SYSTEM',
       timezone: 'Europe/London',
       language: 'en-GB',
+      locale: 'en-GB',
       currency: 'GBP',
       theme: 'light',
       links: { updateSettings: { href: '/api/users/u1/settings', method: 'PUT' } },

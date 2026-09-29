@@ -416,7 +416,7 @@ above) except `/api/health`, `/docs`, and `/openapi.json`.
 | PUT | `/api/users/{id}` | Update a user, including their roles (admin only; `400` for removing your own `ADMIN`) |
 | DELETE | `/api/users/{id}` | Delete a user (admin only; `400` for yourself). Returns `204 No Content` |
 | GET | `/api/users/{id}/profile` | **Where links live.** `/me` only returns the `userProfile` link; this returns the user (`id`, `externalId`, `name`, `email`, `roleIds`) plus every link the UI follows, built from the `{id}` in the path and the caller: personal links (todos, chats, assistant, `userSettings`) only on your own profile, admin links (`userTemplate`, `systemSettings`, `admin`) only for admins |
-| GET / PUT / DELETE | `/api/users/{id}/settings` | Your region settings (timezone, language, currency, theme); the system defaults until you save your own. `DELETE` goes back to the defaults. Owner only, `403` for anyone else |
+| GET / PUT / DELETE | `/api/users/{id}/settings` | Your region settings (timezone, language, locale, currency, theme); the system defaults until you save your own. `DELETE` goes back to the defaults. Owner only, `403` for anyone else |
 | GET / PUT | `/api/admin/settings` | The system default region settings (admin only) |
 | GET | `/api/users/{user_id}/chats` | List the current user's chats (title + timestamps, no messages) |
 | POST | `/api/users/{user_id}/chats` | Create a new chat; body `{"provider": "cloudflare"}` or `"groq"` (default `cloudflare`). Title is "New chat" until the first message |

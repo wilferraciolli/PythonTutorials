@@ -20,6 +20,7 @@ export interface RegionSettings {
   owner_type?: 'SYSTEM' | 'USER';
   timezone: string;
   language: string;
+  locale: string;
   currency: string;
   theme: string;
   links: Record<string, ILink>;
@@ -27,7 +28,7 @@ export interface RegionSettings {
 
 export type RegionSettingsPayload = Pick<
   RegionSettings,
-  'timezone' | 'language' | 'currency' | 'theme'
+  'timezone' | 'language' | 'locale' | 'currency' | 'theme'
 >;
 
 export type RegionSettingsOptions = Record<keyof RegionSettingsPayload, ValueViewValue[]>;
@@ -35,6 +36,7 @@ export type RegionSettingsOptions = Record<keyof RegionSettingsPayload, ValueVie
 const EMPTY_OPTIONS: RegionSettingsOptions = {
   timezone: [],
   language: [],
+  locale: [],
   currency: [],
   theme: [],
 };
@@ -83,6 +85,7 @@ export abstract class RegionSettingsStore {
     return {
       timezone: resolve('timezone'),
       language: resolve('language'),
+      locale: resolve('locale'),
       currency: resolve('currency'),
       theme: resolve('theme'),
     };
