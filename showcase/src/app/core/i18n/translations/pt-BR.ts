@@ -82,10 +82,10 @@ export const ptBR: Translation = {
         'pt-BR': 'Português (Brasil)',
       },
       locale: {
-        'en-GB': 'Inglês (Reino Unido)',
-        'en-US': 'Inglês (Estados Unidos)',
-        'el-CY': 'Grego (Chipre)',
-        'pt-BR': 'Português (Brasil)',
+        'en-GB': 'Reino Unido',
+        'en-US': 'Estados Unidos',
+        'el-CY': 'Chipre',
+        'pt-BR': 'Brasil',
       },
       theme: {
         light: 'Claro',

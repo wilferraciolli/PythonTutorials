@@ -75,8 +75,10 @@ export const enGB = {
       currency: 'Currency',
       theme: 'Theme',
     },
-    // Labels for the values the API offers. A value with no label here is
-    // shown as the raw value, so a new option never breaks the form.
+    // Labels for the values the API offers. `language` names a language;
+    // `locale` names only the country, since it drives formatting. A value
+    // with no label here is shown as the raw value, so a new option never
+    // breaks the form.
     options: {
       language: {
         'en-GB': 'English (United Kingdom)',
@@ -85,10 +87,10 @@ export const enGB = {
         'pt-BR': 'Portuguese (Brazil)',
       },
       locale: {
-        'en-GB': 'English (United Kingdom)',
-        'en-US': 'English (United States)',
-        'el-CY': 'Greek (Cyprus)',
-        'pt-BR': 'Portuguese (Brazil)',
+        'en-GB': 'United Kingdom',
+        'en-US': 'United States',
+        'el-CY': 'Cyprus',
+        'pt-BR': 'Brazil',
       },
       theme: {
         light: 'Light',
