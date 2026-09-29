@@ -34,6 +34,9 @@ export type RegionSettingsPayload = Pick<
 
 export type RegionSettingsOptions = Record<keyof RegionSettingsPayload, ValueViewValue[]>;
 
+// Fields whose option values have a label in the translations.
+const LABELLED_FIELDS: (keyof RegionSettingsPayload)[] = ['language', 'locale', 'theme'];
+
 const EMPTY_OPTIONS: RegionSettingsOptions = {
   timezone: [],
   language: [],
@@ -83,13 +86,16 @@ export abstract class RegionSettingsStore {
   readonly options = computed<RegionSettingsOptions>(() => {
     const metadata = this.resource.value()?._metadata;
     if (!metadata) return EMPTY_OPTIONS;
-    // Labels for the fields that have them (language, locale, theme); the
-    // rest (timezone, currency) show the API's own value.
-    const resolve = (field: keyof RegionSettingsPayload) =>
-      this.metadata.resolveMetadataIdValues(metadata[field]?.values ?? []).map((option) => ({
+    // Only these fields have translated labels; timezone and currency show
+    // the API's own value (IANA / ISO codes), with no translation lookup.
+    const resolve = (field: keyof RegionSettingsPayload) => {
+      const options = this.metadata.resolveMetadataIdValues(metadata[field]?.values ?? []);
+      if (!LABELLED_FIELDS.includes(field)) return options;
+      return options.map((option) => ({
         ...option,
         viewValue: this.i18n.optionLabel(`settings.options.${field}`, option.value),
       }));
+    };
     return {
       timezone: resolve('timezone'),
       language: resolve('language'),
