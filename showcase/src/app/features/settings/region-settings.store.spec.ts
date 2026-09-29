@@ -71,9 +71,10 @@ describe('RegionSettingsStore', () => {
     await Promise.resolve();
 
     expect(store.settings()?.timezone).toBe('Europe/London');
+    // Labels are translated; the values stay the API's own.
     expect(store.options().theme).toEqual([
-      { value: 'light', viewValue: 'light' },
-      { value: 'dark', viewValue: 'dark' },
+      { value: 'light', viewValue: 'Light' },
+      { value: 'dark', viewValue: 'Dark' },
     ]);
     expect(store.notAvailable()).toBe(false);
   });

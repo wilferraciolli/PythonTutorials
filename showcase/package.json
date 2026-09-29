@@ -21,6 +21,7 @@
     "@angular/platform-browser": "^22.1.0",
     "@angular/router": "^22.1.0",
     "@clerk/clerk-js": "^6.31.1",
+    "@jsverse/transloco": "^8.4.0",
     "@ngrx/signals": "^22.0.1",
     "@wiliamferraciolli/ngx-api-client": "^0.1.5",
     "marked": "^18.0.14",

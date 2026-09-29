@@ -1,16 +1,16 @@
 <div class="TodosList App-page">
   <div class="TodosList-header">
-    <h1 class="TodosList-title">My todos</h1>
+    <h1 class="TodosList-title">{{ 'todos.list.title' | transloco }}</h1>
     <a matButton="filled" routerLink="/todos/new">
       <mat-icon aria-hidden="true">add</mat-icon>
-      New todo
+      {{ 'todos.list.new' | transloco }}
     </a>
   </div>
 
   <mat-form-field class="TodosList-filter" appearance="outline" subscriptSizing="dynamic">
-    <mat-label>State</mat-label>
+    <mat-label>{{ 'todos.list.state' | transloco }}</mat-label>
     <select matNativeControl (change)="setStateFilter($any($event.target).value)">
-      <option value="">All</option>
+      <option value="">{{ 'todos.list.all' | transloco }}</option>
       @for (option of store.stateOptions(); track option.value) {
         <option [value]="option.value">{{ option.viewValue }}</option>
       }
@@ -20,26 +20,26 @@
   @if (store.loadErrorMessage(); as errorMessage) {
     <p class="TodosList-error">{{ errorMessage }}</p>
   } @else if (store.isLoading() && store.todos().length === 0) {
-    <p class="TodosList-loading">Loading…</p>
+    <p class="TodosList-loading">{{ 'common.loading' | transloco }}</p>
   } @else if (store.todos().length === 0) {
-    <p class="TodosList-empty">No todos yet — create your first one above.</p>
+    <p class="TodosList-empty">{{ 'todos.list.empty' | transloco }}</p>
   } @else {
     <table mat-table [dataSource]="store.todos()" class="TodosList-table">
       <ng-container matColumnDef="title">
-        <th mat-header-cell *matHeaderCellDef>Title</th>
+        <th mat-header-cell *matHeaderCellDef>{{ 'todos.list.columns.title' | transloco }}</th>
         <td mat-cell *matCellDef="let todo">{{ todo.title }}</td>
       </ng-container>
 
       <ng-container matColumnDef="state">
-        <th mat-header-cell *matHeaderCellDef>State</th>
+        <th mat-header-cell *matHeaderCellDef>{{ 'todos.list.columns.state' | transloco }}</th>
         <td mat-cell *matCellDef="let todo">
-          <mat-chip [class.TodosList-chip-closed]="todo.state === 'CLOSED'">{{ todo.state }}</mat-chip>
+          <mat-chip [class.TodosList-chip-closed]="todo.state === 'CLOSED'">{{ 'todos.states.' + todo.state | transloco }}</mat-chip>
         </td>
       </ng-container>
 
       <ng-container matColumnDef="complete_by">
-        <th mat-header-cell *matHeaderCellDef>Due</th>
-        <td mat-cell *matCellDef="let todo">{{ todo.complete_by | date: 'medium' }}</td>
+        <th mat-header-cell *matHeaderCellDef>{{ 'todos.list.columns.due' | transloco }}</th>
+        <td mat-cell *matCellDef="let todo">{{ todo.complete_by | date: 'medium' : undefined : preferences.locale() }}</td>
       </ng-container>
 
       <ng-container matColumnDef="actions">
@@ -49,20 +49,20 @@
             <button
               matIconButton
               type="button"
-              [attr.aria-label]="todo.state === 'CLOSED' ? 'Reopen' : 'Mark complete'"
-              [title]="todo.state === 'CLOSED' ? 'Reopen' : 'Mark complete'"
+              [attr.aria-label]="(todo.state === 'CLOSED' ? 'todos.list.reopen' : 'todos.list.complete') | transloco"
+              [title]="(todo.state === 'CLOSED' ? 'todos.list.reopen' : 'todos.list.complete') | transloco"
               (click)="toggleClosed(todo)"
             >
               <mat-icon aria-hidden="true">{{ todo.state === 'CLOSED' ? 'replay' : 'check_circle' }}</mat-icon>
             </button>
           }
           @if (links.hasLink(todo.links['update'])) {
-            <a matIconButton [routerLink]="['/todos', todo.id, 'edit']" aria-label="Edit" title="Edit">
+            <a matIconButton [routerLink]="['/todos', todo.id, 'edit']" [attr.aria-label]="'todos.list.edit' | transloco" [title]="'todos.list.edit' | transloco">
               <mat-icon aria-hidden="true">edit</mat-icon>
             </a>
           }
           @if (links.hasLink(todo.links['delete'])) {
-            <button matIconButton type="button" aria-label="Delete" title="Delete" (click)="deleteTodo(todo)">
+            <button matIconButton type="button" [attr.aria-label]="'todos.list.delete' | transloco" [title]="'todos.list.delete' | transloco" (click)="deleteTodo(todo)">
               <mat-icon aria-hidden="true">delete</mat-icon>
             </button>
           }

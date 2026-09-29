@@ -8,7 +8,8 @@ import {
   ValueViewValue,
 } from '@wiliamferraciolli/ngx-api-client';
 
-import { describeApiError } from '../../core/api/api-error';
+import { ApiErrors } from '../../core/api/api-error';
+import { TranslationService } from '../../core/i18n/translation.service';
 import { CurrentUserStore } from '../../core/user/current-user.store';
 
 // Region settings — the same shape for a user's own settings
@@ -49,6 +50,8 @@ const EMPTY_OPTIONS: RegionSettingsOptions = {
 export abstract class RegionSettingsStore {
   private readonly api = inject(ApiClientService);
   private readonly metadata = inject(MetadataService);
+  private readonly apiErrors = inject(ApiErrors);
+  private readonly i18n = inject(TranslationService);
   protected readonly currentUser = inject(CurrentUserStore);
 
   /** The `_data` key the API wraps the settings in. */
@@ -66,7 +69,7 @@ export abstract class RegionSettingsStore {
   readonly isLoading = computed(() => this.currentUser.loading() || this.resource.isLoading());
   readonly errorMessage = computed(() => {
     const error = this.resource.error();
-    return error ? describeApiError(error, "Couldn't load the settings.") : null;
+    return error ? this.apiErrors.describe(error, 'settings.loadFailed') : null;
   });
 
   // The profile has loaded and handed out no link: this caller may not use
@@ -80,8 +83,13 @@ export abstract class RegionSettingsStore {
   readonly options = computed<RegionSettingsOptions>(() => {
     const metadata = this.resource.value()?._metadata;
     if (!metadata) return EMPTY_OPTIONS;
+    // Labels for the fields that have them (language, locale, theme); the
+    // rest (timezone, currency) show the API's own value.
     const resolve = (field: keyof RegionSettingsPayload) =>
-      this.metadata.resolveMetadataIdValues(metadata[field]?.values ?? []);
+      this.metadata.resolveMetadataIdValues(metadata[field]?.values ?? []).map((option) => ({
+        ...option,
+        viewValue: this.i18n.optionLabel(`settings.options.${field}`, option.value),
+      }));
     return {
       timezone: resolve('timezone'),
       language: resolve('language'),
@@ -94,7 +102,7 @@ export abstract class RegionSettingsStore {
   async save(payload: RegionSettingsPayload): Promise<void> {
     const url = this.api.requireLink(
       this.settings()?.links['updateSettings'],
-      'Not permitted to change these settings.',
+      this.i18n.t('settings.notPermittedChange'),
     );
     await this.api.put<string, RegionSettings, RegionSettingsPayload>(this.root, url, payload);
     this.resource.reload();
@@ -103,7 +111,7 @@ export abstract class RegionSettingsStore {
   async reset(): Promise<void> {
     const url = this.api.requireLink(
       this.settings()?.links['resetSettings'],
-      'These settings cannot be reset.',
+      this.i18n.t('settings.cannotReset'),
     );
     await this.api.delete(url);
     this.resource.reload();

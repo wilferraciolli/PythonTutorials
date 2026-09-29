@@ -6,12 +6,13 @@ import { RouterLink } from '@angular/router';
 
 import { AuthStore } from '../../core/auth/auth.store';
 import { CurrentUserStore } from '../../core/user/current-user.store';
+import { TranslocoPipe } from '@jsverse/transloco';
 
 // Only mounted by NavBar once `auth.isSignedIn()` is true — this component
 // doesn't need its own signed-out branch.
 @Component({
   selector: 'app-profile-menu',
-  imports: [RouterLink, MatButtonModule, MatIconModule, MatMenuModule],
+  imports: [RouterLink, MatButtonModule, MatIconModule, MatMenuModule, TranslocoPipe],
   templateUrl: './profile-menu.html',
   styleUrl: './profile-menu.scss',
 })

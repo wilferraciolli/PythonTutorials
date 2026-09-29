@@ -6,9 +6,11 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { Router, RouterLink } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { ApiClientService, LinkService } from '@wiliamferraciolli/ngx-api-client';
 
-import { describeApiError } from '../../../core/api/api-error';
+import { ApiErrors } from '../../../core/api/api-error';
+import { TranslationService } from '../../../core/i18n/translation.service';
 import { Tag } from '../../../core/api/tags-api';
 import { TodoPayload, TodosStore } from '../todos.store';
 
@@ -50,6 +52,7 @@ function fromDatetimeLocalValue(value: string): string {
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
+    TranslocoPipe,
   ],
   templateUrl: './todo-form.html',
   styleUrl: './todo-form.scss',
@@ -63,6 +66,8 @@ export class TodoForm {
   protected readonly links = inject(LinkService);
   private readonly api = inject(ApiClientService);
   private readonly router = inject(Router);
+  private readonly apiErrors = inject(ApiErrors);
+  private readonly i18n = inject(TranslationService);
 
   protected readonly isEditMode = computed(() => this.id() !== undefined);
 
@@ -146,7 +151,7 @@ export class TodoForm {
 
     this.tagError.set(null);
     try {
-      const url = this.api.requireLink(todo.links['addTag'], `Not permitted to tag todo ${todo.id}`);
+      const url = this.api.requireLink(todo.links['addTag'], this.i18n.t('todos.notPermittedUpdate', { id: todo.id }));
       await this.api.post<'tag', Tag, { resource_id: string; tag: string }>('tag', url, {
         resource_id: todo.id,
         tag: tagText,
@@ -161,7 +166,7 @@ export class TodoForm {
   protected async removeTag(tag: Tag): Promise<void> {
     this.tagError.set(null);
     try {
-      const url = this.api.requireLink(tag.links['delete'], `Not permitted to delete tag ${tag.id}`);
+      const url = this.api.requireLink(tag.links['delete'], this.i18n.t('tags.notPermittedDelete', { id: tag.id }));
       await this.api.delete(url);
       this.tagsResource.reload();
     } catch (err) {
@@ -180,7 +185,7 @@ export class TodoForm {
 
     if (this.isEditMode()) {
       const existing = this.existing();
-      if (!existing) throw new Error('Todo is still loading — try again.');
+      if (!existing) throw new Error(this.i18n.t('todos.form.stillLoading'));
       await this.store.updateTodo(existing, payload);
     } else {
       await this.store.createTodo(payload);
@@ -189,6 +194,6 @@ export class TodoForm {
   }
 
   private extractErrorMessage(err: unknown): string {
-    return describeApiError(err, 'Failed to save.');
+    return this.apiErrors.describe(err, 'todos.form.saveFailed');
   }
 }

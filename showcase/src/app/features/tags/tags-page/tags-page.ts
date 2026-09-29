@@ -7,11 +7,14 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { LinkService } from '@wiliamferraciolli/ngx-api-client';
 import { firstValueFrom } from 'rxjs';
 
 import { ConfirmDialog } from '../../../shared/confirm-dialog/confirm-dialog';
-import { describeApiError } from '../../../core/api/api-error';
+import { ApiErrors } from '../../../core/api/api-error';
+import { I18nService } from '../../../core/i18n/i18n.service';
+import { TranslationService } from '../../../core/i18n/translation.service';
 import { Tag } from '../../../core/api/tags-api';
 import { TagsStore } from '../tags.store';
 
@@ -61,6 +64,7 @@ function tagColor(tag: string): string {
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
+    TranslocoPipe,
   ],
   templateUrl: './tags-page.html',
   styleUrl: './tags-page.scss',
@@ -69,6 +73,10 @@ export class TagsPage {
   protected readonly store = inject(TagsStore);
   protected readonly links = inject(LinkService);
   private readonly dialog = inject(MatDialog);
+  private readonly apiErrors = inject(ApiErrors);
+  private readonly i18n = inject(TranslationService);
+  // Dates follow the user's locale setting.
+  protected readonly preferences = inject(I18nService);
 
   protected readonly newTagModel = signal<NewTagFormModel>(INITIAL_NEW_TAG);
   protected readonly createError = signal<string | null>(null);
@@ -113,9 +121,10 @@ export class TagsPage {
       this.dialog
         .open(ConfirmDialog, {
           data: {
-            title: 'Delete tag',
-            message: `Delete "${tag.tag}"? This can't be undone.`,
-            confirmLabel: 'Delete',
+            title: this.i18n.t('tags.deleteDialog.title'),
+            message: this.i18n.t('tags.deleteDialog.message', { name: tag.tag }),
+            confirmLabel: this.i18n.t('common.delete'),
+            cancelLabel: this.i18n.t('common.cancel'),
             tone: 'danger',
           },
         })
@@ -128,6 +137,6 @@ export class TagsPage {
   }
 
   private extractErrorMessage(err: unknown): string {
-    return describeApiError(err, 'Failed to create tag.');
+    return this.apiErrors.describe(err, 'tags.createFailed');
   }
 }

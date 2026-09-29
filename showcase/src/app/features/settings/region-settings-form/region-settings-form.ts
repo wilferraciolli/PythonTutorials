@@ -5,6 +5,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 
 import { RegionSettingsOptions, RegionSettingsPayload } from '../region-settings.store';
+import { TranslocoPipe } from '@jsverse/transloco';
 
 function toPayload(settings: RegionSettingsPayload): RegionSettingsPayload {
   const { timezone, language, locale, currency, theme } = settings;
@@ -15,7 +16,7 @@ function toPayload(settings: RegionSettingsPayload): RegionSettingsPayload {
 // own settings and the system settings. The page owns loading and saving.
 @Component({
   selector: 'app-region-settings-form',
-  imports: [FormField, FormRoot, MatButtonModule, MatFormFieldModule, MatInputModule],
+  imports: [FormField, FormRoot, MatButtonModule, MatFormFieldModule, MatInputModule, TranslocoPipe],
   templateUrl: './region-settings-form.html',
   styleUrl: './region-settings-form.scss',
 })

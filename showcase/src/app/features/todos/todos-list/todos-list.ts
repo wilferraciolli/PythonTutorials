@@ -8,9 +8,12 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatTableModule } from '@angular/material/table';
 import { RouterLink } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { LinkService } from '@wiliamferraciolli/ngx-api-client';
 import { firstValueFrom } from 'rxjs';
 
+import { I18nService } from '../../../core/i18n/i18n.service';
+import { TranslationService } from '../../../core/i18n/translation.service';
 import { ConfirmDialog } from '../../../shared/confirm-dialog/confirm-dialog';
 import { Todo, TodoState, TodosStore } from '../todos.store';
 
@@ -26,6 +29,7 @@ import { Todo, TodoState, TodosStore } from '../todos.store';
     MatIconModule,
     MatInputModule,
     MatTableModule,
+    TranslocoPipe,
   ],
   templateUrl: './todos-list.html',
   styleUrl: './todos-list.scss',
@@ -34,6 +38,9 @@ export class TodosList {
   protected readonly store = inject(TodosStore);
   protected readonly links = inject(LinkService);
   private readonly dialog = inject(MatDialog);
+  private readonly i18n = inject(TranslationService);
+  // Dates follow the user's locale setting.
+  protected readonly preferences = inject(I18nService);
 
   protected readonly displayedColumns = ['title', 'state', 'complete_by', 'actions'];
 
@@ -63,9 +70,10 @@ export class TodosList {
       this.dialog
         .open(ConfirmDialog, {
           data: {
-            title: 'Delete todo',
-            message: `Delete "${todo.title}"? This can't be undone.`,
-            confirmLabel: 'Delete',
+            title: this.i18n.t('todos.list.deleteDialog.title'),
+            message: this.i18n.t('todos.list.deleteDialog.message', { name: todo.title }),
+            confirmLabel: this.i18n.t('common.delete'),
+            cancelLabel: this.i18n.t('common.cancel'),
             tone: 'danger',
           },
         })

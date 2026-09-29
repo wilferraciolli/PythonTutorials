@@ -1,40 +1,43 @@
 <div class="TagsPage App-page">
   <div class="TagsPage-header">
-    <h1 class="TagsPage-title">Tags</h1>
+    <h1 class="TagsPage-title">{{ 'tags.title' | transloco }}</h1>
     @if (!store.isLoading()) {
-      <span class="TagsPage-count">{{ store.tags().length }} tag{{ store.tags().length === 1 ? '' : 's' }}</span>
+      <span class="TagsPage-count">{{
+        (store.tags().length === 1 ? 'tags.countOne' : 'tags.countOther')
+          | transloco: { count: store.tags().length }
+      }}</span>
     }
   </div>
 
   <div class="TagsPage-toolbar">
     <form [formRoot]="newTagForm" class="TagsPage-compose">
       <mat-form-field appearance="outline" subscriptSizing="dynamic">
-        <mat-label>Tag</mat-label>
-        <input matInput [formField]="newTagForm.tag" placeholder="urgent" />
+        <mat-label>{{ 'tags.tag' | transloco }}</mat-label>
+        <input matInput [formField]="newTagForm.tag" [placeholder]="'tags.tagPlaceholder' | transloco" />
         @if (newTagForm.tag().touched() && newTagForm.tag().invalid()) {
-          <mat-error>Required</mat-error>
+          <mat-error>{{ 'common.required' | transloco }}</mat-error>
         }
       </mat-form-field>
 
       <mat-form-field appearance="outline" subscriptSizing="dynamic">
-        <mat-label>Resource ID</mat-label>
-        <input matInput [formField]="newTagForm.resource_id" placeholder="item to tag" />
+        <mat-label>{{ 'tags.resourceId' | transloco }}</mat-label>
+        <input matInput [formField]="newTagForm.resource_id" [placeholder]="'tags.resourcePlaceholder' | transloco" />
         @if (newTagForm.resource_id().touched() && newTagForm.resource_id().invalid()) {
-          <mat-error>Required</mat-error>
+          <mat-error>{{ 'common.required' | transloco }}</mat-error>
         }
       </mat-form-field>
 
       <button matButton="filled" type="submit" [disabled]="creating()">
         <mat-icon aria-hidden="true">add</mat-icon>
-        {{ creating() ? 'Adding…' : 'Add tag' }}
+        {{ (creating() ? 'tags.adding' : 'tags.add') | transloco }}
       </button>
     </form>
 
     <mat-form-field class="TagsPage-search" appearance="outline" subscriptSizing="dynamic">
-      <mat-label>Search</mat-label>
+      <mat-label>{{ 'tags.search' | transloco }}</mat-label>
       <input matInput [value]="store.search()" (input)="setSearch($any($event.target).value)" />
       <mat-icon matPrefix aria-hidden="true">search</mat-icon>
-      <mat-hint>Tag or resource name</mat-hint>
+      <mat-hint>{{ 'tags.searchHint' | transloco }}</mat-hint>
     </mat-form-field>
   </div>
 
@@ -47,11 +50,11 @@
   @if (store.loadErrorMessage(); as errorMessage) {
     <p class="TagsPage-error">{{ errorMessage }}</p>
   } @else if (store.isLoading() && store.tags().length === 0) {
-    <p class="TagsPage-loading">Loading…</p>
+    <p class="TagsPage-loading">{{ 'common.loading' | transloco }}</p>
   } @else if (store.tags().length === 0) {
     <div class="TagsPage-empty">
       <mat-icon aria-hidden="true">sell</mat-icon>
-      <p>{{ store.search() ? 'No tags match your search.' : 'No tags yet — add one above.' }}</p>
+      <p>{{ (store.search() ? 'tags.emptySearch' : 'tags.empty') | transloco }}</p>
     </div>
   } @else {
     <ul class="TagsPage-list">
@@ -62,7 +65,7 @@
               <span matChipAvatar class="TagsPage-dot" [style.background]="tagColor(tag.tag)"></span>
               {{ tag.tag }}
               @if (canDelete(tag)) {
-                <button matChipRemove aria-label="Delete tag">
+                <button matChipRemove [attr.aria-label]="'tags.deleteAria' | transloco">
                   <mat-icon aria-hidden="true">close</mat-icon>
                 </button>
               }
@@ -74,7 +77,7 @@
             [class.TagsPage-resource--unresolved]="!tag.resource"
             [title]="tag.resource_id"
           >{{ tag.resource?.value ?? tag.resource_id }}</span>
-          <span class="TagsPage-date">{{ tag.created_date | date: 'mediumDate' }}</span>
+          <span class="TagsPage-date">{{ tag.created_date | date: 'mediumDate' : undefined : preferences.locale() }}</span>
         </li>
       }
     </ul>

@@ -2,7 +2,7 @@ import { Injectable, computed, inject } from '@angular/core';
 import { ApiClientService, ILink } from '@wiliamferraciolli/ngx-api-client';
 
 import { AuthStore } from '../auth/auth.store';
-import { describeApiError } from '../api/api-error';
+import { ApiErrors } from '../api/api-error';
 import { environment } from '../../../environments/environment';
 
 export interface Me {
@@ -36,6 +36,7 @@ export interface UserProfile {
 export class CurrentUserStore {
   private readonly api = inject(ApiClientService);
   private readonly auth = inject(AuthStore);
+  private readonly apiErrors = inject(ApiErrors);
 
   private readonly meResource = this.api.resource<'me', Me>('me', () =>
     this.auth.isSignedIn() ? `${environment.apiUrl}/api/me` : undefined,
@@ -58,7 +59,7 @@ export class CurrentUserStore {
   // just see a permanent "Loading…" with no indication the API is down.
   readonly errorMessage = computed(() => {
     const error = this.meResource.error() ?? this.profileResource.error();
-    return error ? describeApiError(error, "Couldn't load your account.") : null;
+    return error ? this.apiErrors.describe(error, 'errors.loadAccount') : null;
   });
 
   readonly isAdmin = computed(() => this.me()?.roleIds?.includes('ADMIN') ?? false);

@@ -6,7 +6,9 @@ import { ILink } from '@wiliamferraciolli/ngx-api-client';
 import { RouterLink } from '@angular/router';
 
 import { AuthStore } from '../../core/auth/auth.store';
+import { TranslationService } from '../../core/i18n/translation.service';
 import { CurrentUserStore } from '../../core/user/current-user.store';
+import { TranslocoPipe } from '@jsverse/transloco';
 
 // Index of the tutorial projects this showcase app hosts (todos,
 // workers-ai, ...). Always shows every card — no sign-in gate here; each
@@ -15,20 +17,21 @@ import { CurrentUserStore } from '../../core/user/current-user.store';
 // is the only place that flow lives now.
 @Component({
   selector: 'app-home',
-  imports: [RouterLink, MatButtonModule, MatCardModule, MatIconModule],
+  imports: [RouterLink, MatButtonModule, MatCardModule, MatIconModule, TranslocoPipe],
   templateUrl: './home.html',
   styleUrl: './home.scss',
 })
 export class Home {
   protected readonly auth = inject(AuthStore);
   protected readonly currentUser = inject(CurrentUserStore);
+  private readonly i18n = inject(TranslationService);
 
   protected readonly todosError = computed(() => this.missingLink(this.currentUser.myTodosLink()));
 
   // Each Python project advertises its own chats link on the user profile (see
   // user_profile_service.py in fastapi-cloudflare-ai / fastapi-groq-ai / fastapi-ai).
   // Only one runs locally at a time, so a card whose link isn't there
-  // means "that project isn't the one answering" — same 'Not found' as todos.
+  // means "that project isn't the one answering" — same "not found" as todos.
   protected readonly cloudflareAiError = computed(() =>
     this.missingLink(this.currentUser.link('cloudflareChats')),
   );
@@ -38,8 +41,8 @@ export class Home {
 
   private missingLink(link: ILink | undefined): string | null {
     if (!this.auth.isSignedIn()) return null;
-    if (this.currentUser.errorMessage()) return 'Not found';
-    if (this.currentUser.profile() && !link) return 'Not found';
+    if (this.currentUser.errorMessage()) return this.i18n.t('common.notFound');
+    if (this.currentUser.profile() && !link) return this.i18n.t('common.notFound');
     return null;
   }
 }

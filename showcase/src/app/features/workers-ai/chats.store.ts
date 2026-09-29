@@ -2,7 +2,8 @@ import { httpResource } from '@angular/common/http';
 import { Injectable, computed, inject } from '@angular/core';
 import { ApiClientService, CollectionEnvelope, ILink } from '@wiliamferraciolli/ngx-api-client';
 
-import { describeApiError } from '../../core/api/api-error';
+import { ApiErrors } from '../../core/api/api-error';
+import { TranslationService } from '../../core/i18n/translation.service';
 import { CurrentUserStore } from '../../core/user/current-user.store';
 
 export type ChatMessageRole = 'user' | 'assistant';
@@ -43,6 +44,8 @@ const CHATS_LINK_NAMES = ['aiChats', 'cloudflareChats', 'groqChats'];
 @Injectable()
 export class ChatsStore {
   private readonly api = inject(ApiClientService);
+  private readonly apiErrors = inject(ApiErrors);
+  private readonly i18n = inject(TranslationService);
 
   private readonly currentUser = inject(CurrentUserStore);
 
@@ -57,7 +60,7 @@ export class ChatsStore {
   readonly loadError = computed(() => this.listResource.error());
   readonly loadErrorMessage = computed(() => {
     const error = this.loadError();
-    return error ? describeApiError(error, "Couldn't load your chats.") : null;
+    return error ? this.apiErrors.describe(error, 'chat.loadFailed') : null;
   });
 
   private readonly createChatLink = computed<ILink | undefined>(
@@ -65,20 +68,20 @@ export class ChatsStore {
   );
 
   async createChat(provider: ChatProvider): Promise<Chat> {
-    const url = this.api.requireLink(this.createChatLink(), 'No create-chat link available yet — try again.');
+    const url = this.api.requireLink(this.createChatLink(), this.i18n.t('chat.noCreateLink'));
     const chat = await this.api.post<'chat', Chat, { provider: ChatProvider }>('chat', url, { provider });
     this.listResource.reload();
     return chat;
   }
 
   async deleteChat(chat: Chat): Promise<void> {
-    const url = this.api.requireLink(chat.links['delete'], `Not permitted to delete chat ${chat.id}`);
+    const url = this.api.requireLink(chat.links['delete'], this.i18n.t('chat.notPermittedDelete', { id: chat.id }));
     await this.api.delete(url);
     this.listResource.reload();
   }
 
   async updateTitle(chat: Chat, title: string): Promise<Chat> {
-    const url = this.api.requireLink(chat.links['updateTitle'], `Not permitted to rename chat ${chat.id}`);
+    const url = this.api.requireLink(chat.links['updateTitle'], this.i18n.t('chat.notPermittedRename', { id: chat.id }));
     const updatedChat = await this.api.put<'chat', Chat, { title: string }>('chat', url, { title });
     this.listResource.reload();
     return updatedChat;

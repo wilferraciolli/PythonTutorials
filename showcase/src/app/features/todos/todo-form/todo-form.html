@@ -1,35 +1,35 @@
 <div class="TodoForm App-page">
-  <h1 class="TodoForm-title">{{ isEditMode() ? 'Edit todo' : 'New todo' }}</h1>
+  <h1 class="TodoForm-title">{{ (isEditMode() ? 'todos.form.editTitle' : 'todos.form.newTitle') | transloco }}</h1>
 
   @if (notFound()) {
-    <p class="TodoForm-error">Couldn't find that todo.</p>
+    <p class="TodoForm-error">{{ 'todos.form.notFound' | transloco }}</p>
   } @else if (isEditMode() && !existing()) {
-    <p class="TodoForm-loading">Loading…</p>
+    <p class="TodoForm-loading">{{ 'common.loading' | transloco }}</p>
   } @else {
     <form [formRoot]="todoForm" class="TodoForm-form">
       <mat-form-field appearance="outline">
-        <mat-label>Title</mat-label>
+        <mat-label>{{ 'todos.form.title' | transloco }}</mat-label>
         <input matInput [formField]="todoForm.title" />
         @if (todoForm.title().touched() && todoForm.title().invalid()) {
-          <mat-error>Title is required</mat-error>
+          <mat-error>{{ 'todos.form.titleRequired' | transloco }}</mat-error>
         }
       </mat-form-field>
 
       <mat-form-field appearance="outline">
-        <mat-label>Description</mat-label>
+        <mat-label>{{ 'todos.form.description' | transloco }}</mat-label>
         <textarea matInput rows="3" [formField]="todoForm.description"></textarea>
       </mat-form-field>
 
       <mat-form-field appearance="outline">
-        <mat-label>Due</mat-label>
+        <mat-label>{{ 'todos.form.due' | transloco }}</mat-label>
         <input matInput type="datetime-local" [formField]="todoForm.complete_by" />
         @if (todoForm.complete_by().touched() && todoForm.complete_by().invalid()) {
-          <mat-error>A due date is required</mat-error>
+          <mat-error>{{ 'todos.form.dueRequired' | transloco }}</mat-error>
         }
       </mat-form-field>
 
       <mat-form-field appearance="outline">
-        <mat-label>State</mat-label>
+        <mat-label>{{ 'todos.form.state' | transloco }}</mat-label>
         <select matNativeControl [formField]="todoForm.state">
           @for (option of store.stateOptions(); track option.value) {
             <option [value]="option.value">{{ option.viewValue }}</option>
@@ -42,26 +42,26 @@
       }
 
       <div class="TodoForm-actions">
-        <a matButton routerLink="/todos">Cancel</a>
+        <a matButton routerLink="/todos">{{ 'todos.form.cancel' | transloco }}</a>
         <button matButton="filled" type="submit" [disabled]="saving()">
-          {{ saving() ? 'Saving…' : 'Save' }}
+          {{ (saving() ? 'common.saving' : 'common.save') | transloco }}
         </button>
       </div>
     </form>
 
     @if (isEditMode() && existing(); as todo) {
       <div class="TodoForm-tags">
-        <h2 class="TodoForm-tags-title">Tags</h2>
+        <h2 class="TodoForm-tags-title">{{ 'todos.form.tags' | transloco }}</h2>
 
         @if (tagsLoading()) {
-          <p class="TodoForm-loading">Loading tags…</p>
+          <p class="TodoForm-loading">{{ 'todos.form.loadingTags' | transloco }}</p>
         } @else {
           <mat-chip-set>
             @for (tag of tags(); track tag.id) {
               <mat-chip (removed)="removeTag(tag)">
                 {{ tag.tag }}
                 @if (links.hasLink(tag.links['delete'])) {
-                  <button matChipRemove aria-label="Remove tag">
+                  <button matChipRemove [attr.aria-label]="'todos.form.removeTag' | transloco">
                     <mat-icon aria-hidden="true">cancel</mat-icon>
                   </button>
                 }
@@ -73,7 +73,7 @@
         @if (links.hasLink(todo.links['addTag'])) {
           <div class="TodoForm-tags-add">
             <mat-form-field appearance="outline" subscriptSizing="dynamic">
-              <mat-label>Add a tag</mat-label>
+              <mat-label>{{ 'todos.form.addTag' | transloco }}</mat-label>
               <input
                 matInput
                 [value]="newTag()"
@@ -81,7 +81,7 @@
                 (keyup.enter)="addTag()"
               />
             </mat-form-field>
-            <button matButton type="button" (click)="addTag()">Add</button>
+            <button matButton type="button" (click)="addTag()">{{ 'todos.form.add' | transloco }}</button>
           </div>
         }
 

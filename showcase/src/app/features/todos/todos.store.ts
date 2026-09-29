@@ -8,7 +8,8 @@ import {
   MetadataService,
 } from '@wiliamferraciolli/ngx-api-client';
 
-import { describeApiError } from '../../core/api/api-error';
+import { ApiErrors } from '../../core/api/api-error';
+import { TranslationService } from '../../core/i18n/translation.service';
 import { CurrentUserStore } from '../../core/user/current-user.store';
 
 export type TodoState = 'NEW' | 'ACTIVE' | 'CLOSED';
@@ -42,6 +43,8 @@ export class TodosStore {
   private readonly links = inject(LinkService);
   private readonly metadata = inject(MetadataService);
   private readonly currentUser = inject(CurrentUserStore);
+  private readonly apiErrors = inject(ApiErrors);
+  private readonly i18n = inject(TranslationService);
 
   readonly stateFilter = signal<TodoState | null>(null);
 
@@ -64,7 +67,7 @@ export class TodosStore {
   readonly loadError = computed(() => this.listResource.error());
   readonly loadErrorMessage = computed(() => {
     const error = this.loadError();
-    return error ? describeApiError(error, "Couldn't load your todos.") : null;
+    return error ? this.apiErrors.describe(error, 'todos.loadFailed') : null;
   });
 
   // Allowed state values straight from the API's own metadata (its
@@ -72,7 +75,12 @@ export class TodosStore {
   // MetadataService.resolveMetadataIdValues turns {id, value}[] into the
   // {value, viewValue}[] shape a <select> renders.
   readonly stateOptions = computed(() =>
-    this.metadata.resolveMetadataIdValues(this.listResource.value()?._metadata?.['state']?.values ?? []),
+    this.metadata
+      .resolveMetadataIdValues(this.listResource.value()?._metadata?.['state']?.values ?? [])
+      .map((option) => ({
+        ...option,
+        viewValue: this.i18n.optionLabel('todos.states', option.value),
+      })),
   );
 
   // The "new todo" screen's own resource, fetched via the collection's
@@ -94,11 +102,11 @@ export class TodosStore {
     const templateLink = this.listResource.value()?._metaLinks?.['todoTemplate'];
     const templateUrl = this.api.requireLink(
       templateLink,
-      'No todo template link available yet — try again.',
+      this.i18n.t('todos.noTemplateLink'),
     );
     const createUrl = this.links.getCreateUrlFromTemplateUrl({ href: templateUrl });
     if (!createUrl) {
-      throw new Error('Could not derive the create-todo URL from the template link.');
+      throw new Error(this.i18n.t('todos.noCreateUrl'));
     }
 
     const todo = await this.api.post<'todo', Todo, TodoPayload>('todo', createUrl, payload);
@@ -107,14 +115,14 @@ export class TodosStore {
   }
 
   async updateTodo(todo: Todo, payload: TodoPayload): Promise<Todo> {
-    const url = this.api.requireLink(todo.links['update'], `Not permitted to update todo ${todo.id}`);
+    const url = this.api.requireLink(todo.links['update'], this.i18n.t('todos.notPermittedUpdate', { id: todo.id }));
     const updated = await this.api.put<'todo', Todo, TodoPayload>('todo', url, payload);
     this.listResource.reload();
     return updated;
   }
 
   async deleteTodo(todo: Todo): Promise<void> {
-    const url = this.api.requireLink(todo.links['delete'], `Not permitted to delete todo ${todo.id}`);
+    const url = this.api.requireLink(todo.links['delete'], this.i18n.t('todos.notPermittedDelete', { id: todo.id }));
     await this.api.delete(url);
     this.listResource.reload();
   }

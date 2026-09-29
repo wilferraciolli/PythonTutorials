@@ -9,6 +9,8 @@ import { provideAnimationsAsync } from '@angular/platform-browser/animations/asy
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { API_ORIGIN } from '@wiliamferraciolli/ngx-api-client';
 
+import { I18nService } from './core/i18n/i18n.service';
+import { provideI18n } from './core/i18n/i18n.providers';
 import { authInterceptor } from './core/auth/auth.interceptor';
 import { AuthStore } from './core/auth/auth.store';
 import { routes } from './app.routes';
@@ -25,6 +27,13 @@ export const appConfig: ApplicationConfig = {
     // animations driver; the async variant lazy-loads the animations
     // package instead of putting it in the initial bundle.
     provideAnimationsAsync(),
+    // Runtime translations (Transloco) — see core/i18n/.
+    provideI18n(),
+    // Created up front so the UI language follows the user's settings from
+    // the first render instead of when a component first asks for it.
+    provideAppInitializer(() => {
+      inject(I18nService);
+    }),
     // Loads Clerk before the app renders so route guards and the interceptor
     // never race a not-yet-loaded instance — see auth.store.ts.
     provideAppInitializer(() => inject(AuthStore).init()),

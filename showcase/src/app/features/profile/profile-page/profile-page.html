@@ -1,21 +1,21 @@
 <div class="ProfilePage">
   <mat-card appearance="outlined">
     <mat-card-header>
-      <mat-card-title>Profile</mat-card-title>
+      <mat-card-title>{{ 'profile.title' | transloco }}</mat-card-title>
     </mat-card-header>
 
     @if (currentUser.me(); as me) {
       <mat-card-content class="ProfilePage-content">
         <div class="ProfilePage-row">
-          <span class="ProfilePage-label">Name</span>
+          <span class="ProfilePage-label">{{ 'profile.name' | transloco }}</span>
           <span>{{ me.name }}</span>
         </div>
         <div class="ProfilePage-row">
-          <span class="ProfilePage-label">Email</span>
+          <span class="ProfilePage-label">{{ 'profile.email' | transloco }}</span>
           <span>{{ me.email ?? '—' }}</span>
         </div>
         <div class="ProfilePage-row">
-          <span class="ProfilePage-label">Roles</span>
+          <span class="ProfilePage-label">{{ 'profile.roles' | transloco }}</span>
           <mat-chip-set>
             @for (role of me.roleIds; track role) {
               <mat-chip>{{ role }}</mat-chip>
@@ -29,19 +29,19 @@
           @if (canEditOwnSettings()) {
             <a matButton routerLink="/settings">
               <mat-icon aria-hidden="true">tune</mat-icon>
-              My settings
+              {{ 'profile.mySettings' | transloco }}
             </a>
           }
           @if (canEditSystemSettings()) {
             <a matButton routerLink="/settings/system">
               <mat-icon aria-hidden="true">admin_panel_settings</mat-icon>
-              System settings
+              {{ 'profile.systemSettings' | transloco }}
             </a>
           }
         </mat-card-actions>
       }
     } @else {
-      <mat-card-content>Loading…</mat-card-content>
+      <mat-card-content>{{ 'common.loading' | transloco }}</mat-card-content>
     }
   </mat-card>
 </div>

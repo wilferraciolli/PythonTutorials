@@ -2,9 +2,9 @@
   matIconButton
   type="button"
   [matMenuTriggerFor]="menu"
-  aria-label="Account menu"
+  [attr.aria-label]="'nav.accountMenu' | transloco"
   aria-haspopup="menu"
-  title="Account menu"
+  [title]="'nav.accountMenu' | transloco"
 >
   <mat-icon aria-hidden="true">account_circle</mat-icon>
 </button>
@@ -12,18 +12,18 @@
 <mat-menu #menu="matMenu">
   <a mat-menu-item routerLink="/profile">
     <mat-icon aria-hidden="true">person</mat-icon>
-    <span>Profile</span>
+    <span>{{ 'nav.profile' | transloco }}</span>
   </a>
   <a mat-menu-item routerLink="/todos">
     <mat-icon aria-hidden="true">checklist</mat-icon>
-    <span>My todos</span>
+    <span>{{ 'nav.myTodos' | transloco }}</span>
   </a>
   <a mat-menu-item routerLink="/tags">
     <mat-icon aria-hidden="true">label</mat-icon>
-    <span>Tags</span>
+    <span>{{ 'nav.tags' | transloco }}</span>
   </a>
   <button mat-menu-item type="button" (click)="signOut()">
     <mat-icon aria-hidden="true">logout</mat-icon>
-    <span>Sign out</span>
+    <span>{{ 'nav.signOut' | transloco }}</span>
   </button>
 </mat-menu>

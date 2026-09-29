@@ -2,7 +2,7 @@
   @if (loadErrorMessage(); as errorMessage) {
     <p class="ChatThread-error">{{ errorMessage }}</p>
   } @else if (isLoading() && !chat()) {
-    <p class="ChatThread-loading">Loading…</p>
+    <p class="ChatThread-loading">{{ 'common.loading' | transloco }}</p>
   } @else if (chat(); as chat) {
     <h1 class="ChatThread-title">{{ chat.title }}</h1>
 
@@ -19,11 +19,11 @@
           }
         </div>
       } @empty {
-        <p class="ChatThread-empty">Say something to start the conversation.</p>
+        <p class="ChatThread-empty">{{ 'chat.thread.empty' | transloco }}</p>
       }
       @if (sending()) {
         <div class="ChatThread-message ChatThread-message--assistant ChatThread-message--pending">
-          <p class="ChatThread-messageText">Thinking…</p>
+          <p class="ChatThread-messageText">{{ 'chat.thread.thinking' | transloco }}</p>
         </div>
       }
     </div>
@@ -34,7 +34,7 @@
 
     <form class="ChatThread-composer" (submit)="$event.preventDefault(); send()">
       <mat-form-field class="ChatThread-input" appearance="outline" subscriptSizing="dynamic">
-        <mat-label>Message</mat-label>
+        <mat-label>{{ 'chat.thread.message' | transloco }}</mat-label>
         <input
           matInput
           [value]="draft()"

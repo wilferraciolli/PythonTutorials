@@ -3,15 +3,17 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { ApiClientService } from '@wiliamferraciolli/ngx-api-client';
 import { marked } from 'marked';
 
-import { describeApiError } from '../../../core/api/api-error';
+import { ApiErrors } from '../../../core/api/api-error';
+import { TranslationService } from '../../../core/i18n/translation.service';
 import { Chat, ChatMessage, ChatProvider, ChatsStore } from '../chats.store';
 
 @Component({
   selector: 'app-chat-thread',
-  imports: [MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule],
+  imports: [MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, TranslocoPipe],
   templateUrl: './chat-thread.html',
   styleUrl: './chat-thread.scss',
 })
@@ -22,6 +24,8 @@ export class ChatThread {
 
   private readonly api = inject(ApiClientService);
   private readonly chats = inject(ChatsStore);
+  private readonly apiErrors = inject(ApiErrors);
+  private readonly i18n = inject(TranslationService);
 
   // A resource of its own, not ChatsStore state — the list only carries
   // chat summaries (no messages; see chats.store.ts/chat_service.py), so
@@ -35,7 +39,7 @@ export class ChatThread {
   protected readonly isLoading = this.detailResource.isLoading;
   protected readonly loadErrorMessage = computed(() => {
     const error = this.detailResource.error();
-    return error ? describeApiError(error, "Couldn't load this chat.") : null;
+    return error ? this.apiErrors.describe(error, 'chat.thread.loadFailed') : null;
   });
 
   protected readonly messages = computed<ChatMessage[]>(() => this.chat()?.messages ?? []);
@@ -45,7 +49,7 @@ export class ChatThread {
   protected readonly sendError = signal<string | null>(null);
 
   protected providerLabel(provider: ChatProvider): string {
-    return provider === 'groq' ? 'Groq' : 'Cloudflare Workers AI';
+    return this.i18n.t(`chat.providers.${provider}`);
   }
 
   protected renderMarkdown(content: string): string {
@@ -70,12 +74,12 @@ export class ChatThread {
     this.sending.set(true);
     this.sendError.set(null);
     try {
-      const url = this.api.requireLink(chat.links['sendMessage'], 'This chat cannot be messaged.');
+      const url = this.api.requireLink(chat.links['sendMessage'], this.i18n.t('chat.thread.cannotMessage'));
       await this.api.post<'chat', Chat, { content: string }>('chat', url, { content });
       this.draft.set('');
       this.detailResource.reload();
     } catch (err) {
-      this.sendError.set(describeApiError(err, 'Failed to send message.'));
+      this.sendError.set(this.apiErrors.describe(err, 'chat.thread.sendFailed'));
     } finally {
       this.sending.set(false);
     }

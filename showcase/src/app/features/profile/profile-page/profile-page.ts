@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { RouterLink } from '@angular/router';
 
 import { CurrentUserStore } from '../../../core/user/current-user.store';
+import { TranslocoPipe } from '@jsverse/transloco';
 
 // Read-only — /me's fields (name/email/roleIds) are all marked `readOnly`
 // in the API's own metadata (me_service.py); there is no PATCH /me to edit
@@ -16,7 +17,7 @@ import { CurrentUserStore } from '../../../core/user/current-user.store';
 // button — the UI never decides who is an admin itself.
 @Component({
   selector: 'app-profile-page',
-  imports: [RouterLink, MatButtonModule, MatCardModule, MatChipsModule, MatIconModule],
+  imports: [RouterLink, MatButtonModule, MatCardModule, MatChipsModule, MatIconModule, TranslocoPipe],
   templateUrl: './profile-page.html',
   styleUrl: './profile-page.scss',
 })

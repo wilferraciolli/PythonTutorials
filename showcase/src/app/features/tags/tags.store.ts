@@ -2,7 +2,8 @@ import { httpResource } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { ApiClientService, CollectionEnvelope } from '@wiliamferraciolli/ngx-api-client';
 
-import { describeApiError } from '../../core/api/api-error';
+import { ApiErrors } from '../../core/api/api-error';
+import { TranslationService } from '../../core/i18n/translation.service';
 import { Tag } from '../../core/api/tags-api';
 import { CurrentUserStore } from '../../core/user/current-user.store';
 
@@ -16,6 +17,8 @@ type TagsEnvelope = CollectionEnvelope<'tags', Tag>;
 export class TagsStore {
   private readonly api = inject(ApiClientService);
   private readonly currentUser = inject(CurrentUserStore);
+  private readonly apiErrors = inject(ApiErrors);
+  private readonly i18n = inject(TranslationService);
 
   readonly search = signal('');
 
@@ -32,7 +35,7 @@ export class TagsStore {
   readonly loadError = computed(() => this.listResource.error());
   readonly loadErrorMessage = computed(() => {
     const error = this.loadError();
-    return error ? describeApiError(error, "Couldn't load tags.") : null;
+    return error ? this.apiErrors.describe(error, 'tags.loadFailed') : null;
   });
 
   // The collection's own `createTag` link — tags are the one resource that
@@ -42,14 +45,14 @@ export class TagsStore {
   // from.
   async createTag(payload: { tag: string; resource_id: string }): Promise<Tag> {
     const link = this.listResource.value()?._metaLinks?.['createTag'];
-    const url = this.api.requireLink(link, 'No create-tag link available yet — try again.');
+    const url = this.api.requireLink(link, this.i18n.t('tags.noCreateLink'));
     const created = await this.api.post<'tag', Tag, { tag: string; resource_id: string }>('tag', url, payload);
     this.listResource.reload();
     return created;
   }
 
   async deleteTag(tag: Tag): Promise<void> {
-    const url = this.api.requireLink(tag.links['delete'], `Not permitted to delete tag ${tag.id}`);
+    const url = this.api.requireLink(tag.links['delete'], this.i18n.t('tags.notPermittedDelete', { id: tag.id }));
     await this.api.delete(url);
     this.listResource.reload();
   }
