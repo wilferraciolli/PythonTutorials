@@ -17,7 +17,7 @@ class SupportedTimeZones(str, Enum):
 # BCP 47 / ISO standards languages
 class SupportedLanguages(str, Enum):
     EN_GB = "en-GB"
-    EL = "el"
+    EL_CY = "el-CY"
     PT_BR = "pt-BR"
 
 
