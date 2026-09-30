@@ -5,7 +5,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatIconModule } from '@angular/material/icon';
 import { RouterLink } from '@angular/router';
 
-import { CurrentUserStore } from '../../../core/user/current-user.store';
+import { CurrentUserStore } from '@wiltech-labs/ngx-region-settings';
 import { TranslocoPipe } from '@jsverse/transloco';
 
 // Read-only — /me's fields (name/email/roleIds) are all marked `readOnly`

@@ -6,11 +6,11 @@ import {
   ILink,
   LinkService,
   MetadataService,
-} from '@wiliamferraciolli/ngx-api-client';
+} from '@wiltech-labs/ngx-api-client';
 
 import { ApiErrors } from '../../core/api/api-error';
 import { TranslationService } from '../../core/i18n/translation.service';
-import { CurrentUserStore } from '../../core/user/current-user.store';
+import { CurrentUserStore } from '@wiltech-labs/ngx-region-settings';
 
 export type TodoState = 'NEW' | 'ACTIVE' | 'CLOSED';
 
@@ -55,7 +55,7 @@ export class TodosStore {
   // profile hands out (current-user.store.ts), resolved via ApiClientService
   // against API_ORIGIN. No link yet (still loading the profile) means no request.
   private readonly listResource = httpResource<TodosEnvelope>(() => {
-    const link = this.currentUser.myTodosLink();
+    const link = this.currentUser.link('todos');
     if (!link) return undefined;
     const url = this.api.resolve(link)!;
     const state = this.stateFilter();

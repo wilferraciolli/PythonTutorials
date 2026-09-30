@@ -8,7 +8,7 @@
     <mat-card-content class="MySettingsPage-content">
       @if (store.notAvailable()) {
         <p class="MySettingsPage-muted">{{ 'settings.my.unavailable' | transloco }}</p>
-      } @else if (store.errorMessage(); as message) {
+      } @else if (errorMessage(); as message) {
         <p class="MySettingsPage-error">{{ message }}</p>
       } @else if (store.settings(); as settings) {
         @if (usingDefaults()) {

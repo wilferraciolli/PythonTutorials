@@ -9,7 +9,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatTableModule } from '@angular/material/table';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { LinkService } from '@wiliamferraciolli/ngx-api-client';
+import { LinkService } from '@wiltech-labs/ngx-api-client';
 import { firstValueFrom } from 'rxjs';
 
 import { I18nService } from '../../../core/i18n/i18n.service';

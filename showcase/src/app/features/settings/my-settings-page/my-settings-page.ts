@@ -1,13 +1,12 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
-import { LinkService } from '@wiliamferraciolli/ngx-api-client';
+import { LinkService } from '@wiltech-labs/ngx-api-client';
+import { RegionSettingsPayload, UserSettingsStore } from '@wiltech-labs/ngx-region-settings';
 
 import { ApiErrors } from '../../../core/api/api-error';
-import { I18nService } from '../../../core/i18n/i18n.service';
 import { TranslationService } from '../../../core/i18n/translation.service';
 import { RegionSettingsForm } from '../region-settings-form/region-settings-form';
-import { RegionSettingsPayload, UserSettingsStore } from '../region-settings.store';
 import { TranslocoPipe } from '@jsverse/transloco';
 
 // The signed-in user's own settings. Every user can open this; the API only
@@ -16,7 +15,6 @@ import { TranslocoPipe } from '@jsverse/transloco';
 @Component({
   selector: 'app-my-settings-page',
   imports: [MatButtonModule, MatCardModule, RegionSettingsForm, TranslocoPipe],
-  providers: [UserSettingsStore],
   templateUrl: './my-settings-page.html',
   styleUrl: './my-settings-page.scss',
 })
@@ -25,7 +23,6 @@ export class MySettingsPage {
   private readonly links = inject(LinkService);
   private readonly apiErrors = inject(ApiErrors);
   private readonly i18n = inject(TranslationService);
-  private readonly preferences = inject(I18nService);
 
   protected readonly saving = signal(false);
   protected readonly saveError = signal<string | null>(null);
@@ -37,6 +34,10 @@ export class MySettingsPage {
     () =>
       !this.usingDefaults() && this.links.hasLink(this.store.settings()?.links['resetSettings']),
   );
+  protected readonly errorMessage = computed(() => {
+    const error = this.store.error;
+    return error ? this.apiErrors.describe(error, 'settings.loadFailed') : null;
+  });
 
   protected async save(payload: RegionSettingsPayload): Promise<void> {
     await this.run(() => this.store.save(payload), this.i18n.t('settings.my.saved'));
@@ -52,8 +53,8 @@ export class MySettingsPage {
     this.saving.set(true);
     try {
       await action();
-      // Language and locale may have just changed — the whole UI follows them.
-      this.preferences.refresh();
+      // Language and locale are now automatically reflected in the UI through
+      // the shared root-provided UserSettingsStore.
       this.status.set(doneMessage);
     } catch (err) {
       this.saveError.set(this.apiErrors.describe(err, 'settings.saveFailed'));

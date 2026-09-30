@@ -1,4 +1,4 @@
-import type { ILink } from '@wiliamferraciolli/ngx-api-client';
+import type { ILink } from '@wiltech-labs/ngx-api-client';
 
 // An embedded reference to another resource — id plus its display value —
 // so the UI can show a name without a second lookup. Same id/value shape

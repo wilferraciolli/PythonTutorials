@@ -2,10 +2,10 @@ import { Component, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
+import { AuthStore } from '@wiltech-labs/ngx-auth';
 import { RouterLink } from '@angular/router';
 
-import { AuthStore } from '../../core/auth/auth.store';
-import { CurrentUserStore } from '../../core/user/current-user.store';
+import { UserSession } from '../../core/user/user-session';
 import { TranslocoPipe } from '@jsverse/transloco';
 
 // Only mounted by NavBar once `auth.isSignedIn()` is true — this component
@@ -18,7 +18,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 })
 export class ProfileMenu {
   protected readonly auth = inject(AuthStore);
-  protected readonly currentUser = inject(CurrentUserStore);
+  protected readonly session = inject(UserSession);
 
   protected async signOut(): Promise<void> {
     await this.auth.signOut();

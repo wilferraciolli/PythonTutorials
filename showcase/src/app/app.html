@@ -1,5 +1,8 @@
 <div class="AppShell">
   <app-nav-bar />
+  @if (session.errorMessage(); as message) {
+  <p class="AppShell-error" role="alert">{{ message }}</p>
+  }
   <router-outlet />
   <footer class="AppShell-footer">v{{ version }}</footer>
 </div>

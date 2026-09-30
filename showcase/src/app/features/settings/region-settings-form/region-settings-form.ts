@@ -3,9 +3,12 @@ import { FormField, FormRoot, form } from '@angular/forms/signals';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { RegionSettingsPayload } from '@wiltech-labs/ngx-region-settings';
+import { ValueViewValue } from '@wiltech-labs/ngx-api-client';
 
-import { RegionSettingsOptions, RegionSettingsPayload } from '../region-settings.store';
 import { TranslocoPipe } from '@jsverse/transloco';
+
+type RegionSettingsOptions = Partial<Record<string, ValueViewValue[]>>;
 
 function toPayload(settings: RegionSettingsPayload): RegionSettingsPayload {
   const { timezone, language, locale, currency, theme } = settings;

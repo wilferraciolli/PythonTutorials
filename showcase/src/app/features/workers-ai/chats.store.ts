@@ -1,10 +1,10 @@
 import { httpResource } from '@angular/common/http';
 import { Injectable, computed, inject } from '@angular/core';
-import { ApiClientService, CollectionEnvelope, ILink } from '@wiliamferraciolli/ngx-api-client';
+import { ApiClientService, CollectionEnvelope, ILink } from '@wiltech-labs/ngx-api-client';
 
 import { ApiErrors } from '../../core/api/api-error';
 import { TranslationService } from '../../core/i18n/translation.service';
-import { CurrentUserStore } from '../../core/user/current-user.store';
+import { CurrentUserStore } from '@wiltech-labs/ngx-region-settings';
 
 export type ChatMessageRole = 'user' | 'assistant';
 export type ChatProvider = 'cloudflare' | 'groq';

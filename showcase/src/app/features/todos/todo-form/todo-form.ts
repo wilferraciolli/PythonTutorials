@@ -7,7 +7,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { Router, RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { ApiClientService, LinkService } from '@wiliamferraciolli/ngx-api-client';
+import { ApiClientService, LinkService } from '@wiltech-labs/ngx-api-client';
 
 import { ApiErrors } from '../../../core/api/api-error';
 import { TranslationService } from '../../../core/i18n/translation.service';

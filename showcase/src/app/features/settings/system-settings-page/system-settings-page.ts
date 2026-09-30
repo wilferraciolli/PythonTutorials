@@ -1,10 +1,10 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
+import { RegionSettingsPayload, SystemSettingsStore } from '@wiltech-labs/ngx-region-settings';
 
 import { ApiErrors } from '../../../core/api/api-error';
 import { TranslationService } from '../../../core/i18n/translation.service';
 import { RegionSettingsForm } from '../region-settings-form/region-settings-form';
-import { RegionSettingsPayload, SystemSettingsStore } from '../region-settings.store';
 import { TranslocoPipe } from '@jsverse/transloco';
 
 // Admin-only: the defaults every user falls back to until they save their
@@ -26,6 +26,11 @@ export class SystemSettingsPage {
   protected readonly saving = signal(false);
   protected readonly saveError = signal<string | null>(null);
   protected readonly status = signal<string | null>(null);
+
+  protected readonly errorMessage = computed(() => {
+    const error = this.store.error;
+    return error ? this.apiErrors.describe(error, 'settings.loadFailed') : null;
+  });
 
   protected async save(payload: RegionSettingsPayload): Promise<void> {
     this.saveError.set(null);

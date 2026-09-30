@@ -4,7 +4,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { ApiClientService } from '@wiliamferraciolli/ngx-api-client';
+import { ApiClientService } from '@wiltech-labs/ngx-api-client';
 import { marked } from 'marked';
 
 import { ApiErrors } from '../../../core/api/api-error';

@@ -1,9 +1,9 @@
 import { Component, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatToolbarModule } from '@angular/material/toolbar';
+import { AuthStore } from '@wiltech-labs/ngx-auth';
 import { RouterLink } from '@angular/router';
 
-import { AuthStore } from '../../core/auth/auth.store';
 import { ProfileMenu } from '../profile-menu/profile-menu';
 import { TranslocoPipe } from '@jsverse/transloco';
 

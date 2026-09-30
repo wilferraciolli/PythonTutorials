@@ -1,7 +1,10 @@
 import { TestBed } from '@angular/core/testing';
+import { RegionSettingsPayload } from '@wiltech-labs/ngx-region-settings';
+import { ValueViewValue } from '@wiltech-labs/ngx-api-client';
 
-import { RegionSettingsOptions, RegionSettingsPayload } from '../region-settings.store';
 import { RegionSettingsForm } from './region-settings-form';
+
+type RegionSettingsOptions = Partial<Record<string, ValueViewValue[]>>;
 
 const SETTINGS: RegionSettingsPayload = {
   timezone: 'Europe/London',

@@ -1,6 +1,6 @@
 import { Routes } from '@angular/router';
 
-import { authGuard } from './core/auth/auth.guard';
+import { authGuard } from '@wiltech-labs/ngx-auth';
 
 // The app is a front door for the FastAPI/D1 API: sign in with Clerk, get
 // a token, follow the links /me hands back. Home stays public so there's

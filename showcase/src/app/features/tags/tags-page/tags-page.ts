@@ -8,7 +8,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { LinkService } from '@wiliamferraciolli/ngx-api-client';
+import { LinkService } from '@wiltech-labs/ngx-api-client';
 import { firstValueFrom } from 'rxjs';
 
 import { ConfirmDialog } from '../../../shared/confirm-dialog/confirm-dialog';
