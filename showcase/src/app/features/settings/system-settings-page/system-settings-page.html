@@ -11,7 +11,7 @@
       } @else if (errorMessage(); as message) {
         <p class="SystemSettingsPage-error">{{ message }}</p>
       } @else if (store.settings(); as settings) {
-        <app-region-settings-form
+        <ngx-region-settings-form
           [settings]="settings"
           [options]="store.options()"
           [saving]="saving()"

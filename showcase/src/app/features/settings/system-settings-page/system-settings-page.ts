@@ -1,10 +1,9 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
-import { RegionSettingsPayload, SystemSettingsStore } from '@wiltech-labs/ngx-region-settings';
+import { RegionSettingsPayload, SystemSettingsStore, RegionSettingsFormComponent } from '@wiltech-labs/ngx-region-settings';
 
 import { ApiErrors } from '../../../core/api/api-error';
 import { TranslationService } from '../../../core/i18n/translation.service';
-import { RegionSettingsForm } from '../region-settings-form/region-settings-form';
 import { TranslocoPipe } from '@jsverse/transloco';
 
 // Admin-only: the defaults every user falls back to until they save their
@@ -13,7 +12,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 // "not available" (and the API would 403 them anyway).
 @Component({
   selector: 'app-system-settings-page',
-  imports: [MatCardModule, RegionSettingsForm, TranslocoPipe],
+  imports: [MatCardModule, RegionSettingsFormComponent, TranslocoPipe],
   providers: [SystemSettingsStore],
   templateUrl: './system-settings-page.html',
   styleUrl: './system-settings-page.scss',

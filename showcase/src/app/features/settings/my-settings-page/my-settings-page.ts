@@ -2,11 +2,10 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { LinkService } from '@wiltech-labs/ngx-api-client';
-import { RegionSettingsPayload, UserSettingsStore } from '@wiltech-labs/ngx-region-settings';
+import { RegionSettingsPayload, UserSettingsStore, RegionSettingsFormComponent } from '@wiltech-labs/ngx-region-settings';
 
 import { ApiErrors } from '../../../core/api/api-error';
 import { TranslationService } from '../../../core/i18n/translation.service';
-import { RegionSettingsForm } from '../region-settings-form/region-settings-form';
 import { TranslocoPipe } from '@jsverse/transloco';
 
 // The signed-in user's own settings. Every user can open this; the API only
@@ -14,7 +13,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 // else's settings with a 403.
 @Component({
   selector: 'app-my-settings-page',
-  imports: [MatButtonModule, MatCardModule, RegionSettingsForm, TranslocoPipe],
+  imports: [MatButtonModule, MatCardModule, RegionSettingsFormComponent, TranslocoPipe],
   templateUrl: './my-settings-page.html',
   styleUrl: './my-settings-page.scss',
 })

@@ -17,7 +17,7 @@
           </p>
         }
 
-        <app-region-settings-form
+        <ngx-region-settings-form
           [settings]="settings"
           [options]="store.options()"
           [saving]="saving()"
@@ -34,7 +34,7 @@
               {{ 'settings.my.reset' | transloco }}
             </button>
           }
-        </app-region-settings-form>
+        </ngx-region-settings-form>
 
         @if (saveError()) {
           <p class="MySettingsPage-error" role="alert">{{ saveError() }}</p>
