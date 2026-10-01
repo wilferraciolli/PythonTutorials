@@ -76,17 +76,27 @@ export const elCY: Translation = {
       theme: 'Θέμα',
     },
     options: {
+      timezone: {
+        'Europe/London': 'Λονδίνο',
+        'America/Sao_Paulo': 'Σάο Πάολο',
+        'Asia/Nicosia': 'Λευκωσία',
+      },
       language: {
-        'en-GB': 'Αγγλικά (Ηνωμένο Βασίλειο)',
-        'en-US': 'Αγγλικά (Ηνωμένες Πολιτείες)',
-        'el-CY': 'Ελληνικά (Κύπρος)',
-        'pt-BR': 'Πορτογαλικά (Βραζιλία)',
+        'en-GB': 'Αγγλικά (UK)',
+        'en-US': 'Αγγλικά (US)',
+        'el-CY': 'Ελληνικά (CY)',
+        'pt-BR': 'Πορτογαλικά (BR)',
       },
       locale: {
         'en-GB': 'Ηνωμένο Βασίλειο',
         'en-US': 'Ηνωμένες Πολιτείες',
         'el-CY': 'Κύπρος',
         'pt-BR': 'Βραζιλία',
+      },
+      currency: {
+        GBP: 'GBP - £',
+        EUR: 'EUR - €',
+        BRL: 'BRL - R$',
       },
       theme: {
         light: 'Φωτεινό',

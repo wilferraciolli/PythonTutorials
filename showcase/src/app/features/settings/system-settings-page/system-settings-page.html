@@ -13,7 +13,7 @@
       } @else if (store.settings(); as settings) {
         <ngx-region-settings-form
           [settings]="settings"
-          [options]="store.options()"
+          [options]="translatedOptions()"
           [saving]="saving()"
           (save)="save($event)"
         />

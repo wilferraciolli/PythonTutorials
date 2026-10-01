@@ -75,17 +75,27 @@ export const ptBR: Translation = {
       theme: 'Tema',
     },
     options: {
+      timezone: {
+        'Europe/London': 'Londres',
+        'America/Sao_Paulo': 'São Paulo',
+        'Asia/Nicosia': 'Nicósia',
+      },
       language: {
-        'en-GB': 'Inglês (Reino Unido)',
-        'en-US': 'Inglês (Estados Unidos)',
-        'el-CY': 'Grego (Chipre)',
-        'pt-BR': 'Português (Brasil)',
+        'en-GB': 'Inglês (UK)',
+        'en-US': 'Inglês (US)',
+        'el-CY': 'Grego (CY)',
+        'pt-BR': 'Português (BR)',
       },
       locale: {
         'en-GB': 'Reino Unido',
         'en-US': 'Estados Unidos',
         'el-CY': 'Chipre',
         'pt-BR': 'Brasil',
+      },
+      currency: {
+        GBP: 'GBP - £',
+        EUR: 'EUR - €',
+        BRL: 'BRL - R$',
       },
       theme: {
         light: 'Claro',

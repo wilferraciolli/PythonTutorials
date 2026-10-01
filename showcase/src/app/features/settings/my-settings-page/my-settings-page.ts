@@ -6,6 +6,7 @@ import { RegionSettingsPayload, UserSettingsStore, RegionSettingsFormComponent }
 
 import { ApiErrors } from '../../../core/api/api-error';
 import { TranslationService } from '../../../core/i18n/translation.service';
+import { translateRegionSettingsOptions } from '../region-settings-options';
 import { TranslocoPipe } from '@jsverse/transloco';
 
 // The signed-in user's own settings. Every user can open this; the API only
@@ -34,9 +35,13 @@ export class MySettingsPage {
       !this.usingDefaults() && this.links.hasLink(this.store.settings()?.links['resetSettings']),
   );
   protected readonly errorMessage = computed(() => {
-    const error = this.store.error;
+    const error = this.store.error();
     return error ? this.apiErrors.describe(error, 'settings.loadFailed') : null;
   });
+
+  protected readonly translatedOptions = computed(() =>
+    translateRegionSettingsOptions(this.store.options(), this.i18n),
+  );
 
   protected async save(payload: RegionSettingsPayload): Promise<void> {
     await this.run(() => this.store.save(payload), this.i18n.t('settings.my.saved'));

@@ -4,6 +4,7 @@ import { RegionSettingsPayload, SystemSettingsStore, RegionSettingsFormComponent
 
 import { ApiErrors } from '../../../core/api/api-error';
 import { TranslationService } from '../../../core/i18n/translation.service';
+import { translateRegionSettingsOptions } from '../region-settings-options';
 import { TranslocoPipe } from '@jsverse/transloco';
 
 // Admin-only: the defaults every user falls back to until they save their
@@ -27,9 +28,13 @@ export class SystemSettingsPage {
   protected readonly status = signal<string | null>(null);
 
   protected readonly errorMessage = computed(() => {
-    const error = this.store.error;
+    const error = this.store.error();
     return error ? this.apiErrors.describe(error, 'settings.loadFailed') : null;
   });
+
+  protected readonly translatedOptions = computed(() =>
+    translateRegionSettingsOptions(this.store.options(), this.i18n),
+  );
 
   protected async save(payload: RegionSettingsPayload): Promise<void> {
     this.saveError.set(null);

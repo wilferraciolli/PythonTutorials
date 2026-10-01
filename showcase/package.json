@@ -24,7 +24,7 @@
     "@wiltech-labs/ngx-api-client": "^1.0.0",
     "@wiltech-labs/ngx-auth": "^1.0.0",
     "@wiltech-labs/ngx-forms": "^1.0.0",
-    "@wiltech-labs/ngx-region-settings": "^1.0.1",
+    "@wiltech-labs/ngx-region-settings": "^1.0.5",
     "marked": "^18.0.14",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"

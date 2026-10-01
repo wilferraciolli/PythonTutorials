@@ -80,17 +80,29 @@ export const enGB = {
     // with no label here is shown as the raw value, so a new option never
     // breaks the form.
     options: {
+      timezone: {
+        'Europe/London': 'London',
+        'America/Sao_Paulo': 'São Paulo',
+        'Asia/Nicosia': 'Nicosia',
+      },
       language: {
-        'en-GB': 'English (United Kingdom)',
-        'en-US': 'English (United States)',
-        'el-CY': 'Greek (Cyprus)',
-        'pt-BR': 'Portuguese (Brazil)',
+        'en-GB': 'English (UK)',
+        'en-US': 'English (US)',
+        'el-CY': 'Greek (CY)',
+        'pt-BR': 'Portuguese (BR)',
       },
       locale: {
         'en-GB': 'United Kingdom',
         'en-US': 'United States',
         'el-CY': 'Cyprus',
         'pt-BR': 'Brazil',
+      },
+      // Code plus symbol, so the raw stored value (`GBP`) stays recognisable
+      // alongside its symbol. The symbol never changes with the UI language.
+      currency: {
+        GBP: 'GBP - £',
+        EUR: 'EUR - €',
+        BRL: 'BRL - R$',
       },
       theme: {
         light: 'Light',
