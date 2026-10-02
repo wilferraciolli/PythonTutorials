@@ -1,9 +1,8 @@
 from typing import Optional
 
 from pydantic import BaseModel, Field
+from wiltech_labs_rest import ApiResponse, NoMetadata
 
-from core.common.api_response import ApiResponse
-from core.common.base_dto import NoMetadata
 from media.enums import MediaType
 
 

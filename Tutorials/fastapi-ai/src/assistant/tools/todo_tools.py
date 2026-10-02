@@ -1,8 +1,10 @@
 from datetime import date, datetime, timedelta, timezone
 from typing import Any, Callable, Dict, List, Optional
 
+from wiltech_labs_rest import format_utc_datetime
+
 from assistant.tools.tool import Tool
-from core.common.serializers import format_utc_datetime
+
 from todos.models import TodoModel
 from todos.todo_repository import TodoRepository
 from todos.todo_search_service import TodoSearchService

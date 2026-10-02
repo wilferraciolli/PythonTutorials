@@ -1,6 +1,8 @@
 from datetime import date, datetime, timedelta, timezone
 from typing import Callable, Dict
 
+from wiltech_labs_rest import API_PREFIX, EmbeddedRef, FieldMetadata, Link
+
 from admin.analytics.constants import (
     DEFAULT_DAYS,
     ENGAGEMENT_DATA_NAME,
@@ -18,8 +20,6 @@ from admin.analytics.schemas import (
     EngagementMetadata,
     EngagementResponse,
 )
-from core.common.api_response import API_PREFIX
-from core.common.base_dto import EmbeddedRef, FieldMetadata, Link
 
 
 def utc_today() -> date:

@@ -40,3 +40,4 @@ class SupportedCurrencies(str, Enum):
 class SupportedThemes(str, Enum):
     LIGHT = "light"
     DARK = "dark"
+    SYSTEM = "system"

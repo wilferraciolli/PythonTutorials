@@ -1,8 +1,8 @@
 from typing import Optional
 
 from pydantic import BaseModel
+from wiltech_labs_rest import UtcDateTime
 
-from core.common.serializers import UtcDateTime
 from groups.enums import GroupVisibility
 
 

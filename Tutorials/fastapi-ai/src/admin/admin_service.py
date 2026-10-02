@@ -1,6 +1,8 @@
 from datetime import datetime, timezone
 from typing import Dict, Optional
 
+from wiltech_labs_rest import API_PREFIX, Link, NoMetadata
+
 from admin.constants import (
     ADMIN_DATA_NAME,
     LINK_ENGAGEMENT_ANALYTICS,
@@ -19,8 +21,7 @@ from admin.schemas import (
     PostStatsRebuildDTO,
     PostStatsRebuildResponse,
 )
-from core.common.api_response import API_PREFIX
-from core.common.base_dto import Link, NoMetadata
+
 from groups.posts.post_search_service import PostSearchService
 from groups.posts.post_stats_repository import PostStatsRepository
 

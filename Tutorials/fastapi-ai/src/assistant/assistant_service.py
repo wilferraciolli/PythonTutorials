@@ -3,12 +3,13 @@ import logging
 from datetime import datetime
 from typing import Any, Callable, Dict, List
 
+from wiltech_labs_rest import NoMetadata
+
 from assistant.constants import ANSWER_DATA_NAME
 from assistant.schemas import AssistantAnswerDTO, AssistantAnswerResponse, ToolCallDTO
 from assistant.tools.todo_tools import utc_now
 from assistant.tools.tool import Tool
 from core.ai.llm import ToolLlm
-from core.common.base_dto import NoMetadata
 
 logger = logging.getLogger(__name__)
 

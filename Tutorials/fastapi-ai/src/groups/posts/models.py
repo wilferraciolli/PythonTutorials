@@ -1,8 +1,8 @@
 from typing import List, Optional
 
 from pydantic import BaseModel, Field
+from wiltech_labs_rest import UtcDateTime
 
-from core.common.serializers import UtcDateTime
 from groups.enums import GroupVisibility
 from media.enums import MediaType
 

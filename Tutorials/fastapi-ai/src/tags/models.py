@@ -1,8 +1,7 @@
 from typing import Optional
 
 from pydantic import BaseModel
-
-from core.common.serializers import UtcDateTime
+from wiltech_labs_rest import UtcDateTime
 
 
 class TagModel(BaseModel):

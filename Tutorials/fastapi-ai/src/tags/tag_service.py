@@ -2,8 +2,8 @@ from datetime import datetime, timezone
 from typing import List, Optional
 from uuid import uuid4
 
-from core.common.api_response import API_PREFIX
-from core.common.base_dto import EmbeddedRef, FieldMetadata, Link
+from wiltech_labs_rest import API_PREFIX, EmbeddedRef, FieldMetadata, Link
+
 from tags.constants import LINK_CREATE_TAG, LINK_DELETE, LINK_SELF, TAG_DATA_NAME, TAGS_DATA_NAME
 from tags.models import TagModel
 from tags.schemas import (

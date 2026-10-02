@@ -1,8 +1,5 @@
-from enum import Enum
-from typing import Type
+from wiltech_labs_rest import API_PREFIX, FieldMetadata, Link, choice_field
 
-from core.common.api_response import API_PREFIX
-from core.common.base_dto import EmbeddedRef, FieldMetadata, Link
 from shared.settings.region.constants import LINK_SELF, LINK_UPDATE_SETTINGS, SYSTEM_SETTINGS_DATA_NAME
 from shared.settings.region.enums import SupportedCurrencies, SupportedLanguages, SupportedLocales, SupportedThemes, SupportedTimeZones
 from shared.settings.region.models import RegionSettingModel
@@ -59,11 +56,11 @@ class SystemSettingsService:
         # (e.g. restrict `values` or make a field readOnly).
         return SystemSettingsMetadata(
             id=FieldMetadata(readOnly=True, hidden=True),
-            timezone=self._choice_field(SupportedTimeZones),
-            language=self._choice_field(SupportedLanguages),
-            locale=self._choice_field(SupportedLocales),
-            currency=self._choice_field(SupportedCurrencies),
-            theme=self._choice_field(SupportedThemes),
+            timezone=choice_field(SupportedTimeZones),
+            language=choice_field(SupportedLanguages),
+            locale=choice_field(SupportedLocales),
+            currency=choice_field(SupportedCurrencies),
+            theme=choice_field(SupportedThemes),
         )
 
     @staticmethod
@@ -73,13 +70,6 @@ class SystemSettingsService:
             LINK_SELF: Link(href=url, method="GET"),
             LINK_UPDATE_SETTINGS: Link(href=url, method="PUT"),
         }
-
-    @staticmethod
-    def _choice_field(enum_type: Type[Enum]) -> FieldMetadata:
-        return FieldMetadata(
-            mandatory=True,
-            values=[EmbeddedRef(id=member.value, value=member.value) for member in enum_type],
-        )
 
     def build_response(self, system_settings: SystemSettingsDTO) -> SystemSettingsResponse:
         return SystemSettingsResponse.of(

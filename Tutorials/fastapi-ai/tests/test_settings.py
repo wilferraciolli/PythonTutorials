@@ -38,6 +38,7 @@ def test_your_settings_fall_back_to_the_system_defaults(client):
     settings = body["_data"]["userSettings"]
     assert settings["owner_type"] == "SYSTEM" and settings["timezone"] == "Europe/London"
     assert {"id": "dark", "value": "dark"} in body["_metadata"]["theme"]["values"]
+    assert {"id": "system", "value": "system"} in body["_metadata"]["theme"]["values"]
 
     saved = http.put(settings["links"]["updateSettings"]["href"], json=GREEK).json()["_data"]["userSettings"]
     assert saved["owner_type"] == "USER" and saved["language"] == "el-CY" and saved["locale"] == "el-CY"

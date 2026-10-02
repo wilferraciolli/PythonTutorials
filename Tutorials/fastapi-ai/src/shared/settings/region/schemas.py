@@ -1,7 +1,6 @@
 from pydantic import BaseModel
+from wiltech_labs_rest import ApiResponse, FieldMetadata, LinkedResource
 
-from core.common.api_response import ApiResponse
-from core.common.base_dto import FieldMetadata, LinkedResource
 from shared.settings.region.enums import (
     SupportedCurrencies,
     SupportedLanguages,

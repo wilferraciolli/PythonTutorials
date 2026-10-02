@@ -1,9 +1,7 @@
 from typing import Any, Dict, Literal
 
 from pydantic import BaseModel, Field
-
-from core.common.api_response import ApiResponse
-from core.common.base_dto import NoMetadata
+from wiltech_labs_rest import ApiResponse, NoMetadata
 
 
 # --- Request: what the client sends -----------------------------------------

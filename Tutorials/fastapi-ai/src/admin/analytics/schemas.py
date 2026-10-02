@@ -1,9 +1,7 @@
 from datetime import date
 
 from pydantic import BaseModel, ConfigDict, Field
-
-from core.common.api_response import ApiResponse
-from core.common.base_dto import FieldMetadata
+from wiltech_labs_rest import ApiResponse, FieldMetadata
 
 
 # --- DTO: what the application service returns ------------------------------

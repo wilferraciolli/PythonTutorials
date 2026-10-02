@@ -2,10 +2,8 @@ from datetime import datetime
 from typing import Optional
 
 from pydantic import BaseModel, Field, field_serializer
+from wiltech_labs_rest import ApiResponse, FieldMetadata, LinkedResource, NoMetadata, format_utc_datetime
 
-from core.common.api_response import ApiResponse
-from core.common.base_dto import FieldMetadata, LinkedResource, NoMetadata
-from core.common.serializers import format_utc_datetime
 from groups.constants import DESCRIPTION_MAX_LENGTH, NAME_MAX_LENGTH
 from groups.enums import GroupVisibility
 

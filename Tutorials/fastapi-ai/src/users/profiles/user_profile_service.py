@@ -1,7 +1,7 @@
 from typing import Optional
 
-from core.common.api_response import API_PREFIX
-from core.common.base_dto import FieldMetadata, Link
+from wiltech_labs_rest import API_PREFIX, FieldMetadata, Link
+
 from core.security.authorization import Caller
 from core.security.roles import role_options
 from users.models import UserModel

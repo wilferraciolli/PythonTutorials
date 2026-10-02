@@ -2,8 +2,8 @@ from datetime import datetime, timezone
 from typing import Dict, List, Optional
 from uuid import uuid4
 
-from core.common.api_response import API_PREFIX
-from core.common.base_dto import EmbeddedRef, FieldMetadata, Link, NoMetadata
+from wiltech_labs_rest import API_PREFIX, EmbeddedRef, FieldMetadata, Link, NoMetadata
+
 from core.common.errors import ConflictError, ForbiddenError, NotFoundError
 from core.security.authorization import Caller
 from groups.constants import (

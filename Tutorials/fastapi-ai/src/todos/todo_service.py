@@ -3,9 +3,10 @@ from datetime import datetime, timezone
 from typing import List, Optional
 from uuid import uuid4
 
+from wiltech_labs_rest import API_PREFIX, EmbeddedRef, FieldMetadata, Link
+
 from core.ai.schemas import ReindexDTO
-from core.common.api_response import API_PREFIX
-from core.common.base_dto import EmbeddedRef, FieldMetadata, Link
+
 from tags.tag_service import TagService
 from todos.constants import (
     LINK_ADD_TAG,

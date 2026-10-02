@@ -1,6 +1,7 @@
 from enum import Enum
 
-from core.common.base_dto import EmbeddedRef
+from wiltech_labs_rest import EmbeddedRef
+
 
 
 # Enum for user role

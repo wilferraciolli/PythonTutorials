@@ -1,6 +1,8 @@
 from datetime import datetime, timezone
 from typing import Dict, List
 
+from wiltech_labs_rest import API_PREFIX, Link, NoMetadata
+
 from chats.chat_repository import ChatRepository
 from chats.constants import HITS_DATA_NAME, LINK_CHAT, LINK_REINDEX, LINK_SEARCH, REINDEX_DATA_NAME
 from chats.models import ChatMessageHitModel, ChatMessageModel
@@ -8,8 +10,6 @@ from chats.schemas import ChatReindexResponse, ChatSearchHitDTO, ChatSearchRespo
 from core.ai.embeddings import EmbedFn
 from core.ai.schemas import ReindexDTO
 from core.ai.vector_store import VectorItem, VectorStore
-from core.common.api_response import API_PREFIX
-from core.common.base_dto import Link, NoMetadata
 
 SNIPPET_LENGTH = 300
 DEFAULT_LIMIT = 10

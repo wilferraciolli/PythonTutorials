@@ -2,8 +2,8 @@ import logging
 from typing import Dict, List, Optional
 from uuid import uuid4
 
-from core.common.api_response import API_PREFIX
-from core.common.base_dto import FieldMetadata, Link
+from wiltech_labs_rest import API_PREFIX, FieldMetadata, Link
+
 from core.common.errors import ConflictError, ForbiddenError, NotFoundError
 from core.security.authorization import Caller
 from groups.group_permissions import GroupAccess, GroupPermissions

@@ -1,8 +1,8 @@
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from core.common.api_response import API_PREFIX
-from core.common.base_dto import FieldMetadata, Link
+from wiltech_labs_rest import API_PREFIX, FieldMetadata, Link
+
 from core.security.auth import AuthenticatedUser
 from core.security.roles import UserRole, to_role
 from users.models import UserModel

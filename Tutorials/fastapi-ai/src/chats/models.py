@@ -1,7 +1,7 @@
 from pydantic import BaseModel
+from wiltech_labs_rest import UtcDateTime
 
 from chats.enums import ChatMessageRole
-from core.common.serializers import UtcDateTime
 
 
 class ChatModel(BaseModel):

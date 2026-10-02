@@ -1,8 +1,5 @@
-from enum import Enum
-from typing import Type
+from wiltech_labs_rest import API_PREFIX, FieldMetadata, Link, choice_field
 
-from core.common.api_response import API_PREFIX
-from core.common.base_dto import EmbeddedRef, FieldMetadata, Link
 from core.security.authorization import Caller
 from shared.settings.region.enums import (
     SupportedCurrencies,
@@ -95,11 +92,11 @@ class UserSettingsService:
         return UserSettingsMetadata(
             id=FieldMetadata(readOnly=True, hidden=True),
             owner_type=FieldMetadata(readOnly=True),
-            timezone=self._choice_field(SupportedTimeZones),
-            language=self._choice_field(SupportedLanguages),
-            locale=self._choice_field(SupportedLocales),
-            currency=self._choice_field(SupportedCurrencies),
-            theme=self._choice_field(SupportedThemes),
+            timezone=choice_field(SupportedTimeZones),
+            language=choice_field(SupportedLanguages),
+            locale=choice_field(SupportedLocales),
+            currency=choice_field(SupportedCurrencies),
+            theme=choice_field(SupportedThemes),
         )
 
     @staticmethod
@@ -110,13 +107,6 @@ class UserSettingsService:
             LINK_UPDATE_SETTINGS: Link(href=url, method="PUT"),
             LINK_RESET_SETTINGS: Link(href=url, method="DELETE"),
         }
-
-    @staticmethod
-    def _choice_field(enum_type: Type[Enum]) -> FieldMetadata:
-        return FieldMetadata(
-            mandatory=True,
-            values=[EmbeddedRef(id=member.value, value=member.value) for member in enum_type],
-        )
 
     def build_response(self, user_settings: UserSettingsDTO) -> UserSettingsResponse:
         return UserSettingsResponse.of(

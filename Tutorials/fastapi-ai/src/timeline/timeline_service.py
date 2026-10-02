@@ -1,8 +1,8 @@
 from datetime import datetime, timezone
 from typing import Callable, Dict, List
 
-from core.common.api_response import API_PREFIX
-from core.common.base_dto import EmbeddedRef, FieldMetadata, Link
+from wiltech_labs_rest import API_PREFIX, EmbeddedRef, FieldMetadata, Link
+
 from core.security.authorization import Caller
 from groups.group_permissions import GroupAccess
 from groups.models import GroupModel

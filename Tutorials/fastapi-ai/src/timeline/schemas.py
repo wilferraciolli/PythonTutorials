@@ -1,7 +1,6 @@
 from pydantic import BaseModel
+from wiltech_labs_rest import ApiResponse, FieldMetadata
 
-from core.common.api_response import ApiResponse
-from core.common.base_dto import FieldMetadata
 from groups.posts.schemas import PostDTO
 
 

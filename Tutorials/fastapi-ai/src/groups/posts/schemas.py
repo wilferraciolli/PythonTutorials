@@ -2,10 +2,8 @@ from datetime import datetime
 from typing import List, Optional
 
 from pydantic import BaseModel, Field, field_serializer
+from wiltech_labs_rest import ApiResponse, FieldMetadata, LinkedResource, format_utc_datetime
 
-from core.common.api_response import ApiResponse
-from core.common.base_dto import FieldMetadata, LinkedResource
-from core.common.serializers import format_utc_datetime
 from groups.posts.constants import BODY_MAX_LENGTH, MAX_TAGGED_PEOPLE, TITLE_MAX_LENGTH
 from media.enums import MediaType
 from media.schemas import MediaRefRequest

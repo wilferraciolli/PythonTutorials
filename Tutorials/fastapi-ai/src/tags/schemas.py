@@ -2,10 +2,7 @@ from datetime import datetime
 from typing import Optional
 
 from pydantic import BaseModel, Field, field_serializer
-
-from core.common.api_response import ApiResponse
-from core.common.base_dto import EmbeddedRef, FieldMetadata, LinkedResource
-from core.common.serializers import format_utc_datetime
+from wiltech_labs_rest import ApiResponse, EmbeddedRef, FieldMetadata, LinkedResource, format_utc_datetime
 
 
 # --- Request: what the client sends -----------------------------------------

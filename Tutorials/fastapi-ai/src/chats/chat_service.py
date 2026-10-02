@@ -3,6 +3,8 @@ from datetime import datetime, timezone
 from typing import Any, Callable, Dict, List, Optional
 from uuid import uuid4
 
+from wiltech_labs_rest import API_PREFIX, FieldMetadata, Link, NoMetadata
+
 from chats.chat_repository import ChatRepository
 from chats.chat_search_service import ChatSearchService
 from chats.constants import (
@@ -20,8 +22,6 @@ from chats.enums import ChatMessageRole
 from chats.models import ChatMessageModel, ChatModel
 from chats.schemas import ChatDTO, ChatListResponse, ChatMessageDTO, ChatMetadata, ChatResponse
 from core.ai.ai import AI, ChatProvider
-from core.common.api_response import API_PREFIX
-from core.common.base_dto import FieldMetadata, Link, NoMetadata
 
 logger = logging.getLogger(__name__)
 
