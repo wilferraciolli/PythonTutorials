@@ -1,4 +1,5 @@
-from core.common.base_dto import LinkedResource
+from wiltech_labs_rest import LinkedResource
+
 from shared.settings.configuration.enums import ConfigurationSettingType
 
 
