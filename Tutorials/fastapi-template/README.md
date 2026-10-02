@@ -44,11 +44,8 @@ fastapi-template/
 │   ├── entry.py                      # FastAPI app + Workers ASGI entrypoint
 │   ├── main.py                       # Plain FastAPI app for uvicorn/Docker; wires
 │   │                                  # routers + the Clerk auth dependency
-│   ├── core/                         # Cross-cutting, no domain knowledge
-│   │   ├── common/
-│   │   │   ├── api_response.py       # ApiResponse envelope + API_PREFIX
-│   │   │   ├── base_dto.py           # Link, LinkedResource, EmbeddedRef, FieldMetadata
-│   │   │   └── serializers.py        # UTC date formatting
+│   ├── core/                         # Cross-cutting, no domain knowledge (the response
+│   │   │                              # envelope, links and metadata come from wiltech-labs-rest)
 │   │   ├── config/
 │   │   │   ├── config.py             # Runtime config from Worker env / .env / OS env
 │   │   │   └── database.py           # SQLite, D1 binding, and D1 HTTP adapters + migrations
@@ -107,7 +104,7 @@ The classes don't inherit from each other. A Request holds only the fields the
 client may change; the DTO adds what the server decides (`id`, `links`, ...).
 
 **Every non-delete response uses the generic envelope** `ApiResponse` from
-the [`wiltech-labs-rest`](https://test.pypi.org/project/wiltech-labs-rest/)
+the [`wiltech-labs-rest`](https://pypi.org/project/wiltech-labs-rest/)
 library, so a resource never defines its own
 `_data`/`_metadata` classes:
 
@@ -131,8 +128,7 @@ return service.build_response(user_settings)
   `LinkedResource`, `EmbeddedRef` (an `{id, value}` option), `FieldMetadata`
   (`readOnly` / `hidden` / `mandatory` / `values`), `choice_field(enum)`,
   `Message` / `MessageType`, `API_PREFIX` and `format_utc_datetime`. It's
-  currently installed from TestPyPI (see `[tool.uv.index]` in
-  `pyproject.toml`); upgrade with
+  installed from PyPI like any other dependency; upgrade with
   `uv lock --upgrade-package wiltech-labs-rest && uv sync`.
 - `_messages` is always present (an empty array when there's nothing to
   say). `FieldMetadata` drops its own unset flags, so routes don't need

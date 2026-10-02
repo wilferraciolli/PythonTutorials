@@ -229,7 +229,7 @@ requires-dist = [
     { name = "httpx" },
     { name = "pyjwt", extras = ["crypto"] },
     { name = "uvicorn" },
-    { name = "wiltech-labs-rest", specifier = ">=0.1.0", index = "https://test.pypi.org/simple/" },
+    { name = "wiltech-labs-rest", specifier = ">=1.0.0" },
 ]
 
 [package.metadata.requires-dev]
@@ -594,14 +594,14 @@ wheels = [
 
 [[package]]
 name = "wiltech-labs-rest"
-version = "0.1.0"
-source = { registry = "https://test.pypi.org/simple/" }
+version = "1.0.0"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pydantic" },
 ]
-sdist = { url = "https://test-files.pythonhosted.org/packages/3e/97/45cdfa11c362f3463952344e20748ec4572f4436e6567abc26c8a729769a/wiltech_labs_rest-0.1.0.tar.gz", hash = "sha256:a2e1247527543f47f02d3ecf7be9e511e42581ba9d7631f585ca67f5c9b06f4d", size = 7492, upload-time = "2026-10-02T20:05:13.494Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/03/84/b043db06978d94463a2d380386683a815ea0416bd3369bc330096ace1c1d/wiltech_labs_rest-1.0.0.tar.gz", hash = "sha256:e1c8475b935496ce89608ae074503c29168b3040d38b003c4bb7fd1d99eaced8", size = 8610, upload-time = "2026-10-02T20:45:42.652Z" }
 wheels = [
-    { url = "https://test-files.pythonhosted.org/packages/72/2a/62e5393c578e54894d27c0d210d2929272d5fb6d317b16e3ddc1442bb194/wiltech_labs_rest-0.1.0-py3-none-any.whl", hash = "sha256:a95c060c6926a6a2da292be11815d944ed24e496eac6da85a97fd93306375f78", size = 7951, upload-time = "2026-10-02T20:05:12.336Z" },
+    { url = "https://files.pythonhosted.org/packages/d9/53/0ae2fa7bceb297a6e27f9bcf28708be3411d9c2d8fa8a492c32bfe6f8816/wiltech_labs_rest-1.0.0-py3-none-any.whl", hash = "sha256:ace3351f0243bcf848584168645082fe1c709f665e5729381d437bfb499c40cd", size = 8817, upload-time = "2026-10-02T20:45:41.552Z" },
 ]
 
 [[package]]
