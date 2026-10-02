@@ -8,6 +8,7 @@ dependencies = [
     "httpx",
     "pyjwt[crypto]",
     "uvicorn",
+    "wiltech-labs-rest>=0.1.0",
 ]
 
 [dependency-groups]
@@ -15,3 +16,14 @@ dev = [
     "workers-py",
     "workers-runtime-sdk",
 ]
+
+# wiltech-labs-rest is only on TestPyPI for now. `explicit = true` means this
+# index is used for that package alone; everything else still comes from PyPI.
+# Once it's on PyPI, delete this block and [tool.uv.sources].
+[[tool.uv.index]]
+name = "testpypi"
+url = "https://test.pypi.org/simple/"
+explicit = true
+
+[tool.uv.sources]
+wiltech-labs-rest = { index = "testpypi" }

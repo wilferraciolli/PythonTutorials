@@ -106,8 +106,9 @@ reference implementation:
 The classes don't inherit from each other. A Request holds only the fields the
 client may change; the DTO adds what the server decides (`id`, `links`, ...).
 
-**Every non-delete response uses the generic envelope** in
-`core/common/api_response.py`, so a resource never defines its own
+**Every non-delete response uses the generic envelope** `ApiResponse` from
+the [`wiltech-labs-rest`](https://test.pypi.org/project/wiltech-labs-rest/)
+library, so a resource never defines its own
 `_data`/`_metadata` classes:
 
 ```python
@@ -126,9 +127,13 @@ return service.build_response(user_settings)
 
 - The `_data` key name (`"userSettings"`) is a constant in the domain's
   `constants.py`, together with the link names.
-- Shared building blocks live in `core/common/base_dto.py`: `Link`,
-  `LinkedResource`, `EmbeddedRef` (an `{id, value}` option), and
-  `FieldMetadata` (`readOnly` / `hidden` / `mandatory` / `values`).
+- Shared building blocks come from `wiltech_labs_rest` too: `Link`,
+  `LinkedResource`, `EmbeddedRef` (an `{id, value}` option), `FieldMetadata`
+  (`readOnly` / `hidden` / `mandatory` / `values`), `choice_field(enum)`,
+  `Message` / `MessageType`, `API_PREFIX` and `format_utc_datetime`. It's
+  currently installed from TestPyPI (see `[tool.uv.index]` in
+  `pyproject.toml`); upgrade with
+  `uv lock --upgrade-package wiltech-labs-rest && uv sync`.
 - `_messages` is always present (an empty array when there's nothing to
   say). `FieldMetadata` drops its own unset flags, so routes don't need
   `response_model_exclude_none`, and a DTO's `None` fields still come back as
