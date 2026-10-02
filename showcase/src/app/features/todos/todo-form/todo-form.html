@@ -7,35 +7,10 @@
     <p class="TodoForm-loading">{{ 'common.loading' | transloco }}</p>
   } @else {
     <form [formRoot]="todoForm" class="TodoForm-form">
-      <mat-form-field appearance="outline">
-        <mat-label>{{ 'todos.form.title' | transloco }}</mat-label>
-        <input matInput [formField]="todoForm.title" />
-        @if (todoForm.title().touched() && todoForm.title().invalid()) {
-          <mat-error>{{ 'todos.form.titleRequired' | transloco }}</mat-error>
-        }
-      </mat-form-field>
-
-      <mat-form-field appearance="outline">
-        <mat-label>{{ 'todos.form.description' | transloco }}</mat-label>
-        <textarea matInput rows="3" [formField]="todoForm.description"></textarea>
-      </mat-form-field>
-
-      <mat-form-field appearance="outline">
-        <mat-label>{{ 'todos.form.due' | transloco }}</mat-label>
-        <input matInput type="datetime-local" [formField]="todoForm.complete_by" />
-        @if (todoForm.complete_by().touched() && todoForm.complete_by().invalid()) {
-          <mat-error>{{ 'todos.form.dueRequired' | transloco }}</mat-error>
-        }
-      </mat-form-field>
-
-      <mat-form-field appearance="outline">
-        <mat-label>{{ 'todos.form.state' | transloco }}</mat-label>
-        <select matNativeControl [formField]="todoForm.state">
-          @for (option of store.stateOptions(); track option.value) {
-            <option [value]="option.value">{{ option.viewValue }}</option>
-          }
-        </select>
-      </mat-form-field>
+      <ngx-text-field [fieldDef]="titleField()" [field]="todoForm.title" />
+      <ngx-textarea-field [fieldDef]="descriptionField()" [field]="todoForm.description" />
+      <ngx-instant-date-time-field [fieldDef]="dueField()" [field]="todoForm.complete_by" />
+      <ngx-select-field [fieldDef]="stateField()" [field]="todoForm.state" />
 
       @if (saveError()) {
         <p class="TodoForm-error">{{ saveError() }}</p>
@@ -49,44 +24,18 @@
       </div>
     </form>
 
-    @if (isEditMode() && existing(); as todo) {
+    @if (isEditMode() && existing()) {
       <div class="TodoForm-tags">
         <h2 class="TodoForm-tags-title">{{ 'todos.form.tags' | transloco }}</h2>
 
         @if (tagsLoading()) {
           <p class="TodoForm-loading">{{ 'todos.form.loadingTags' | transloco }}</p>
         } @else {
-          <mat-chip-set>
-            @for (tag of tags(); track tag.id) {
-              <mat-chip (removed)="removeTag(tag)">
-                {{ tag.tag }}
-                @if (links.hasLink(tag.links['delete'])) {
-                  <button matChipRemove [attr.aria-label]="'todos.form.removeTag' | transloco">
-                    <mat-icon aria-hidden="true">cancel</mat-icon>
-                  </button>
-                }
-              </mat-chip>
-            }
-          </mat-chip-set>
-        }
-
-        @if (links.hasLink(todo.links['addTag'])) {
-          <div class="TodoForm-tags-add">
-            <mat-form-field appearance="outline" subscriptSizing="dynamic">
-              <mat-label>{{ 'todos.form.addTag' | transloco }}</mat-label>
-              <input
-                matInput
-                [value]="newTag()"
-                (input)="newTag.set($any($event.target).value)"
-                (keyup.enter)="addTag()"
-              />
-            </mat-form-field>
-            <button matButton type="button" (click)="addTag()">{{ 'todos.form.add' | transloco }}</button>
-          </div>
+          <ngx-chips-field [fieldDef]="tagsField()" [field]="tagsForm" />
         }
 
         @if (tagError()) {
-          <p class="TodoForm-error">{{ tagError() }}</p>
+          <p class="TodoForm-error" role="alert">{{ tagError() }}</p>
         }
       </div>
     }

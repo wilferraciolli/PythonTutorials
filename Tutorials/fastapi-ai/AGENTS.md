@@ -3,7 +3,7 @@
 Before creating or changing this Python FastAPI app, read the central Python
 conventions:
 
-- `../PYTHON_APP_CONVENTIONS.md`
+- `../docs/PYTHON_APP_CONVENTIONS.md`
 
 Follow those conventions for:
 

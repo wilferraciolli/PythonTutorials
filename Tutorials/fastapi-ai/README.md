@@ -107,7 +107,7 @@ fastapi-ai/
 
 ## Code conventions
 
-The full rules live in [`../PYTHON_APP_CONVENTIONS.md`](../PYTHON_APP_CONVENTIONS.md);
+The full rules live in [`../docs/PYTHON_APP_CONVENTIONS.md`](../docs/PYTHON_APP_CONVENTIONS.md);
 [`fastapi-template`](../fastapi-template) is the small reference. In short:
 
 **One class per layer, named for the layer.** `todos/` is a compact example:

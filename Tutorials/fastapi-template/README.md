@@ -89,7 +89,7 @@ fastapi-template/
 
 ## Code conventions
 
-The full rules live in [`../PYTHON_APP_CONVENTIONS.md`](../PYTHON_APP_CONVENTIONS.md).
+The full rules live in [`../docs/PYTHON_APP_CONVENTIONS.md`](../docs/PYTHON_APP_CONVENTIONS.md).
 The ones you'll hit first when adding a resource:
 
 **One class per layer, named for the layer.** `users/settings/` is the

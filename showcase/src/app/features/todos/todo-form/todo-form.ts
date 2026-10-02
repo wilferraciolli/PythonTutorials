@@ -1,13 +1,18 @@
 import { Component, computed, effect, inject, input, signal } from '@angular/core';
-import { FormField, FormRoot, form, required, schema } from '@angular/forms/signals';
+import { disabled, FormRoot, form, required, schema } from '@angular/forms/signals';
 import { MatButtonModule } from '@angular/material/button';
-import { MatChipsModule } from '@angular/material/chips';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
 import { Router, RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { ApiClientService, LinkService } from '@wiltech-labs/ngx-api-client';
+import {
+  ChipsField,
+  FormFieldType,
+  InstantDateTimeField,
+  SelectField,
+  TextareaField,
+  TextField,
+} from '@wiltech-labs/ngx-forms';
+import type { FieldDef } from '@wiltech-labs/ngx-forms';
 
 import { ApiErrors } from '../../../core/api/api-error';
 import { TranslationService } from '../../../core/i18n/translation.service';
@@ -17,41 +22,26 @@ import { TodoPayload, TodosStore } from '../todos.store';
 interface TodoFormModel {
   title: string;
   description: string;
-  // Native `datetime-local` value ("YYYY-MM-DDTHH:mm", local time) — see
-  // toDatetimeLocalValue()/fromDatetimeLocalValue() for the round-trip to
-  // the API's UTC ISO string.
+  // UTC instant ('YYYY-MM-DDThh:mm:ssZ', '' when unset) — the exact shape
+  // InstantDateTimeField both reads and writes, and TodoPayload.complete_by's
+  // own shape, so no local <-> UTC conversion is needed on either side.
   complete_by: string;
   state: string;
 }
 
 const INITIAL_MODEL: TodoFormModel = { title: '', description: '', complete_by: '', state: 'NEW' };
 
-const todoSchema = schema<TodoFormModel>((path) => {
-  required(path.title);
-  required(path.complete_by);
-});
-
-function toDatetimeLocalValue(iso: string): string {
-  const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-
-function fromDatetimeLocalValue(value: string): string {
-  return new Date(value).toISOString();
-}
-
 @Component({
   selector: 'app-todo-form',
   imports: [
     RouterLink,
-    FormField,
     FormRoot,
     MatButtonModule,
-    MatChipsModule,
-    MatFormFieldModule,
-    MatIconModule,
-    MatInputModule,
+    TextField,
+    TextareaField,
+    SelectField,
+    InstantDateTimeField,
+    ChipsField,
     TranslocoPipe,
   ],
   templateUrl: './todo-form.html',
@@ -83,22 +73,56 @@ export class TodoForm {
   protected readonly saveError = signal<string | null>(null);
   protected readonly saving = signal(false);
 
-  protected readonly todoForm = form(this.model, todoSchema, {
-    submission: {
-      action: async () => {
-        this.saveError.set(null);
-        this.saving.set(true);
-        try {
-          await this.persist();
-        } catch (err) {
-          this.saveError.set(this.extractErrorMessage(err));
-        } finally {
-          this.saving.set(false);
-        }
-        return undefined;
+  protected readonly titleField = computed<FieldDef>(() => ({
+    name: 'title',
+    type: FormFieldType.TEXT,
+    label: this.i18n.t('todos.form.title'),
+    required: true,
+  }));
+  protected readonly descriptionField = computed<FieldDef>(() => ({
+    name: 'description',
+    type: FormFieldType.TEXTAREA,
+    label: this.i18n.t('todos.form.description'),
+  }));
+  protected readonly dueField = computed<FieldDef>(() => ({
+    name: 'complete_by',
+    type: FormFieldType.INSTANT_DATE_TIME,
+    label: this.i18n.t('todos.form.due'),
+    required: true,
+  }));
+  protected readonly stateField = computed<FieldDef>(() => ({
+    name: 'state',
+    type: FormFieldType.SELECT,
+    label: this.i18n.t('todos.form.state'),
+    options: this.store.stateOptions().map((option) => ({ label: option.viewValue, value: option.value })),
+  }));
+
+  // Hand-written (not ngx-forms' toSchema()) so the required messages come
+  // from the app's own translated keys instead of toSchema's English-only
+  // "<label> is required".
+  protected readonly todoForm = form(
+    this.model,
+    schema<TodoFormModel>((path) => {
+      required(path.title, { message: () => this.i18n.t('todos.form.titleRequired') });
+      required(path.complete_by, { message: () => this.i18n.t('todos.form.dueRequired') });
+    }),
+    {
+      submission: {
+        action: async () => {
+          this.saveError.set(null);
+          this.saving.set(true);
+          try {
+            await this.persist();
+          } catch (err) {
+            this.saveError.set(this.extractErrorMessage(err));
+          } finally {
+            this.saving.set(false);
+          }
+          return undefined;
+        },
       },
     },
-  });
+  );
 
   // Reactively bound to the current todo's own `tags` link — resolves to
   // undefined (unfetched) until the todo is found, and re-resolves if a
@@ -110,8 +134,29 @@ export class TodoForm {
   });
   protected readonly tags = this.tagsResource.value;
   protected readonly tagsLoading = this.tagsResource.isLoading;
-  protected readonly newTag = signal('');
   protected readonly tagError = signal<string | null>(null);
+
+  // Not submitted with todoForm — each add/remove is its own API call, same
+  // as before this used ngx-forms. ChipsField only replaces the hand-rolled
+  // mat-chip-grid as the UI; reconcileTags() below does the actual syncing.
+  protected readonly tagsModel = signal<string[]>([]);
+  protected readonly canAddTag = computed(() => this.links.hasLink(this.existing()?.links['addTag']));
+  protected readonly tagsForm = form(
+    this.tagsModel,
+    schema<string[]>((path) => {
+      disabled(path, () => !this.canAddTag());
+    }),
+  );
+  protected readonly tagsField = computed<FieldDef>(() => ({
+    name: 'tags',
+    type: FormFieldType.CHIPS,
+    label: this.i18n.t('todos.form.tags'),
+  }));
+
+  // The last tag list this component itself produced — from the server, or
+  // from a reconcile that already succeeded — so the effect below only acts
+  // on a genuine ChipsField edit, never on its own sync-back from the server.
+  private knownTags: string[] = [];
 
   constructor() {
     // Prefills the writable form model once the existing todo is found —
@@ -123,7 +168,7 @@ export class TodoForm {
       this.model.set({
         title: todo.title,
         description: todo.description ?? '',
-        complete_by: toDatetimeLocalValue(todo.complete_by),
+        complete_by: todo.complete_by,
         state: todo.state,
       });
     });
@@ -138,39 +183,67 @@ export class TodoForm {
       this.model.set({
         title: template.title,
         description: template.description ?? '',
-        complete_by: template.complete_by ? toDatetimeLocalValue(template.complete_by) : '',
+        complete_by: template.complete_by ?? '',
         state: template.state,
       });
     });
+
+    // Keeps tagsModel in step with the server — the source of truth both on
+    // first load and after reconcileTags()'s own reload.
+    effect(() => {
+      const loaded = this.tags();
+      if (loaded === undefined) return;
+      const texts = loaded.map((t) => t.tag);
+      this.knownTags = texts;
+      this.tagsModel.set(texts);
+    });
+
+    // Fires on every tagsModel change, including the sync above — but that
+    // one always sets tagsModel to exactly knownTags, so the diff below is
+    // empty and this is a no-op for it. Only a real ChipsField add/remove
+    // produces a non-empty diff.
+    effect(() => {
+      const current = this.tagsModel();
+      const added = current.filter((tag) => !this.knownTags.includes(tag));
+      const removed = this.knownTags.filter((tag) => !current.includes(tag));
+      if (added.length === 0 && removed.length === 0) return;
+      this.knownTags = current;
+      void this.reconcileTags(added, removed);
+    });
   }
 
-  protected async addTag(): Promise<void> {
+  private async reconcileTags(added: string[], removed: string[]): Promise<void> {
     const todo = this.existing();
-    const tagText = this.newTag().trim();
-    if (!todo || !tagText) return;
+    if (!todo) return;
 
     this.tagError.set(null);
     try {
-      const url = this.api.requireLink(todo.links['addTag'], this.i18n.t('todos.notPermittedUpdate', { id: todo.id }));
-      await this.api.post<'tag', Tag, { resource_id: string; tag: string }>('tag', url, {
-        resource_id: todo.id,
-        tag: tagText,
-      });
+      for (const tagText of added) {
+        const url = this.api.requireLink(
+          todo.links['addTag'],
+          this.i18n.t('todos.notPermittedUpdate', { id: todo.id }),
+        );
+        await this.api.post<'tag', Tag, { resource_id: string; tag: string }>('tag', url, {
+          resource_id: todo.id,
+          tag: tagText,
+        });
+      }
+      for (const tagText of removed) {
+        const tag = (this.tags() ?? []).find((t) => t.tag === tagText);
+        const url = this.api.requireLink(
+          tag?.links['delete'],
+          this.i18n.t('tags.notPermittedDelete', { id: tagText }),
+        );
+        await this.api.delete(url);
+      }
       this.tagsResource.reload();
-      this.newTag.set('');
     } catch (err) {
       this.tagError.set(this.extractErrorMessage(err));
-    }
-  }
-
-  protected async removeTag(tag: Tag): Promise<void> {
-    this.tagError.set(null);
-    try {
-      const url = this.api.requireLink(tag.links['delete'], this.i18n.t('tags.notPermittedDelete', { id: tag.id }));
-      await this.api.delete(url);
-      this.tagsResource.reload();
-    } catch (err) {
-      this.tagError.set(this.extractErrorMessage(err));
+      // Revert the optimistic edit — tagsResource still holds the old
+      // truth, so re-sync from it instead of guessing.
+      const loaded = this.tags() ?? [];
+      this.knownTags = loaded.map((t) => t.tag);
+      this.tagsModel.set(this.knownTags);
     }
   }
 
@@ -179,7 +252,7 @@ export class TodoForm {
     const payload: TodoPayload = {
       title: value.title,
       description: value.description || null,
-      complete_by: fromDatetimeLocalValue(value.complete_by),
+      complete_by: value.complete_by,
       state: value.state as TodoPayload['state'],
     };
 
