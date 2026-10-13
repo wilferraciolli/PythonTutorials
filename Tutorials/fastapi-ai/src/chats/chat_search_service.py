@@ -1,15 +1,21 @@
 from datetime import datetime, timezone
 from typing import Dict, List
 
+from wiltech_labs_ai import EmbedFn
 from wiltech_labs_rest import API_PREFIX, Link, NoMetadata
 
 from chats.chat_repository import ChatRepository
-from chats.constants import HITS_DATA_NAME, LINK_CHAT, LINK_REINDEX, LINK_SEARCH, REINDEX_DATA_NAME
+from chats.constants import (
+    HITS_DATA_NAME,
+    LINK_CHAT,
+    LINK_REINDEX,
+    LINK_SEARCH,
+    REINDEX_DATA_NAME,
+)
+from chats.message_vector_store import MessageVectorItem, MessageVectorStore
 from chats.models import ChatMessageHitModel, ChatMessageModel
 from chats.schemas import ChatReindexResponse, ChatSearchHitDTO, ChatSearchResponse
-from core.ai.embeddings import EmbedFn
-from core.ai.schemas import ReindexDTO
-from core.ai.vector_store import VectorItem, VectorStore
+from shared.search.schemas import ReindexDTO
 
 SNIPPET_LENGTH = 300
 DEFAULT_LIMIT = 10
@@ -35,7 +41,7 @@ class ChatSearchService:
     def __init__(
         self,
         chat_repository: ChatRepository,
-        vector_store: VectorStore,
+        vector_store: MessageVectorStore,
         embed: EmbedFn,
         embedding_model: str,
         providers: List[str],
@@ -53,7 +59,7 @@ class ChatSearchService:
 
         vectors = await self.embed([message.content for message in messages])
         items = [
-            VectorItem(message.id, message.chat_id, user_id, self.embedding_model, vector)
+            MessageVectorItem(message.id, message.chat_id, user_id, self.embedding_model, vector)
             for message, vector in zip(messages, vectors)
         ]
         await self.vector_store.upsert(items, datetime.now(timezone.utc).isoformat())

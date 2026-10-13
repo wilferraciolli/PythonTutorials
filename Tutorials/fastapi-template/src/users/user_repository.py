@@ -1,7 +1,8 @@
 from typing import Any, List, Mapping, Optional
 
-from core.config.database import Database
-from core.security.roles import UserRole, parse_role_ids
+from wiltech_labs_auth import UserRole, parse_role_ids
+from wiltech_labs_core import Database
+
 from users.models import UserModel
 
 

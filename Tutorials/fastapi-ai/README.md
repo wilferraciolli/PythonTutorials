@@ -14,8 +14,8 @@ This app keeps the same portability pattern as the sibling
 
 The repository layer does not know whether the database is SQLite or
 Cloudflare D1, and the chat service does not know which AI provider it is
-talking to — both sit behind small adapters (`core/config/database.py`,
-`core/ai/ai.py`).
+talking to — both sit behind small adapters from the shared libraries
+(`wiltech-labs-core`'s `Database`, `wiltech-labs-ai`'s `AI`).
 
 The code follows the same conventions as [`fastapi-template`](../fastapi-template):
 one package per domain, one typed class per layer, and the generic
@@ -58,23 +58,15 @@ One package per domain. Each has a `{domain}_router.py` (HTTP only), a
 `{domain}_service.py` (business rules, links, metadata, the response), a
 `{domain}_repository.py` (SQL), `models.py` (database rows), `schemas.py`
 (Request, DTO, Metadata and the typed responses) and `constants.py` (the
-`_data` names and link names). `core/` is cross-cutting and never imports a
-domain.
+`_data` names and link names). The cross-cutting plumbing is not in this repo:
+it comes from the published `wiltech-labs-*` libraries (below), which never
+import a domain.
 
 ```
 fastapi-ai/
 ├── src/
 │   ├── main.py                  # Plain FastAPI app for uvicorn/Docker: registers every router
 │   ├── entry.py                 # Cloudflare Workers ASGI entrypoint (wraps main.app)
-│   ├── core/
-│   │   ├── common/              # ApiResponse + API_PREFIX, Link/EmbeddedRef/FieldMetadata/Message,
-│   │   │                        # UTC dates (UtcDateTime), AppError + its exception handler
-│   │   ├── config/              # config (Worker env / .env / OS env), database adapters + migrations, CORS
-│   │   ├── security/            # auth (Clerk JWT), authorization (Caller, get_caller,
-│   │   │                        # require_admin, require_owner), roles
-│   │   └── ai/                  # AI protocol (Workers AI REST/binding, Groq), LLM client,
-│   │                            # embeddings, vector stores
-│   ├── metrics/                 # /api/health
 │   ├── users/                   # /api/users; dependencies.py creates the caller's user on first sight
 │   │   ├── profiles/            # /api/me and /api/users/{id}/profile (where every link lives)
 │   │   └── settings/            # /api/users/{id}/settings (personal)
@@ -105,6 +97,22 @@ fastapi-ai/
 └── .gitignore
 ```
 
+### Shared libraries
+
+The plumbing every Wiltech FastAPI app needs is installed from PyPI, not copied
+into `src/` (source: `py-libraries`):
+
+| Package | Provides |
+|---|---|
+| `wiltech-labs-core` (`[sqlite]` extra) | `get_config`, the `Database` protocol (SQLite / D1 binding / D1 over HTTP) and migrations, the `AppError` family + `register_error_handlers`, `EnvCORSMiddleware`, `health_router` |
+| `wiltech-labs-auth` | Clerk JWT (`get_authenticated_user`), `Caller` / `get_caller` / `require_admin` / `require_owner`, `UserRole` |
+| `wiltech-labs-ai` | the `AI` protocol (Workers AI binding / REST, Groq), `OpenAICompatibleLlm` + `get_tool_llm`, `get_embedder`, `DatabaseVectorStore`, `ToolAgent` |
+| `wiltech-labs-rest` | the response envelope (`ApiResponse`, `Link`, `FieldMetadata`, ...) |
+
+What stays in the app is specific to it: the chat `message_vector_store.py`
+(keyed by chat, with its own `message_embeddings` table) and `to_role` in
+`users/profiles/me_service.py`.
+
 ## Code conventions
 
 The full rules live in [`../docs/PYTHON_APP_CONVENTIONS.md`](../docs/PYTHON_APP_CONVENTIONS.md);
@@ -129,7 +137,7 @@ The full rules live in [`../docs/PYTHON_APP_CONVENTIONS.md`](../docs/PYTHON_APP_
 - `_messages` is always present, an empty array when there is nothing to say.
   `FieldMetadata` drops unset flags on its own, so routes don't use
   `response_model_exclude_none`.
-- Business-rule failures are exceptions from `core/common/errors.py`
+- Business-rule failures are exceptions from `wiltech_labs_core`
   (`NotFoundError` 404, `ForbiddenError` 403, `ConflictError` 409, ...) or a
   domain's own subclass (`users/exceptions.py`). One handler turns them into
   `{"detail": ...}` with the right status, so routers don't need try/except.
@@ -163,7 +171,7 @@ probe and returns a plain object.
 ## Authentication
 
 Every endpoint except `/api/health` requires a Clerk-issued JWT:
-`Authorization: Bearer <token>`. `core/security/auth.py` verifies it against
+`Authorization: Bearer <token>`. `wiltech_labs_auth` (`get_authenticated_user`) verifies it against
 `CLERK_JWKS_URL`/`CLERK_AUDIENCE` (from `.env` or `wrangler.jsonc` `vars`) —
 there is no dev bypass, so a plain `curl` with no header gets `401 Unauthorized`
 on every route below.
@@ -184,11 +192,11 @@ Roles live in our own `user_roles` table, not only in Clerk:
 - **Our API is the source of truth after that.** An admin can grant or remove
   roles through `PUT /api/users/{id}`, and a role granted here survives even
   if Clerk stops sending it. To revoke a role, use the API, not Clerk.
-- **`get_caller`** (`core/security/authorization.py`) returns a `Caller`
+- **`get_caller`** (`wiltech_labs_auth`) returns a `Caller`
   with the caller's saved roles. **`require_admin`** guards admin-only routes
   (`403` unless those roles include `ADMIN`), and **`require_owner`** guards
-  personal `/users/{id}/...` routes. They read `user_detail_view`, so `core/`
-  never imports the `users` package.
+  personal `/users/{id}/...` routes. They read `user_detail_view`, so the
+  library never imports the `users` package.
 - **Links follow permissions.** A non-admin gets no `updateUser` /
   `deleteUser` links and no `createUser` / `userTemplate` meta links. Nobody
   gets a `deleteUser` link on themselves.
@@ -219,7 +227,7 @@ the non-secret values come from `wrangler.jsonc` `vars` and secrets from
 | `CF_D1_ACCOUNT_ID` | With `d1_http` | Cloudflare account id that owns the D1 database |
 | `CF_D1_DATABASE_ID` | With `d1_http` | Id of the D1 database (`demo-db`) |
 | `CF_D1_API_TOKEN` | With `d1_http` | Cloudflare API token with D1 edit access (secret) |
-| `CORS_ORIGINS` | For a browser UI | Comma-separated frontend origins, read on every request (`src/core/config/cors.py`): `.env` locally, `wrangler.jsonc` `vars` in the Worker (set to the deployed demo-ui, `https://demo-ui-2pk.pages.dev`) |
+| `CORS_ORIGINS` | For a browser UI | Comma-separated frontend origins, read on every request (`EnvCORSMiddleware` in `wiltech-labs-core`): `.env` locally, `wrangler.jsonc` `vars` in the Worker (set to the deployed demo-ui, `https://demo-ui-2pk.pages.dev`) |
 | `AI_MODE` | No | `http` (Cloudflare REST API) or `binding` (`env.AI`). Defaults to `binding` inside a Worker, otherwise `http` |
 | `CF_AI_ACCOUNT_ID` | With `http` | Cloudflare account id used for Workers AI |
 | `CF_AI_API_TOKEN` | With `http` | Cloudflare API token with Workers AI access (secret) |
@@ -237,7 +245,7 @@ newer/larger ones (e.g. `@cf/moonshotai/kimi-k2.7-code`) return `403` with
 "not available on the Workers Free plan", and old ones get retired with a `410`
 (`@cf/meta/llama-3.1-8b-instruct` was deprecated on 2026-05-30). The default,
 `@cf/meta/llama-4-scout-17b-16e-instruct`, is fast and handles the Ask tools well.
-Groq and Workers AI are both called with plain `httpx` (`src/core/ai/llm.py`), not the
+Groq and Workers AI are both called with plain `httpx` (`OpenAICompatibleLlm` in `wiltech-labs-ai`), not the
 `openai` package, which cost about 1.4 s of CPU to load on a cold Worker.
 
 ## Database modes
@@ -482,7 +490,7 @@ flowchart LR
 |---|---|---|---|
 | 1 | **Query tool**: `count_notes` / `list_notes` with filters (state, dates, tags), scoped to the user | Always | Copy [`src/assistant/tools/todo_tools.py`](src/assistant/tools/todo_tools.py) to `note_tools.py` |
 | 2 | **Register it** | Always | Add `*build_note_tools(...)` to the `tools` list in [`src/assistant/assistant_router.py`](src/assistant/assistant_router.py) |
-| 3 | **Embeddings**: a `search_notes` tool, and vectors kept up to date | Only if people will search it *by meaning* (free text) | Copy [`todo_search_service.py`](src/todos/todo_search_service.py); use `ResourceVectorStore(db, "note")` (same `resource_embeddings` table, new `resource_type`, no new table); call `index_...` on create/edit and `remove_...` on delete in the resource's service, best effort like `TodoService._index` |
+| 3 | **Embeddings**: a `search_notes` tool, and vectors kept up to date | Only if people will search it *by meaning* (free text) | Copy [`todo_search_service.py`](src/todos/todo_search_service.py); use `DatabaseVectorStore(db, "note")` from `wiltech_labs_ai` (same `resource_embeddings` table, new `resource_type`, no new table); call `index_...` on create/edit and `remove_...` on delete in the resource's service, best effort like `TodoService._index` |
 | 4 | **Reindex endpoint** to backfill existing rows | With step 3 | Copy `POST /todos/search/reindex` |
 | 5 | **Tests** | Always | Copy the pattern in [`tests/test_todo_questions.py`](tests/test_todo_questions.py): scripted model, real SQLite, check user isolation |
 
@@ -533,7 +541,7 @@ Background and worked examples: [`docs/ask-your-data.md`](docs/ask-your-data.md)
 
 - **Python Workers are in beta.** The exact shape of objects returned by the
   Workers AI binding is based on the documented JS-equivalent API; build any
-  adapter defensively, the same way `core/config/database.py`'s D1 adapters handle both
+  adapter defensively, the same way `wiltech-labs-core`'s D1 adapters handle both
   dict-like and attribute-like row access. `ChatService._extract_reply()`
   takes the same defensive stance on the AI response shape.
 - No traditional SQLAlchemy ORM — repository SQL is raw and parameterized.

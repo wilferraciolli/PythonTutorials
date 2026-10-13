@@ -5,12 +5,19 @@ Service tests on a real temp SQLite file, plus a few API tests for the wiring
 """
 import pytest
 from fastapi.testclient import TestClient
+from wiltech_labs_auth import (
+    AuthenticatedUser,
+    Caller,
+    UserRole,
+    get_authenticated_user,
+)
+from wiltech_labs_core import (
+    ConflictError,
+    ForbiddenError,
+    NotFoundError,
+    SQLiteDatabase,
+)
 
-from core.common.errors import ConflictError, ForbiddenError, NotFoundError
-from core.config.database import SQLiteDatabase
-from core.security.auth import AuthenticatedUser, get_authenticated_user
-from core.security.authorization import Caller
-from core.security.roles import UserRole
 from groups.enums import GroupVisibility
 from groups.group_repository import GroupRepository
 from groups.group_service import GroupService

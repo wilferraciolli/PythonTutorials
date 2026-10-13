@@ -1,11 +1,11 @@
 """Social groups: likes and post_stats (score = comments x 2 + likes)."""
 import pytest
-from social import ADMIN, MEMBER, OUTSIDER, OWNER, make_social
+from wiltech_labs_core import ConflictError, ForbiddenError, NotFoundError
 
-from core.common.errors import ConflictError, ForbiddenError, NotFoundError
 from groups.enums import GroupVisibility
 from groups.group_repository import GroupRepository
 from groups.posts.post_stats_repository import PostStatsRepository
+from social import ADMIN, MEMBER, OUTSIDER, OWNER, make_social
 from users.user_repository import UserRepository
 from users.user_service import UserService
 

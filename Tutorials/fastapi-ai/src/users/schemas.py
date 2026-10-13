@@ -2,10 +2,13 @@ from datetime import datetime
 from typing import Optional
 
 from pydantic import BaseModel, Field, field_serializer
-from wiltech_labs_rest import ApiResponse, FieldMetadata, LinkedResource, format_utc_datetime
-
-from core.security.roles import UserRole
-
+from wiltech_labs_auth import UserRole
+from wiltech_labs_rest import (
+    ApiResponse,
+    FieldMetadata,
+    LinkedResource,
+    format_utc_datetime,
+)
 
 # --- Request: what the client sends -----------------------------------------
 

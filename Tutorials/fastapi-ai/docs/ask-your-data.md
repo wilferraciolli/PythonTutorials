@@ -191,7 +191,7 @@ flowchart TD
 ## Provider notes
 
 Both providers are called through their OpenAI-compatible chat-completions API
-(`core/ai/llm.py`), so one client serves both:
+(`wiltech_labs_ai`), so one client serves both:
 
 | Provider | Endpoint | Notes |
 |---|---|---|
@@ -206,7 +206,7 @@ did the model pick the right tool and arguments?
 ```mermaid
 flowchart TD
     R[assistant/assistant_router.py<br/>POST /assistant/ask] --> S[assistant/assistant_service.py<br/>the tool loop]
-    S --> LLM[core/ai/llm.py<br/>OpenAICompatibleLlm]
+    S --> LLM[wiltech_labs_ai<br/>OpenAICompatibleLlm]
     S --> Tools[assistant/tools/tool.py<br/>Tool]
     R --> TT[assistant/tools/todo_tools.py<br/>count_todos, list_todos]
     R --> CT[assistant/tools/chat_tools.py<br/>search_chats]

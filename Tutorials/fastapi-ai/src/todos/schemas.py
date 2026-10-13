@@ -2,12 +2,15 @@ from datetime import datetime
 from typing import Optional
 
 from pydantic import BaseModel, Field, field_serializer
-from wiltech_labs_rest import ApiResponse, FieldMetadata, LinkedResource, format_utc_datetime
+from wiltech_labs_rest import (
+    ApiResponse,
+    FieldMetadata,
+    LinkedResource,
+    format_utc_datetime,
+)
 
-from core.ai.schemas import ReindexDTO
-
+from shared.search.schemas import ReindexDTO
 from todos.enums import TodoState
-
 
 # --- Request: what the client sends -----------------------------------------
 

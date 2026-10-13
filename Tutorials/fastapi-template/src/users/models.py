@@ -3,7 +3,7 @@ from typing import Optional
 
 from pydantic import BaseModel
 
-from core.security.roles import UserRole
+from wiltech_labs_auth import UserRole
 
 
 class UserModel(BaseModel):

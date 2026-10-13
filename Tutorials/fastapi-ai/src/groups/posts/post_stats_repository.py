@@ -1,4 +1,4 @@
-from core.config.database import Database
+from wiltech_labs_core import Database
 
 COMMENT_WEIGHT = 2
 LIKE_WEIGHT = 1

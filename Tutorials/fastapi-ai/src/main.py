@@ -1,18 +1,15 @@
 from fastapi import Depends, FastAPI
+from wiltech_labs_auth import get_authenticated_user, require_admin
+from wiltech_labs_core import EnvCORSMiddleware, health_router, register_error_handlers
 
 from admin import admin_router
 from admin.analytics import engagement_router
 from assistant import assistant_router
 from chats import chat_router
-from core.common.errors import register_error_handlers
-from core.config.cors import EnvCORSMiddleware
-from core.security.auth import get_authenticated_user
-from core.security.authorization import require_admin
 from groups import group_router
 from groups.posts import post_router
 from groups.posts.comments import comment_router
 from media import media_router
-from metrics import status_router
 from shared.settings.region import system_settings_router
 from tags import tag_router
 from timeline import timeline_router
@@ -27,7 +24,7 @@ app = FastAPI(
     description="AI sample",
     version="1.0.0")
 
-# CORS_ORIGINS is read on every request (cors.py): from wrangler.jsonc `vars`
+# CORS_ORIGINS is read on every request (EnvCORSMiddleware): from wrangler.jsonc `vars`
 # in a Worker, or from .env locally. A fixed list built at import time never
 # saw the Worker's vars, so the deployed UI would have been blocked.
 app.add_middleware(EnvCORSMiddleware)
@@ -39,7 +36,7 @@ app.add_middleware(EnvCORSMiddleware)
 # Every router except the health check requires a signed-in caller.
 # ensure_current_user creates the caller's user on first sight (as /me
 # does) before any route dependency runs, so get_caller always finds them.
-app.include_router(status_router.router, prefix="/api")
+app.include_router(health_router(), prefix="/api")
 app.include_router(me_router.router, prefix="/api", dependencies=[Depends(get_authenticated_user)])
 
 for router in (

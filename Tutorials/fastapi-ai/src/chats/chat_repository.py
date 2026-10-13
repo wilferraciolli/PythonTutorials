@@ -1,7 +1,8 @@
 from typing import Any, List, Mapping, Optional
 
+from wiltech_labs_core import Database
+
 from chats.models import ChatMessageHitModel, ChatMessageModel, ChatModel
-from core.config.database import Database
 
 _SELECT_MESSAGE_HIT = (
     "SELECT m.*, c.title AS chat_title, c.user_id AS user_id FROM chat_messages m "

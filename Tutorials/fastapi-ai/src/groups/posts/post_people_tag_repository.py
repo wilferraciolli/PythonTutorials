@@ -1,6 +1,7 @@
 from typing import Dict, Iterable, List, Set
 
-from core.config.database import Database
+from wiltech_labs_core import Database
+
 from groups.posts.models import TaggedPersonModel
 
 

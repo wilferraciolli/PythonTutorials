@@ -8,16 +8,16 @@ import json
 
 import pytest
 from fastapi.testclient import TestClient
-from social import ADMIN, MEMBER, NEWS_ID, OUTSIDER, OWNER, make_social
+from wiltech_labs_auth import AuthenticatedUser, get_authenticated_user
 
 from assistant.assistant_service import AssistantService
 from assistant.tools.social_tools import build_social_tools
-from core.security.auth import AuthenticatedUser, get_authenticated_user
 from groups.enums import GroupVisibility
 from groups.posts.post_search_service import PostSearchService
 from groups.posts.schemas import PostUpdateRequest
 from groups.schemas import GroupUpdateRequest
 from groups.social_query_repository import SocialQueryRepository
+from social import ADMIN, MEMBER, NEWS_ID, OUTSIDER, OWNER, make_social
 
 AXES = [("bike", "cycle", "lane"), ("pizza", "recipe", "cook"), ("rain", "storm", "weather")]
 
@@ -244,7 +244,8 @@ async def test_assistant_answers_a_social_question(s):
 def test_admin_reindex_endpoint(tmp_path, monkeypatch):
     monkeypatch.setenv("DATABASE_MODE", "sqlite")
     monkeypatch.setenv("DATABASE_PATH", str(tmp_path / "api.db"))
-    from core.config.database import SQLiteDatabase
+    from wiltech_labs_core import SQLiteDatabase
+
     from groups.posts.post_router import get_post_search_service
     from main import app
 

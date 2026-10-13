@@ -4,10 +4,10 @@ carries taggedUserIds, the response metadata resolves them to full names.
 """
 import pytest
 from pydantic import ValidationError
-from social import MEMBER, OWNER, make_social
+from wiltech_labs_core import ForbiddenError, InvalidInputError
 
-from core.common.errors import ForbiddenError, InvalidInputError
 from groups.posts.schemas import PostCreateRequest, PostUpdateRequest
+from social import MEMBER, OWNER, make_social
 from timeline.enums import TimelineType
 from timeline.timeline_repository import TimelineRepository
 from timeline.timeline_service import TimelineService

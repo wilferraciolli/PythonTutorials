@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
+from wiltech_labs_auth import Caller, get_caller
+from wiltech_labs_core import get_database
 
-from core.config.database import get_database
-from core.security.authorization import Caller, get_caller
 from users.profiles.schemas import UserProfileResponse
 from users.profiles.user_profile_service import UserProfileService
 from users.user_repository import UserRepository

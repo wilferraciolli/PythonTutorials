@@ -2,10 +2,9 @@ from datetime import datetime, timezone
 from typing import List, Optional
 from uuid import uuid4
 
+from wiltech_labs_auth import Caller, UserRole, role_options
 from wiltech_labs_rest import API_PREFIX, FieldMetadata, Link
 
-from core.security.authorization import Caller
-from core.security.roles import UserRole, role_options
 from users.constants import (
     LINK_CREATE_USER,
     LINK_DELETE_USER,

@@ -1,14 +1,25 @@
 from datetime import datetime, timezone
 from uuid import uuid4
 
+from wiltech_labs_auth import AuthenticatedUser, UserRole
 from wiltech_labs_rest import API_PREFIX, FieldMetadata, Link
 
-from core.security.auth import AuthenticatedUser
-from core.security.roles import UserRole, to_role
 from users.models import UserModel
 from users.profiles.constants import LINK_SELF, LINK_USER_PROFILE, ME_DATA_NAME
 from users.profiles.schemas import MeDTO, MeMetadata, MeResponse
 from users.user_repository import UserRepository
+
+
+def to_role(role_id: str) -> UserRole | None:
+    """
+    A role name from outside (e.g. Clerk metadata, which is free text) as a
+    UserRole, matching case-insensitively: "admin", "Admin" and " ADMIN "
+    all mean ADMIN. None for anything that isn't a role.
+    """
+    try:
+        return UserRole(str(role_id).strip().upper())
+    except ValueError:
+        return None
 
 
 class MeService:

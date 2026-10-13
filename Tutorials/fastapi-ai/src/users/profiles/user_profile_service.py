@@ -1,9 +1,8 @@
 from typing import Optional
 
+from wiltech_labs_auth import Caller, role_options
 from wiltech_labs_rest import API_PREFIX, FieldMetadata, Link
 
-from core.security.authorization import Caller
-from core.security.roles import role_options
 from users.models import UserModel
 from users.profiles.constants import (
     LINK_ADMIN,
@@ -30,7 +29,11 @@ from users.profiles.constants import (
     LINK_USERS,
     USER_PROFILE_DATA_NAME,
 )
-from users.profiles.schemas import UserProfileDTO, UserProfileMetadata, UserProfileResponse
+from users.profiles.schemas import (
+    UserProfileDTO,
+    UserProfileMetadata,
+    UserProfileResponse,
+)
 from users.user_repository import UserRepository
 
 

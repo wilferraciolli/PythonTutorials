@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Request
+from wiltech_labs_core import get_database
 
-from core.config.database import get_database
 from shared.settings.region.region_settings_repository import RegionSettingsRepository
 from shared.settings.region.schemas import SystemSettingsResponse, SystemSettingsUpdateRequest
 from shared.settings.region.system_settings_service import SystemSettingsService

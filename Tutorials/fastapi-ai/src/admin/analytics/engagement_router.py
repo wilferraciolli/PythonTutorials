@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends, Request
+from wiltech_labs_auth import require_admin
+from wiltech_labs_core import get_database
 
 from admin.analytics.constants import DEFAULT_DAYS
 from admin.analytics.engagement_repository import EngagementRepository
 from admin.analytics.engagement_service import EngagementAnalyticsService
 from admin.analytics.schemas import EngagementResponse
-from core.config.database import get_database
-from core.security.authorization import require_admin
 
 # Engagement analytics API: social activity insights for the admin area.
 # Admins only; the admin hub links here as `engagementAnalytics`.

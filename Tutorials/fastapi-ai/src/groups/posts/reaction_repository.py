@@ -1,6 +1,6 @@
 from typing import Iterable, Set
 
-from core.config.database import Database
+from wiltech_labs_core import Database
 
 
 class ReactionRepository:

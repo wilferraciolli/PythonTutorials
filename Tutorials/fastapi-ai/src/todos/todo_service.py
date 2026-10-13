@@ -5,8 +5,7 @@ from uuid import uuid4
 
 from wiltech_labs_rest import API_PREFIX, EmbeddedRef, FieldMetadata, Link
 
-from core.ai.schemas import ReindexDTO
-
+from shared.search.schemas import ReindexDTO
 from tags.tag_service import TagService
 from todos.constants import (
     LINK_ADD_TAG,

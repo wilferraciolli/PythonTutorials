@@ -1,6 +1,7 @@
 from typing import Any, List, Mapping, Optional
 
-from core.config.database import Database
+from wiltech_labs_core import Database
+
 from tags.models import TagModel
 
 # tag_resource_view joins tags to the resource they're attached to (see

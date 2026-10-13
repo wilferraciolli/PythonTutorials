@@ -1,10 +1,10 @@
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Request, Response
+from wiltech_labs_ai import get_embedder
+from wiltech_labs_auth import Caller, get_caller
+from wiltech_labs_core import get_database
 
-from core.ai.embeddings import get_embedder
-from core.config.database import get_database
-from core.security.authorization import Caller, get_caller
 from groups.group_router import get_group_service
 from groups.posts.constants import DEFAULT_LIMIT
 from groups.posts.post_repository import PostRepository
@@ -12,7 +12,12 @@ from groups.posts.post_search_service import PostSearchService
 from groups.posts.post_service import PostService
 from groups.posts.post_stats_repository import PostStatsRepository
 from groups.posts.reaction_repository import ReactionRepository
-from groups.posts.schemas import PostCreateRequest, PostListResponse, PostResponse, PostUpdateRequest
+from groups.posts.schemas import (
+    PostCreateRequest,
+    PostListResponse,
+    PostResponse,
+    PostUpdateRequest,
+)
 from media.media_providers import MediaProviders
 from media.media_router import get_media_providers
 from media.schemas import MediaRefRequest

@@ -1,9 +1,9 @@
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from wiltech_labs_auth import Caller, get_caller, require_admin
+from wiltech_labs_core import get_database
 
-from core.config.database import get_database
-from core.security.authorization import Caller, get_caller, require_admin
 from users.exceptions import SelfLockoutError
 from users.schemas import (
     UserCreateRequest,

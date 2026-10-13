@@ -1,11 +1,10 @@
 from datetime import date, datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
+from wiltech_labs_auth import Caller
 from wiltech_labs_rest import format_utc_datetime
 
 from assistant.tools.tool import Tool
-
-from core.security.authorization import Caller
 from groups.posts.post_search_service import PostSearchService
 from groups.posts.post_service import display_author
 from groups.social_query_repository import SocialQueryRepository

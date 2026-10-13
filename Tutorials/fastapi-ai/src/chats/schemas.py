@@ -1,13 +1,17 @@
 from datetime import datetime
 
 from pydantic import BaseModel, Field, field_serializer
-from wiltech_labs_rest import ApiResponse, FieldMetadata, LinkedResource, NoMetadata, format_utc_datetime
+from wiltech_labs_rest import (
+    ApiResponse,
+    FieldMetadata,
+    LinkedResource,
+    NoMetadata,
+    format_utc_datetime,
+)
 
-from chats.constants import TITLE_MAX_LENGTH
+from chats.constants import TITLE_MAX_LENGTH, ChatProvider
 from chats.enums import ChatMessageRole
-from core.ai.ai import ChatProvider
-from core.ai.schemas import ReindexDTO
-
+from shared.search.schemas import ReindexDTO
 
 # --- Request: what the client sends -----------------------------------------
 

@@ -1,6 +1,6 @@
 from typing import Dict
 
-from core.config.database import Database
+from wiltech_labs_core import Database
 
 # What "engagement" counts, and where each lives. Deleted posts and comments
 # still count (the activity happened); a removed like doesn't (its row is gone).

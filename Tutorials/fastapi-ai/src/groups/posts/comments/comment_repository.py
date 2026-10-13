@@ -1,6 +1,7 @@
 from typing import Any, List, Mapping, Optional
 
-from core.config.database import Database
+from wiltech_labs_core import Database
+
 from groups.posts.comments.models import CommentModel
 
 _SELECT_COMMENT = (

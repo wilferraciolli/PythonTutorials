@@ -1,6 +1,7 @@
 from typing import Any, List, Mapping, Optional, Tuple
 
-from core.config.database import Database
+from wiltech_labs_core import Database
+
 from groups.models import GroupFollowerModel, GroupMemberModel, GroupModel
 
 

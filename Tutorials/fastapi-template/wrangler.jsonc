@@ -10,7 +10,7 @@
 		"CLERK_AUDIENCE": "wiltech-dev-api"
 	}
 	// Add bindings here as a new project needs them, e.g. Cloudflare D1
-	// (database.py already supports it via DATABASE_MODE=d1_binding):
+	// (wiltech-labs-core's get_database already supports it via DATABASE_MODE=d1_binding):
 	// "d1_databases": [
 	//   {
 	//     "binding": "DB",

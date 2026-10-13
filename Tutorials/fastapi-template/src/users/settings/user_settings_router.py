@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from wiltech_labs_auth import Caller, get_caller
+from wiltech_labs_core import get_database
 
-from core.config.database import get_database
-from core.security.authorization import Caller, get_caller
 from shared.settings.region.region_settings_repository import RegionSettingsRepository
 from users.exceptions import NotOwnerError
 from users.settings.schemas import UserSettingsResponse, UserSettingsUpdateRequest

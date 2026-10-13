@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Request
+from wiltech_labs_auth import Caller, get_caller
+from wiltech_labs_core import get_database
 
-from core.config.database import get_database
-from core.security.authorization import Caller, get_caller
 from groups.posts.post_router import get_post_service
 from timeline.constants import DEFAULT_LIMIT
 from timeline.enums import TimelineType

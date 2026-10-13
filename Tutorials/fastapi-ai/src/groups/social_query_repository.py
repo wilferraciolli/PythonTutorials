@@ -1,8 +1,14 @@
 from typing import Any, List, Optional
 
-from core.config.database import Database
+from wiltech_labs_core import Database
+
 from groups.group_repository import visible_group_clause
-from groups.models import GroupRefModel, MyGroupModel, SocialCommentModel, SocialPostModel
+from groups.models import (
+    GroupRefModel,
+    MyGroupModel,
+    SocialCommentModel,
+    SocialPostModel,
+)
 
 _POST_COLUMNS = (
     "p.id, p.group_id, p.title, p.body, p.author_id, p.created_date, "

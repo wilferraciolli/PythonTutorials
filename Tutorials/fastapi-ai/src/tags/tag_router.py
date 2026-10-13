@@ -1,9 +1,14 @@
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from wiltech_labs_core import get_database
 
-from core.config.database import get_database
-from tags.schemas import TagCreateRequest, TagListResponse, TagResponse, TagTemplateResponse
+from tags.schemas import (
+    TagCreateRequest,
+    TagListResponse,
+    TagResponse,
+    TagTemplateResponse,
+)
 from tags.tag_repository import TagRepository
 from tags.tag_service import TagService
 

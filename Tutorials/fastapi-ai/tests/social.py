@@ -1,9 +1,9 @@
 """Shared setup for the social-groups tests (not a test module itself)."""
 from dataclasses import dataclass
 
-from core.config.database import SQLiteDatabase
-from core.security.authorization import Caller
-from core.security.roles import UserRole
+from wiltech_labs_auth import Caller, UserRole
+from wiltech_labs_core import SQLiteDatabase
+
 from groups.enums import GroupVisibility
 from groups.group_repository import GroupRepository
 from groups.group_service import GroupService

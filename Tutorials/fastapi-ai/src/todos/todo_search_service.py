@@ -1,8 +1,7 @@
-from datetime import datetime, timezone
 from typing import Dict, List, Optional
 
-from core.ai.embeddings import EmbedFn
-from core.ai.resource_vector_store import ResourceVectorStore
+from wiltech_labs_ai import DatabaseVectorStore, EmbedFn, VectorRecord
+
 from todos.enums import TodoState
 from todos.models import TodoModel
 from todos.schemas import TodoSearchHitDTO
@@ -31,7 +30,7 @@ class TodoSearchService:
     def __init__(
         self,
         repository: TodoRepository,
-        store: ResourceVectorStore,
+        store: DatabaseVectorStore,
         embed: EmbedFn,
         embedding_model: str,
     ) -> None:
@@ -45,18 +44,19 @@ class TodoSearchService:
             return 0
 
         vectors = await self.embed([todo_text(todo) for todo in todos])
-        now = datetime.now(timezone.utc).isoformat()
-        for todo, vector in zip(todos, vectors):
-            await self.store.upsert(todo.id, todo.user_id, self.embedding_model, vector, now)
+        await self.store.upsert(
+            [VectorRecord(todo.id, todo.user_id, vector, self.embedding_model) for todo, vector in zip(todos, vectors)]
+        )
         return len(todos)
 
     async def remove_todo(self, todo_id: str) -> None:
-        await self.store.delete(todo_id)
+        await self.store.delete([todo_id])
 
     async def reindex_user(self, user_id: str) -> int:
         """Backfill: embed every todo of this user that isn't indexed yet."""
-        indexed = await self.store.indexed_ids(user_id)
-        pending = [todo for todo in await self.repository.list_for_user(user_id) if todo.id not in indexed]
+        todos = await self.repository.list_for_user(user_id)
+        indexed = await self.store.existing_ids([todo.id for todo in todos])
+        pending = [todo for todo in todos if todo.id not in indexed]
         return await self.index_todos(pending)
 
     async def search(
@@ -70,12 +70,12 @@ class TodoSearchService:
         pool = limit * 3
 
         [query_vector] = await self.embed([query])
-        vector_hits = await self.store.query(user_id, query_vector, pool)
+        vector_hits = await self.store.query([user_id], query_vector, pool)
         keyword_matches = await self.repository.search_by_keyword(user_id, query, pool)
 
         scores: Dict[str, float] = {}
-        for rank, (todo_id, _) in enumerate(vector_hits):
-            scores[todo_id] = scores.get(todo_id, 0.0) + 1 / (RRF_K + rank + 1)
+        for rank, hit in enumerate(vector_hits):
+            scores[hit.id] = scores.get(hit.id, 0.0) + 1 / (RRF_K + rank + 1)
         keyword_ids = {todo.id for todo in keyword_matches}
         for rank, todo in enumerate(keyword_matches):
             scores[todo.id] = scores.get(todo.id, 0.0) + 1 / (RRF_K + rank + 1)

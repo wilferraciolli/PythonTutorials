@@ -159,12 +159,12 @@ normalised, so cosine similarity is a plain dot product.
 flowchart TD
     R[chats/chat_router.py<br/>GET /chats/search<br/>POST /chats/search/reindex] --> SS[chats/chat_search_service.py<br/>index, reindex, search, RRF]
     CS[chats/chat_service.py<br/>indexes after a reply,<br/>removes on delete] --> SS
-    SS --> EMB[core/ai/embeddings.py<br/>embed() via Workers AI]
-    SS --> VS[core/ai/vector_store.py<br/>VectorStore protocol]
+    SS --> EMB[wiltech_labs_ai<br/>embed() via Workers AI]
+    SS --> VS[wiltech_labs_ai<br/>VectorStore protocol]
     SS --> CR[chats/chat_repository.py<br/>keyword search, message loading]
     VS --> DVS[DatabaseVectorStore<br/>SQLite / D1]
     VS -.future.-> VEC[Cloudflare Vectorize adapter]
-    EMB --> AI[core/ai/ai.py AI protocol]
+    EMB --> AI[wiltech_labs_ai AI protocol]
 ```
 
 `VectorStore` is a protocol, the same pattern as `Database` and `AI`: the search

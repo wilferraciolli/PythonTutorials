@@ -8,12 +8,12 @@ import json
 from datetime import date, datetime, timezone
 
 import pytest
+from wiltech_labs_ai import DatabaseVectorStore
+from wiltech_labs_core import SQLiteDatabase
 
 from assistant.assistant_service import AssistantService
 from assistant.tools.date_tools import build_date_tools, resolve_period
 from assistant.tools.todo_tools import build_todo_tools
-from core.ai.resource_vector_store import ResourceVectorStore
-from core.config.database import SQLiteDatabase
 from tags.tag_repository import TagRepository
 from tags.tag_service import TagService
 from todos.schemas import TodoCreateRequest
@@ -97,7 +97,7 @@ async def env(tmp_path):
             )
 
     repo = TodoRepository(db)
-    search = TodoSearchService(repo, ResourceVectorStore(db, "todo"), fake_embed, "fake")
+    search = TodoSearchService(repo, DatabaseVectorStore(db, "todo"), fake_embed, "fake")
     await search.index_todos(await repo.list_for_user("u1") + await repo.list_for_user("u2"))
     tools = [*build_todo_tools(repo, lambda: NOW, search=search), *build_date_tools(lambda: NOW)]
 
@@ -171,11 +171,11 @@ async def test_todo_service_keeps_the_index_in_step(env):
         "u1",
         TodoCreateRequest(title="Water the plant", complete_by=datetime(2027, 1, 1, tzinfo=timezone.utc)),
     )
-    assert created.id in await search.store.indexed_ids("u1")
+    assert created.id in await search.store.existing_ids([created.id])
     assert "Water the plant" in [hit.title for hit in (await search.search("u1", "garden"))[:2]]
 
     assert await service.delete_todo("u1", created.id)
-    assert created.id not in await search.store.indexed_ids("u1")
+    assert created.id not in await search.store.existing_ids([created.id])
 
 
 async def test_reindex_backfills_only_missing(env):

@@ -21,7 +21,6 @@ from admin.schemas import (
     PostStatsRebuildDTO,
     PostStatsRebuildResponse,
 )
-
 from groups.posts.post_search_service import PostSearchService
 from groups.posts.post_stats_repository import PostStatsRepository
 

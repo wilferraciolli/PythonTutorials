@@ -4,8 +4,7 @@ and that nobody but the owner gets in.
 """
 import pytest
 from fastapi.testclient import TestClient
-
-from core.security.auth import AuthenticatedUser, get_authenticated_user
+from wiltech_labs_auth import AuthenticatedUser, get_authenticated_user
 
 ALICE = AuthenticatedUser(id="clerk-a", name="Alice", email="a@x.io", role_ids=[], claims={})
 BOB = AuthenticatedUser(id="clerk-b", name="Bob", email="b@x.io", role_ids=["ADMIN"], claims={})

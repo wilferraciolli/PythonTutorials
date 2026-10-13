@@ -1,14 +1,10 @@
-import os
-
 from fastapi import Depends, FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+from wiltech_labs_auth import get_authenticated_user, require_admin
+from wiltech_labs_core import EnvCORSMiddleware, health_router, register_error_handlers
 
-from core.security.auth import get_authenticated_user
 from shared.settings.region import system_settings_router
-from core.security.authorization import require_admin
 from users.profiles import me_router, user_profile_router
 from users import user_router
-from metrics import status_router
 from users.settings import user_settings_router
 
 app = FastAPI(
@@ -16,33 +12,22 @@ app = FastAPI(
     description="Portable FastAPI starter: Clerk auth, SQLite/D1 database layer, users resource",
     version="0.1.0")
 
-# The Clerk token travels as an `Authorization: Bearer …` header, not a
-# cookie, so `allow_credentials` stays False — the browser doesn't need to
-# send/receive cookies cross-origin for this to work.
-# CORS_ORIGINS is read from os.environ (config.py's _load_dotenv()
-# populates it for local runs), not via config.get_config() — that needs a
-# Request, and CORSMiddleware is built once at import time, before any
-# request exists. That also means a wrangler.jsonc `vars` entry would NOT
-# reach this: per config.py, Cloudflare injects vars into
-# request.scope["env"], not into os.environ. TODO: once the showcase UI
-# has a deployed (Pages) origin, add it to the default list below directly
-# — this default only covers `ng serve` talking to a local uvicorn/Docker
-# run.
-_cors_origins = [origin.strip() for origin in os.environ.get("CORS_ORIGINS", "http://localhost:4200").split(",") if origin.strip()]
+# AppError subclasses (NotFoundError, ConflictError, ...) raised by services
+# become `{"detail": ...}` with their status code.
+register_error_handlers(app)
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=_cors_origins,
-    allow_credentials=False,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# CORS_ORIGINS (comma-separated) is read per request, so it works from .env
+# for uvicorn/Docker and from wrangler.jsonc `vars` in a Worker (which only
+# exist on the request). The Clerk token travels as an `Authorization:
+# Bearer …` header, not a cookie, so credentials stay off. The default only
+# covers `ng serve` talking to a local run; set CORS_ORIGINS for a deployed UI.
+app.add_middleware(EnvCORSMiddleware, default_origins="http://localhost:4200")
 
 
 # Register routers under /api (e.g. /api/health, /api/me, /api/users) —
 # leaves room for the Worker to serve non-API paths (static assets, etc.)
 # from the same origin later without colliding with these routes.
-app.include_router(status_router.router, prefix="/api")
+app.include_router(health_router(), prefix="/api")
 app.include_router(me_router.router, prefix="/api", dependencies=[Depends(get_authenticated_user)])
 app.include_router(user_profile_router.router, prefix="/api", dependencies=[Depends(get_authenticated_user)])
 app.include_router(user_router.router, prefix="/api", dependencies=[Depends(get_authenticated_user)])

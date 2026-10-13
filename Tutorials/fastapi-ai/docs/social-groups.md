@@ -25,7 +25,7 @@ How a user's roles are set (`MeService`): the first time a Clerk user is seen, t
 created with the token's `roles` claim (matched case-insensitively; `STANDARD` if there are
 none). On every later request, roles in the token that the user lacks are **added**; none is
 ever removed. After that our database is the source of truth: permission checks read the
-saved roles (`core/security/authorization.py`, through `user_detail_view`), an admin granted
+saved roles (`wiltech_labs_auth`'s `get_caller`, through `user_detail_view`), an admin granted
 through the API stays an admin even if Clerk stops sending the role, and revoking is done
 through the API. See the README's "Roles" section.
 

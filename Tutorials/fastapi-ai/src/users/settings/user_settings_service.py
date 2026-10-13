@@ -1,6 +1,6 @@
+from wiltech_labs_auth import Caller
 from wiltech_labs_rest import API_PREFIX, FieldMetadata, Link, choice_field
 
-from core.security.authorization import Caller
 from shared.settings.region.enums import (
     SupportedCurrencies,
     SupportedLanguages,

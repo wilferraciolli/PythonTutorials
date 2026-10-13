@@ -1,10 +1,9 @@
 from datetime import datetime, timezone
 from uuid import uuid4
 
+from wiltech_labs_auth import AuthenticatedUser, UserRole
 from wiltech_labs_rest import API_PREFIX, FieldMetadata, Link
 
-from core.security.auth import AuthenticatedUser
-from core.security.roles import UserRole
 from users.models import UserModel
 from users.profiles.constants import LINK_SELF, LINK_USER_PROFILE, ME_DATA_NAME
 from users.profiles.schemas import MeDTO, MeMetadata, MeResponse

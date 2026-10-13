@@ -2,10 +2,10 @@ from datetime import datetime, timezone
 from typing import Dict, List, Optional
 from uuid import uuid4
 
+from wiltech_labs_auth import Caller
+from wiltech_labs_core import ConflictError, ForbiddenError, NotFoundError
 from wiltech_labs_rest import API_PREFIX, EmbeddedRef, FieldMetadata, Link, NoMetadata
 
-from core.common.errors import ConflictError, ForbiddenError, NotFoundError
-from core.security.authorization import Caller
 from groups.constants import (
     FOLLOWERS_DATA_NAME,
     GROUP_DATA_NAME,

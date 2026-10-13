@@ -2,9 +2,9 @@
 from datetime import datetime, timedelta, timezone
 
 import pytest
-from social import ADMIN, MEMBER, NEWS_ID, OUTSIDER, OWNER, make_social
 
 from groups.enums import GroupVisibility
+from social import ADMIN, MEMBER, NEWS_ID, OUTSIDER, OWNER, make_social
 from timeline.enums import TimelineType
 from timeline.timeline_repository import TimelineRepository
 from timeline.timeline_service import TimelineService
@@ -140,8 +140,7 @@ async def test_response_links_follow_the_callers_place_in_each_group(s):
 
 def test_api_timeline(tmp_path, monkeypatch):
     from fastapi.testclient import TestClient
-
-    from core.security.auth import AuthenticatedUser, get_authenticated_user
+    from wiltech_labs_auth import AuthenticatedUser, get_authenticated_user
 
     monkeypatch.setenv("DATABASE_MODE", "sqlite")
     monkeypatch.setenv("DATABASE_PATH", str(tmp_path / "api.db"))

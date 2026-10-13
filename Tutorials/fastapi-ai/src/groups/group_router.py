@@ -1,9 +1,9 @@
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Request, Response
+from wiltech_labs_auth import Caller, get_caller
+from wiltech_labs_core import get_database
 
-from core.config.database import get_database
-from core.security.authorization import Caller, get_caller
 from groups.group_repository import GroupRepository
 from groups.group_service import GroupService
 from groups.schemas import (

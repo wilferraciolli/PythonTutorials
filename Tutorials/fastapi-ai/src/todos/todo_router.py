@@ -1,11 +1,10 @@
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from wiltech_labs_ai import DatabaseVectorStore, get_embedder
+from wiltech_labs_auth import require_owner
+from wiltech_labs_core import get_database
 
-from core.ai.embeddings import get_embedder
-from core.ai.resource_vector_store import ResourceVectorStore
-from core.config.database import get_database
-from core.security.authorization import require_owner
 from tags.tag_repository import TagRepository
 from tags.tag_service import TagService
 from todos.enums import TodoState
@@ -29,7 +28,7 @@ router = APIRouter(prefix="/users/{user_id}/todos", tags=["todos"], dependencies
 def get_todo_search_service(request: Request) -> TodoSearchService:
     db = get_database(request)
     embed_texts, model = get_embedder(request)
-    return TodoSearchService(TodoRepository(db), ResourceVectorStore(db, "todo"), embed_texts, model)
+    return TodoSearchService(TodoRepository(db), DatabaseVectorStore(db, "todo"), embed_texts, model)
 
 
 def get_todo_service(request: Request) -> TodoService:

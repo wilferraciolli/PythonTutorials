@@ -6,14 +6,19 @@ with an httpx.MockTransport, so the real request building and parsing run.
 import httpx
 import pytest
 from fastapi.testclient import TestClient
-from social import MEMBER, OWNER, make_social
+from wiltech_labs_auth import AuthenticatedUser, get_authenticated_user
+from wiltech_labs_core import (
+    AppError,
+    ForbiddenError,
+    NotConfiguredError,
+    UpstreamError,
+)
 
-from core.common.errors import AppError, ForbiddenError, NotConfiguredError, UpstreamError
-from core.security.auth import AuthenticatedUser, get_authenticated_user
 from groups.posts.schemas import PostCreateRequest
 from media.enums import MediaType
 from media.media_providers import MediaProviders
 from media.schemas import MediaRefRequest
+from social import MEMBER, OWNER, make_social
 
 PHOTO = {
     "id": "abc123",

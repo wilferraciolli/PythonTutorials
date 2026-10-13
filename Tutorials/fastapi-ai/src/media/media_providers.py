@@ -4,9 +4,9 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Protocol
 
 import httpx
+from wiltech_labs_core import AppError, NotConfiguredError, UpstreamError
 from wiltech_labs_rest import NoMetadata
 
-from core.common.errors import AppError, NotConfiguredError, UpstreamError
 from media.constants import MEDIA_DATA_NAME
 from media.enums import MediaType
 from media.schemas import MediaRefRequest, MediaSearchResponse, MediaSearchResultDTO

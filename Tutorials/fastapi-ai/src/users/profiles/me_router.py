@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Request
+from wiltech_labs_auth import AuthenticatedUser, get_authenticated_user
+from wiltech_labs_core import get_database
 
-from core.config.database import get_database
-from core.security.auth import AuthenticatedUser, get_authenticated_user
 from users.profiles.me_service import MeService
 from users.profiles.schemas import MeResponse
 from users.user_repository import UserRepository

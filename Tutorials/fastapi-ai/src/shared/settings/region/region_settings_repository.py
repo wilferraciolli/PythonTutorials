@@ -1,6 +1,7 @@
 from typing import Any, Mapping, Optional
 
-from core.config.database import Database
+from wiltech_labs_core import Database
+
 from shared.settings.region.enums import RegionSettingOwnerType
 from shared.settings.region.models import RegionSettingModel
 

@@ -7,7 +7,8 @@ each time. It already has:
 - **Clerk JWT authentication** wired into every route except `/api/health`.
 - **A portable `Database` protocol** — local SQLite for uvicorn/Docker, a
   Cloudflare D1 binding, or D1-over-HTTP, all through the same interface
-  (`src/core/config/database.py`). Business logic never touches SQLite or D1 directly.
+  (`Database` / `get_database` from `wiltech-labs-core`). Business logic never touches
+  SQLite or D1 directly.
 - **A working example resource** (`user_router.py`) built through the full
   router -> service -> repository -> database layering, so you can see the
   pattern before repeating it for your own domain.
@@ -15,6 +16,17 @@ each time. It already has:
   HATEOAS-style links, built in the service layer.
 - Routes mounted under `/api`, `pyproject.toml`/`uv.lock`, Docker, and a
   `wrangler.jsonc` ready for `pywrangler dev` / `wrangler deploy`.
+
+The cross-cutting code isn't in this folder: it comes from PyPI, so every app
+gets fixes with a version bump instead of copy-paste.
+
+| Package | Gives you |
+|---|---|
+| [`wiltech-labs-core`](https://pypi.org/project/wiltech-labs-core/) (`[sqlite]` extra) | `get_config`, `Database` / `get_database` (SQLite, D1 binding, D1 over HTTP, migrations), `AppError` + `register_error_handlers`, `EnvCORSMiddleware`, `health_router` |
+| [`wiltech-labs-auth`](https://pypi.org/project/wiltech-labs-auth/) | Clerk JWT (`get_authenticated_user`), `Caller` / `get_caller`, `require_admin`, `require_owner`, `UserRole`, `role_options`, service API keys, Clerk webhooks |
+| [`wiltech-labs-rest`](https://pypi.org/project/wiltech-labs-rest/) | The response envelope, links and field metadata |
+
+Upgrade them with `uv lock --upgrade-package <name> && uv sync`.
 
 See [`fastapi-cloudflare-d1`](../fastapi-cloudflare-d1) and
 [`fastapi-cloudflare-ai`](../fastapi-cloudflare-ai) for what a project built
@@ -44,17 +56,8 @@ fastapi-template/
 │   ├── entry.py                      # FastAPI app + Workers ASGI entrypoint
 │   ├── main.py                       # Plain FastAPI app for uvicorn/Docker; wires
 │   │                                  # routers + the Clerk auth dependency
-│   ├── core/                         # Cross-cutting, no domain knowledge (the response
-│   │   │                              # envelope, links and metadata come from wiltech-labs-rest)
-│   │   ├── config/
-│   │   │   ├── config.py             # Runtime config from Worker env / .env / OS env
-│   │   │   └── database.py           # SQLite, D1 binding, and D1 HTTP adapters + migrations
-│   │   └── security/
-│   │       ├── auth.py               # Clerk JWT verification (JWKS fetch/cache)
-│   │       ├── authorization.py      # require_admin, reading user_detail_view
-│   │       └── roles.py              # UserRole enum
-│   ├── metrics/
-│   │   └── status_router.py          # /api/health
+│   │                                  # (config, database, security, health and the
+│   │                                  # envelope come from the wiltech-labs-* packages)
 │   ├── shared/                       # Data owned by several domains
 │   │   └── settings/
 │   │       ├── region/               # region_settings: /api/admin/settings + the shared repository
@@ -152,7 +155,7 @@ exception; it's an infrastructure probe and returns a plain object.
    implementation and add one package per domain with its own router,
    service, repository and schemas, following the conventions above.
 6. Add bindings to `wrangler.jsonc` as needed (a commented D1 example is
-   already there — `database.py` supports it out of the box).
+   already there — `get_database` supports it out of the box).
 7. `uv sync`, then run locally (see below).
 
 ## Prerequisites (one-time machine setup)
@@ -177,7 +180,7 @@ exception; it's an infrastructure probe and returns a plain object.
 ## Authentication
 
 Every endpoint except `/api/health` requires a Clerk-issued JWT:
-`Authorization: Bearer <token>`. `auth.py` verifies it against
+`Authorization: Bearer <token>`. `get_authenticated_user` (`wiltech-labs-auth`) verifies it against
 `CLERK_JWKS_URL`/`CLERK_AUDIENCE` (from `.env` or `wrangler.jsonc` `vars`) —
 there is no dev bypass, so a plain `curl` with no header gets `401 Unauthorized`
 on every route below. Optionally set `CLERK_AUTHORIZED_PARTIES` (comma-separated frontend origins) to also require the token's `azp` claim to match one of them. The Clerk values checked into `.env.example` point at a
@@ -194,10 +197,12 @@ Roles live in our own `user_roles` table, not only in Clerk:
 - **Our API is the source of truth after that.** An admin can grant or remove
   roles through `PUT /api/users/{id}`, and a role granted here survives even
   if Clerk stops sending it. To revoke a role, use the API, not Clerk.
-- **`get_caller`** (`core/security/authorization.py`) returns a `Caller`
+- **`get_caller`** (`wiltech-labs-auth`) returns a `Caller`
   with the caller's saved roles. **`require_admin`** builds on it to guard
   admin-only routes: `403` unless those roles include `ADMIN`. Both read
-  `user_detail_view`, so `core/` never imports the `users` package.
+  `user_detail_view` (`migrations/003_user_detail_view.sql`), so the library
+  never imports the `users` package. A project with a different users schema
+  overrides `get_caller_lookup` instead (see the library's README).
 - **Links follow permissions.** Services receive the `Caller`, so a
   non-admin gets no `updateUser` / `deleteUser` links and no `createUser` /
   `userTemplate` meta links. Nobody gets a `deleteUser` link on themselves.
@@ -315,7 +320,7 @@ above) except `/api/health`, `/docs`, and `/openapi.json`.
 
 - **Python Workers are in beta.** The exact shape of D1 row objects returned
   by `.first()` / `.all()` is based on the documented JS-equivalent API;
-  `database.py`'s D1 adapters defensively handle both dict-like and
+  `wiltech-labs-core`'s D1 adapters defensively handle both dict-like and
   attribute-like access, but if a `workers-py` version update changes this
   shape, that's the first place to check.
 - No traditional SQLAlchemy ORM — repository SQL is raw and parameterized.

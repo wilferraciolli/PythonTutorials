@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from typing import Any, Callable, Dict, List, Optional
 from uuid import uuid4
 
+from wiltech_labs_ai import AI
 from wiltech_labs_rest import API_PREFIX, FieldMetadata, Link, NoMetadata
 
 from chats.chat_repository import ChatRepository
@@ -17,11 +18,17 @@ from chats.constants import (
     LINK_SEND_MESSAGE,
     LINK_UPDATE_TITLE,
     TITLE_MAX_LENGTH,
+    ChatProvider,
 )
 from chats.enums import ChatMessageRole
 from chats.models import ChatMessageModel, ChatModel
-from chats.schemas import ChatDTO, ChatListResponse, ChatMessageDTO, ChatMetadata, ChatResponse
-from core.ai.ai import AI, ChatProvider
+from chats.schemas import (
+    ChatDTO,
+    ChatListResponse,
+    ChatMessageDTO,
+    ChatMetadata,
+    ChatResponse,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +48,7 @@ class ChatService:
     """
     Application service for AI chats.
 
-    Talks to Workers AI through the portable `AI` protocol (core/ai/ai.py)
+    Talks to Workers AI through the portable `AI` protocol (wiltech_labs_ai.AI)
     exactly the way the repositories talk to the database through `Database`
     — nothing here knows whether that's the REST API or the native env.AI
     binding (see get_ai()).

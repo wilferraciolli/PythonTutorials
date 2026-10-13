@@ -1,7 +1,8 @@
 from dataclasses import dataclass
 from typing import Optional
 
-from core.security.authorization import Caller
+from wiltech_labs_auth import Caller
+
 from groups.enums import GroupVisibility
 from groups.models import GroupModel
 

@@ -1,6 +1,7 @@
 from typing import Any, Mapping, Optional
 
-from core.config.database import Database
+from wiltech_labs_core import Database
+
 from shared.settings.configuration.enums import ConfigurationSettingType
 from shared.settings.configuration.models import ConfigurationSettingModel
 

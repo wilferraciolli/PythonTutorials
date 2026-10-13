@@ -100,8 +100,9 @@ lets the same code run locally and in a Cloudflare Worker.
 The code is organised by domain (`users/`, `todos/`, `chats/`, `groups/posts/comments/`,
 ...), each with its router, service, repository, `models.py` (database rows),
 `schemas.py` (Request, DTO, Metadata and the typed `ApiResponse`) and `constants.py`.
-Cross-cutting code lives in `core/` and never imports a domain. See the README's
-"Code conventions".
+Cross-cutting code (config, database adapters, errors, CORS, Clerk auth, AI providers, vector stores)
+comes from the `wiltech-labs-core`, `-auth`, `-ai` and `-rest` libraries and never imports a domain.
+See the README's "Code conventions".
 
 ## Who may see what (business-logic seams)
 

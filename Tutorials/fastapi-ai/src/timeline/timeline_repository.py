@@ -1,6 +1,7 @@
 from typing import Any, List, Set
 
-from core.config.database import Database
+from wiltech_labs_core import Database
+
 from groups.group_repository import visible_group_clause
 from groups.posts.models import PostModel
 from groups.posts.post_repository import SELECT_POST, to_post_model

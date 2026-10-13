@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Query, Request
+from wiltech_labs_core import get_config
 
-from core.config.config import get_config
 from media.constants import MAX_RESULTS
 from media.media_providers import MediaProviders
 from media.schemas import MediaSearchResponse

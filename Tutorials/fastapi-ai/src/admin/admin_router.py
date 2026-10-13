@@ -1,11 +1,15 @@
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Request
+from wiltech_labs_auth import require_admin
+from wiltech_labs_core import get_database
 
 from admin.admin_service import AdminService
-from admin.schemas import AdminResponse, PostSearchReindexResponse, PostStatsRebuildResponse
-from core.config.database import get_database
-from core.security.authorization import require_admin
+from admin.schemas import (
+    AdminResponse,
+    PostSearchReindexResponse,
+    PostStatsRebuildResponse,
+)
 from groups.posts.post_router import get_post_search_service
 from groups.posts.post_search_service import PostSearchService
 from groups.posts.post_stats_repository import PostStatsRepository

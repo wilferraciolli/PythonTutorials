@@ -1,9 +1,9 @@
 from datetime import datetime, timezone
 from typing import Callable, Dict, List
 
+from wiltech_labs_auth import Caller
 from wiltech_labs_rest import API_PREFIX, EmbeddedRef, FieldMetadata, Link
 
-from core.security.authorization import Caller
 from groups.group_permissions import GroupAccess
 from groups.models import GroupModel
 from groups.posts.models import PostModel

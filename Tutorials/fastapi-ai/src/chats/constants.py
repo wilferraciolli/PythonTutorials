@@ -1,3 +1,8 @@
+from typing import Literal
+
+# The LLM providers a chat can use (wiltech-labs-ai also knows "local", which this app has no model config for).
+ChatProvider = Literal["cloudflare", "groq"]
+
 # Names of the `_data` block in the response envelope for the chats APIs.
 CHAT_DATA_NAME = "chat"
 CHATS_DATA_NAME = "chats"

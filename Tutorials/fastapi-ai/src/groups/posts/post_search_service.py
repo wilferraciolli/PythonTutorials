@@ -1,10 +1,9 @@
-from datetime import datetime, timezone
 from typing import Dict, List, Optional, Protocol
 
-from core.ai.embeddings import EmbedFn
-from core.ai.resource_vector_store import ResourceVectorStore
-from core.config.database import Database
-from core.security.authorization import Caller
+from wiltech_labs_ai import DatabaseVectorStore, EmbedFn, VectorRecord
+from wiltech_labs_auth import Caller
+from wiltech_labs_core import Database
+
 from groups.models import SocialCommentModel
 from groups.posts.constants import SYSTEM_AUTHOR
 from groups.posts.schemas import PostIndexCountsDTO, PostSearchHitDTO
@@ -32,10 +31,6 @@ def _snippet(text: str) -> str:
     return text if len(text) <= SNIPPET_CHARS else text[: SNIPPET_CHARS - 1] + "…"
 
 
-def _now() -> str:
-    return datetime.now(timezone.utc).isoformat()
-
-
 class PostSearchService:
     """
     Search posts and comments by meaning plus keyword, merged with reciprocal
@@ -50,8 +45,8 @@ class PostSearchService:
 
     def __init__(self, db: Database, embed: EmbedFn, embedding_model: str) -> None:
         self.queries = SocialQueryRepository(db)
-        self.posts = ResourceVectorStore(db, "post")
-        self.comments = ResourceVectorStore(db, "comment")
+        self.posts = DatabaseVectorStore(db, "post")
+        self.comments = DatabaseVectorStore(db, "comment")
         self.embed = embed
         self.embedding_model = embedding_model
 
@@ -59,31 +54,39 @@ class PostSearchService:
 
     async def index_post(self, post: _HasText) -> None:
         [vector] = await self.embed([post_text(post)])
-        await self.posts.upsert(post.id, post.group_id, self.embedding_model, vector, _now())
+        await self.posts.upsert([VectorRecord(post.id, post.group_id, vector, self.embedding_model)])
 
     async def index_comment(self, comment_id: str, body: str, group_id: str) -> None:
         [vector] = await self.embed([body])
-        await self.comments.upsert(comment_id, group_id, self.embedding_model, vector, _now())
+        await self.comments.upsert([VectorRecord(comment_id, group_id, vector, self.embedding_model)])
 
     async def remove_post(self, post_id: str) -> None:
-        await self.posts.delete(post_id)
+        await self.posts.delete([post_id])
 
     async def remove_comment(self, comment_id: str) -> None:
-        await self.comments.delete(comment_id)
+        await self.comments.delete([comment_id])
 
     async def reindex_missing(self) -> PostIndexCountsDTO:
         """Backfill: embed every live post and comment that has no vector yet (e.g. the News seed)."""
-        indexed_posts, indexed_comments = await self.posts.all_ids(), await self.comments.all_ids()
-        posts = [post for post in await self.queries.live_posts() if post.id not in indexed_posts]
-        comments = [comment for comment in await self.queries.live_comments() if comment.id not in indexed_comments]
+        live_posts, live_comments = await self.queries.live_posts(), await self.queries.live_comments()
+        indexed_posts = await self.posts.existing_ids([post.id for post in live_posts])
+        indexed_comments = await self.comments.existing_ids([comment.id for comment in live_comments])
+        posts = [post for post in live_posts if post.id not in indexed_posts]
+        comments = [comment for comment in live_comments if comment.id not in indexed_comments]
 
-        now = _now()
         if posts:
-            for post, vector in zip(posts, await self.embed([post_text(post) for post in posts])):
-                await self.posts.upsert(post.id, post.group_id, self.embedding_model, vector, now)
+            vectors = await self.embed([post_text(post) for post in posts])
+            await self.posts.upsert(
+                [VectorRecord(post.id, post.group_id, vector, self.embedding_model) for post, vector in zip(posts, vectors)]
+            )
         if comments:
-            for comment, vector in zip(comments, await self.embed([comment.body for comment in comments])):
-                await self.comments.upsert(comment.id, comment.group_id, self.embedding_model, vector, now)
+            vectors = await self.embed([comment.body for comment in comments])
+            await self.comments.upsert(
+                [
+                    VectorRecord(comment.id, comment.group_id, vector, self.embedding_model)
+                    for comment, vector in zip(comments, vectors)
+                ]
+            )
         return PostIndexCountsDTO(posts=len(posts), comments=len(comments))
 
     # --- search
@@ -105,12 +108,12 @@ class PostSearchService:
             return []
 
         [vector] = await self.embed([query])
-        post_hits = await self.posts.query_scopes(scopes, vector, pool)
-        comment_hits = await self.comments.query_scopes(scopes, vector, pool)
+        post_hits = await self.posts.query(scopes, vector, pool)
+        comment_hits = await self.comments.query(scopes, vector, pool)
         keyword_post_ids = await self.queries.keyword_post_ids(caller.user_id, caller.is_admin, query, group_id, pool)
         keyword_comments = await self.queries.keyword_comments(caller.user_id, caller.is_admin, query, group_id, pool)
 
-        comment_ids = [cid for cid, _ in comment_hits] + [comment.id for comment in keyword_comments]
+        comment_ids = [hit.id for hit in comment_hits] + [comment.id for comment in keyword_comments]
         comments: Dict[str, SocialCommentModel] = {
             comment.id: comment
             for comment in await self.queries.comments_by_ids(caller.user_id, caller.is_admin, comment_ids)
@@ -121,14 +124,14 @@ class PostSearchService:
         # best of its own vector and its comments' vectors.
         similarity: Dict[str, float] = {}
         matched_comment: Dict[str, str] = {}
-        for post_id, score in post_hits:
-            similarity[post_id] = max(similarity.get(post_id, score), score)
-        for comment_id, score in comment_hits:
-            comment = comments.get(comment_id)
+        for hit in post_hits:
+            similarity[hit.id] = max(similarity.get(hit.id, hit.score), hit.score)
+        for hit in comment_hits:
+            comment = comments.get(hit.id)
             if comment is None:  # deleted, or in a group the caller can't see
                 continue
-            if score > similarity.get(comment.post_id, float("-inf")):
-                similarity[comment.post_id] = score
+            if hit.score > similarity.get(comment.post_id, float("-inf")):
+                similarity[comment.post_id] = hit.score
                 matched_comment[comment.post_id] = comment.body
         meaning_ranked = sorted(similarity, key=lambda pid: similarity[pid], reverse=True)
 

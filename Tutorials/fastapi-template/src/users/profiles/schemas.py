@@ -1,9 +1,8 @@
 from typing import Optional
 
 from pydantic import BaseModel
+from wiltech_labs_auth import UserRole
 from wiltech_labs_rest import ApiResponse, FieldMetadata, LinkedResource
-
-from core.security.roles import UserRole
 
 
 # --- DTO: what the application services return ------------------------------

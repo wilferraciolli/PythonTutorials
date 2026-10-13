@@ -1,8 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from wiltech_labs_ai import get_ai, get_embedder
+from wiltech_labs_auth import require_owner
+from wiltech_labs_core import get_config, get_database
 
 from chats.chat_repository import ChatRepository
 from chats.chat_search_service import DEFAULT_LIMIT, ChatSearchService
 from chats.chat_service import ChatService
+from chats.constants import ChatProvider
+from chats.message_vector_store import DatabaseMessageVectorStore
 from chats.schemas import (
     ChatCreateRequest,
     ChatListResponse,
@@ -12,12 +17,6 @@ from chats.schemas import (
     ChatSearchResponse,
     ChatTitleUpdateRequest,
 )
-from core.ai.ai import ChatProvider, get_ai
-from core.ai.embeddings import get_embedder
-from core.ai.vector_store import DatabaseVectorStore
-from core.config.config import get_config
-from core.config.database import get_database
-from core.security.authorization import require_owner
 
 # Personal resource: only the user in the path may use it (require_owner, 403).
 router = APIRouter(prefix="/users/{user_id}/chats", tags=["chats"])
@@ -36,7 +35,7 @@ def get_chat_search_service(request: Request) -> ChatSearchService:
 
     return ChatSearchService(
         ChatRepository(db),
-        DatabaseVectorStore(db),
+        DatabaseMessageVectorStore(db),
         embed_texts,
         embedding_model,
         ["cloudflare", "groq"],
