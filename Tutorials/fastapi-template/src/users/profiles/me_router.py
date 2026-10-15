@@ -1,11 +1,10 @@
-from typing import Any
-
 from fastapi import APIRouter, Depends, Request
+from wiltech_labs_auth import AuthenticatedUser, get_authenticated_user
+from wiltech_labs_core import get_database
 
-from core.security.auth import AuthenticatedUser, get_authenticated_user
-from core.config.database import get_database
-from users.user_repository import UserRepository
 from users.profiles.me_service import MeService
+from users.profiles.schemas import MeResponse
+from users.user_repository import UserRepository
 
 router = APIRouter(prefix="/me", tags=["me"])
 
@@ -19,6 +18,6 @@ def get_me_service(request: Request) -> MeService:
 async def get_me(
     current_user: AuthenticatedUser = Depends(get_authenticated_user),
     service: MeService = Depends(get_me_service),
-) -> dict[str, Any]:
-    user_row = await service.get_or_create_current_user(current_user)
-    return service.build_response(user_row)
+) -> MeResponse:
+    me = await service.get_me(current_user)
+    return service.build_response(me)

@@ -3,12 +3,12 @@
     <mat-card class="Home-nav-card" appearance="outlined">
       <mat-card-content class="Home-content Home-content-nav">
         <mat-icon class="Home-nav-icon" aria-hidden="true">checklist</mat-icon>
-        <h2 class="Home-nav-title">Todos</h2>
-        <p class="Home-lead">Create, update, and tag your todos against the API.</p>
+        <h2 class="Home-nav-title">{{ 'home.todos.title' | transloco }}</h2>
+        <p class="Home-lead">{{ 'home.todos.lead' | transloco }}</p>
         @if (todosError(); as errorMessage) {
           <p class="Home-card-error" role="alert">{{ errorMessage }}</p>
         } @else {
-          <a matButton="filled" routerLink="/todos">Go to todos</a>
+          <a matButton="filled" routerLink="/todos">{{ 'home.todos.cta' | transloco }}</a>
         }
       </mat-card-content>
     </mat-card>
@@ -16,13 +16,13 @@
     <mat-card class="Home-nav-card" appearance="outlined">
       <mat-card-content class="Home-content Home-content-nav">
         <mat-icon class="Home-nav-icon" aria-hidden="true">cloud</mat-icon>
-        <h2 class="Home-nav-title">Cloudflare AI</h2>
-        <p class="Home-lead">Chat with Cloudflare Workers AI models running at the edge.</p>
+        <h2 class="Home-nav-title">{{ 'home.cloudflare.title' | transloco }}</h2>
+        <p class="Home-lead">{{ 'home.cloudflare.lead' | transloco }}</p>
         @if (cloudflareAiError(); as errorMessage) {
           <p class="Home-card-error" role="alert">{{ errorMessage }}</p>
         } @else {
           <a matButton="filled" routerLink="/workers-ai" [queryParams]="{ provider: 'cloudflare' }"
-            >Go to Cloudflare AI</a
+            >{{ 'home.cloudflare.cta' | transloco }}</a
           >
         }
       </mat-card-content>
@@ -31,13 +31,13 @@
     <mat-card class="Home-nav-card" appearance="outlined">
       <mat-card-content class="Home-content Home-content-nav">
         <mat-icon class="Home-nav-icon" aria-hidden="true">bolt</mat-icon>
-        <h2 class="Home-nav-title">Groq AI</h2>
-        <p class="Home-lead">Chat with fast open models served by Groq.</p>
+        <h2 class="Home-nav-title">{{ 'home.groq.title' | transloco }}</h2>
+        <p class="Home-lead">{{ 'home.groq.lead' | transloco }}</p>
         @if (groqAiError(); as errorMessage) {
           <p class="Home-card-error" role="alert">{{ errorMessage }}</p>
         } @else {
           <a matButton="filled" routerLink="/workers-ai" [queryParams]="{ provider: 'groq' }"
-            >Go to Groq AI</a
+            >{{ 'home.groq.cta' | transloco }}</a
           >
         }
       </mat-card-content>

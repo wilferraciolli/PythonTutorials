@@ -1,6 +1,6 @@
 import { Routes } from '@angular/router';
 
-import { authGuard } from './core/auth/auth.guard';
+import { authGuard } from '@wiltech-labs/ngx-auth';
 
 // The app is a front door for the FastAPI/D1 API: sign in with Clerk, get
 // a token, follow the links /me hands back. Home stays public so there's
@@ -15,6 +15,11 @@ export const routes: Routes = [
     path: 'profile',
     canActivate: [authGuard],
     loadChildren: () => import('./features/profile/profile.routes').then((m) => m.profileRoutes),
+  },
+  {
+    path: 'settings',
+    canActivate: [authGuard],
+    loadChildren: () => import('./features/settings/settings.routes').then((m) => m.settingsRoutes),
   },
   {
     path: 'todos',

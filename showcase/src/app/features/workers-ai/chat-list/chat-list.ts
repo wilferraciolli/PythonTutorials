@@ -3,9 +3,11 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { filter, map, startWith } from 'rxjs';
 
-import { describeApiError } from '../../../core/api/api-error';
+import { ApiErrors } from '../../../core/api/api-error';
+import { TranslationService } from '../../../core/i18n/translation.service';
 import { Chat, ChatProvider, ChatsStore } from '../chats.store';
 
 // The chat id lives in the child route (`/workers-ai/:chatId`), which this
@@ -18,7 +20,7 @@ function chatIdFromUrl(url: string): string | null {
 
 @Component({
   selector: 'app-chat-list',
-  imports: [MatButtonModule, MatIconModule],
+  imports: [MatButtonModule, MatIconModule, TranslocoPipe],
   templateUrl: './chat-list.html',
   styleUrl: './chat-list.scss',
 })
@@ -26,6 +28,8 @@ export class ChatList {
   protected readonly store = inject(ChatsStore);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  private readonly apiErrors = inject(ApiErrors);
+  private readonly i18n = inject(TranslationService);
 
   protected readonly creating = signal(false);
   protected readonly selectedProvider = signal<ChatProvider>('cloudflare');
@@ -74,7 +78,7 @@ export class ChatList {
   }
 
   protected providerLabel(provider: ChatProvider): string {
-    return provider === 'groq' ? 'Groq' : 'Cloudflare Workers AI';
+    return this.i18n.t(`chat.providers.${provider}`);
   }
 
   protected async selectProvider(provider: string): Promise<void> {
@@ -102,7 +106,7 @@ export class ChatList {
   protected async saveTitle(chat: Chat): Promise<void> {
     const title = this.editingTitle().trim();
     if (!title) {
-      this.renameError.set('A chat name is required.');
+      this.renameError.set(this.i18n.t('chat.list.nameRequired'));
       return;
     }
 
@@ -112,7 +116,7 @@ export class ChatList {
       await this.store.updateTitle(chat, title);
       this.cancelEditing();
     } catch (err) {
-      this.renameError.set(describeApiError(err, 'Failed to rename chat.'));
+      this.renameError.set(this.apiErrors.describe(err, 'chat.list.renameFailed'));
     } finally {
       this.saving.set(false);
     }

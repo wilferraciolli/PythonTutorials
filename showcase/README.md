@@ -14,7 +14,9 @@ running, a banner across the top says the API can't be reached.
 | Path | Auth | Screen |
 |---|---|---|
 | `/` | Public | Home — cards linking to Todos and Workers AI (sign in from the nav bar) |
-| `/profile` | Sign-in required | Current user's name/email/roles (read-only; sourced from `/me`) |
+| `/profile` | Sign-in required | Current user's name/email/roles (read-only; sourced from `/me`), plus buttons to the settings screens below when the profile hands out their links |
+| `/settings` | Sign-in required | Your own region settings (timezone, language, currency, theme); shows when you're still on the system defaults and lets you reset back to them. Follows the profile's `userSettings` link (needs `fastapi-template` running) |
+| `/settings/system` | Admins only | The system-wide default settings. Follows the profile's `systemSettings` link, which the API only gives admins; anyone else sees "only admins" (needs `fastapi-template` running) |
 | `/todos` | Sign-in required | List the signed-in user's todos, filterable by state |
 | `/todos/new`, `/todos/:id/edit` | Sign-in required | Create/edit a todo, including its tags |
 | `/tags` | Sign-in required | Browse, search, create, and delete tags across every resource |

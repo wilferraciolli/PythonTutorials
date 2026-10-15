@@ -217,11 +217,13 @@ name = "fastapi-ai"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
-    { name = "aiosqlite" },
     { name = "fastapi" },
     { name = "httpx" },
-    { name = "pyjwt", extra = ["crypto"] },
     { name = "uvicorn" },
+    { name = "wiltech-labs-ai" },
+    { name = "wiltech-labs-auth" },
+    { name = "wiltech-labs-core", extra = ["sqlite"] },
+    { name = "wiltech-labs-rest" },
 ]
 
 [package.dev-dependencies]
@@ -234,11 +236,13 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "aiosqlite" },
     { name = "fastapi" },
     { name = "httpx" },
-    { name = "pyjwt", extras = ["crypto"] },
     { name = "uvicorn" },
+    { name = "wiltech-labs-ai", specifier = ">=1.0.1" },
+    { name = "wiltech-labs-auth", specifier = ">=1.0.1" },
+    { name = "wiltech-labs-core", extras = ["sqlite"], specifier = ">=1.0.1" },
+    { name = "wiltech-labs-rest", specifier = ">=1.0.0" },
 ]
 
 [package.metadata.requires-dev]
@@ -656,6 +660,65 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/5d/ad/04bbb797c84fc1f26cb171f7394716f4865ffb8d8c5e1eef42565c2dfa6b/uvicorn-0.53.0.tar.gz", hash = "sha256:a9356f0cb89b3b8621529c5d5eebd69bfe154f4c3f68b4cf2de47e45fa855c2e", size = 110881, upload-time = "2026-09-14T07:44:23.815Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/76/18/0eea75741ee812e9f598b687619ce2454f6c3a1c5cd21ea990ec6bd26f45/uvicorn-0.53.0-py3-none-any.whl", hash = "sha256:e8dca71ec86dce5f04e333f0d56cdedf942446e6643b9cea1af0d6d3a02cb03e", size = 87081, upload-time = "2026-09-14T07:44:22.179Z" },
+]
+
+[[package]]
+name = "wiltech-labs-ai"
+version = "1.0.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "httpx" },
+    { name = "wiltech-labs-core" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ae/d4/93b31a7c605d3b5fd227d90981fd472a6130516a772d347a9e2660c11b40/wiltech_labs_ai-1.0.1.tar.gz", hash = "sha256:21033b91b4319f9256fbc80c2cca29fdccc5e25f7f19aa5b896e710e663502cd", size = 20764, upload-time = "2026-10-13T14:11:02.971Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e1/ce/4b70bcc1031224c6cc33d4ba6da26176baa20eb8f9f8035b4c1b4ea466ad/wiltech_labs_ai-1.0.1-py3-none-any.whl", hash = "sha256:2798f981153ab629739dd086beff36718bcb2cb4ca82c81376edb5db598fce2c", size = 23295, upload-time = "2026-10-13T14:11:01.608Z" },
+]
+
+[[package]]
+name = "wiltech-labs-auth"
+version = "1.0.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "fastapi" },
+    { name = "httpx" },
+    { name = "pyjwt", extra = ["crypto"] },
+    { name = "wiltech-labs-core" },
+    { name = "wiltech-labs-rest" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/4c/e5/a337db4130f3c6544f1e7e6f403893e1e0d9ee31087488b7831a45a81da1/wiltech_labs_auth-1.0.1.tar.gz", hash = "sha256:9396f8ce5c89a16dfe3b6a0f5be6b6d5c9db39152863d5f44061904bb282595a", size = 14324, upload-time = "2026-10-13T14:11:46.912Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b3/84/f800f65e381ba59c35e6c071cf89ab14ff89dcd050feb078e3c4234943b5/wiltech_labs_auth-1.0.1-py3-none-any.whl", hash = "sha256:d987bce8ad64b99c133071e80485ce0941840091a5f312f7aee337548975064a", size = 14751, upload-time = "2026-10-13T14:11:45.718Z" },
+]
+
+[[package]]
+name = "wiltech-labs-core"
+version = "1.0.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "fastapi" },
+    { name = "httpx" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/2c/f1/ccf0fa95fbc8d659da233fdaeadf0aa6afb8fa3de81b82accf519e6850b0/wiltech_labs_core-1.0.1.tar.gz", hash = "sha256:ba277386b9f33476a79da197ade3992088fc6c3090c42d2d276c3280f51650a9", size = 14073, upload-time = "2026-10-13T14:12:10.442Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/2d/aa/8e5f43ccf995cf82801bd847f941c17a4210783d1a018e96e2619ecd9a5f/wiltech_labs_core-1.0.1-py3-none-any.whl", hash = "sha256:e429613b20824e7de0901cdeab67f41c2bcbaf5dc2756df957caafe48a849f2b", size = 13642, upload-time = "2026-10-13T14:12:09.29Z" },
+]
+
+[package.optional-dependencies]
+sqlite = [
+    { name = "aiosqlite" },
+]
+
+[[package]]
+name = "wiltech-labs-rest"
+version = "1.0.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pydantic" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/a8/f1/97ccd7291a5a90da7f31d4d14861fe9d84f74faa500f14a10cc98053845a/wiltech_labs_rest-1.0.1.tar.gz", hash = "sha256:18a789a775622177437d4287e337f81652dda5e03f2f696fa517d077cb7a214d", size = 11538, upload-time = "2026-10-02T21:25:01.904Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/6e/39/619f0a63b390bc17b2aec0506c40fec0bbd19c65ef5c7e36a3b62891fe97/wiltech_labs_rest-1.0.1-py3-none-any.whl", hash = "sha256:2157c4f71f3b8714ffa439ffa0b8affb4366d7f9c8ccb5ae1743e05a931c7f53", size = 12216, upload-time = "2026-10-02T21:25:00.59Z" },
 ]
 
 [[package]]

@@ -75,8 +75,8 @@ Build `find` first.
 
 Follows the router -> service -> repository -> adapter layering in `PYTHON_APP_CONVENTIONS.md`.
 
-1. **Adapter** `src/vector_store.py`: `VectorStore` protocol with `upsert`, `query`, `delete_by_ids`.
-   Implementations: `VectorizeBindingAdapter` and `VectorizeHttpAdapter` (REST), mirroring `AiBindingAdapter` / `AiHttpAdapter` in `src/ai.py`.
+1. **Adapter** `src/core/ai/vector_store.py`: `VectorStore` protocol with `upsert`, `query`, `delete_by_ids`.
+   Implementations: `VectorizeBindingAdapter` and `VectorizeHttpAdapter` (REST), mirroring `AiBindingAdapter` / `AiHttpAdapter` in `src/core/ai/ai.py`.
    Add a `vectorize` binding to `wrangler.jsonc`.
 2. **Embedding helper**: `embed(texts) -> list[list[float]]`, batched, using the existing AI adapter.
 3. **Indexing service** `src/services/search_index_service.py`:

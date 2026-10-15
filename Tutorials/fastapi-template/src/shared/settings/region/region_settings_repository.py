@@ -1,15 +1,17 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, Mapping, Optional
 
-from core.config.database import Database
-
+from wiltech_labs_core import Database
 
 from shared.settings.region.enums import RegionSettingOwnerType
-from users.enums import UserRole
+from shared.settings.region.models import RegionSettingModel
 
 
 class RegionSettingsRepository:
     """
     Repository for region settings database operations.
+
+    A user's own row uses the user's id as its primary key (owner_type USER);
+    the single SYSTEM row holds the defaults every user falls back to.
 
     This repository depends on the portable Database protocol, not SQLite,
     Cloudflare D1, or any other concrete database runtime.
@@ -18,192 +20,75 @@ class RegionSettingsRepository:
     def __init__(self, db: Database) -> None:
         self.db = db
 
-    # Get system Settings
-    async def get_system_settings(self) -> Optional[Dict[str, Any]]:
-        result = await self.db.fetch_one(
+    async def get_system_settings(self) -> Optional[RegionSettingModel]:
+        row = await self.db.fetch_one(
             "SELECT * FROM region_settings WHERE owner_type = ?",
-            (RegionSettingOwnerType.SYSTEM)
+            (RegionSettingOwnerType.SYSTEM.value,),
         )
 
-        if not result:
-            return None
+        return self._to_model(row)
 
-        return result
 
-    # Get user Settings
-    async def get_user_settings(self, user_id: str) -> Optional[Dict[str, Any]]:
-        result = await self.db.fetch_one(
-            "SELECT * FROM region_settings WHERE id = ?",
-            (user_id)
+    async def update_system_settings(
+            self,
+            timezone: str,
+            language: str,
+            locale: str,
+            currency: str,
+            theme: str,
+    ) -> RegionSettingModel:
+        # The SYSTEM row is seeded by the migrations, so this is a plain update.
+        await self.db.execute(
+            "UPDATE region_settings SET timezone = ?, language = ?, locale = ?, currency = ?, theme = ? "
+            "WHERE owner_type = ?",
+            (timezone, language, locale, currency, theme, RegionSettingOwnerType.SYSTEM.value),
         )
 
-        if not result:
-            return None
+        saved = await self.get_system_settings()
+        if saved is None:
+            raise RuntimeError("system region settings are missing; run the migrations")
 
-        return result
+        return saved
 
-    # Update user Settings
-    async def update_user_settings(self, user_id: str, **fields: Any) -> Optional[Dict[str, Any]]:
-        result = await self.db.fetch_one(
-            "SELECT * FROM region_settings WHERE id = ?",
-            (user_id)
+
+    async def get_user_settings(self, user_id: str) -> Optional[RegionSettingModel]:
+        row = await self.db.fetch_one(
+            "SELECT * FROM region_settings WHERE id = ? AND owner_type = ?",
+            (user_id, RegionSettingOwnerType.USER.value),
         )
 
-        if not result:
-            return None
+        return self._to_model(row)
 
-        return result
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    async def create(
+    async def upsert_user_settings(
         self,
         user_id: str,
-        name: str,
-        email: str,
-        role_ids: list[UserRole],
-        created_date: str,
-        external_user_id: Optional[str] = None,
-    ) -> Dict[str, Any]:
-        role_ids = self.normalise_role_ids(role_ids)
+        timezone: str,
+        language: str,
+        locale: str,
+        currency: str,
+        theme: str,
+    ) -> RegionSettingModel:
         await self.db.execute(
-            "INSERT INTO users (id, external_user_id, name, email, created_date) VALUES (?, ?, ?, ?, ?)",
-            (user_id, external_user_id, name, email, created_date),
+            "INSERT INTO region_settings (id, owner_type, timezone, language, locale, currency, theme) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?) "
+            "ON CONFLICT(id) DO UPDATE SET "
+            "timezone = excluded.timezone, language = excluded.language, locale = excluded.locale, "
+            "currency = excluded.currency, theme = excluded.theme",
+            (user_id, RegionSettingOwnerType.USER.value, timezone, language, locale, currency, theme),
         )
 
-        for role_id in role_ids:
-            await self.db.execute(
-                "INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)",
-                (user_id, role_id.value),
-            )
+        saved = await self.get_user_settings(user_id)
+        if saved is None:
+            raise RuntimeError(f"saved user region settings were not found: {user_id}")
 
-        created = await self.get_by_id(user_id)
-        if created is None:
-            raise RuntimeError(f"created user was not found: {user_id}")
-        return created
+        return saved
 
-    async def get_by_id(self, user_id: str) -> Optional[Dict[str, Any]]:
-        user = await self.db.fetch_one(
-            "SELECT * FROM users WHERE id = ?",
-            (user_id,),
-        )
-
-        if not user:
-            return None
-
-        user["roleIds"] = await self.get_role_ids(user_id)
-        return user
-
-
-
-    async def get_all(self) -> List[Dict[str, Any]]:
-        users = await self.db.fetch_all(
-            "SELECT * FROM users ORDER BY name",
-        )
-
-        for user in users:
-            user["roleIds"] = await self.get_role_ids(user["id"])
-
-        return users
-
-    async def search(self, term: Optional[str] = None) -> List[Dict[str, Any]]:
-        # Case-insensitive match on name or email (SQLite LIKE and D1 both
-        # are for ASCII). No term returns everyone, same as get_all().
-        if not term:
-            return await self.get_all()
-
-        like = f"%{term}%"
-        users = await self.db.fetch_all(
-            "SELECT * FROM users WHERE name LIKE ? OR email LIKE ? ORDER BY name",
-            (like, like),
-        )
-
-        for user in users:
-            user["roleIds"] = await self.get_role_ids(user["id"])
-
-        return users
-
-    async def update(self, user_id: str, **fields: Any) -> Optional[Dict[str, Any]]:
-        role_ids = fields.pop("roleIds", None)
-
-        updatable = {key: value for key, value in fields.items() if value is not None}
-
-        if updatable:
-            set_clause = ", ".join(f"{key} = ?" for key in updatable)
-            values = list(updatable.values()) + [user_id]
-
-            await self.db.execute(
-                f"UPDATE users SET {set_clause} WHERE id = ?",
-                tuple(values),
-            )
-
-        if role_ids is not None:
-            await self.replace_roles(user_id, role_ids)
-
-        return await self.get_by_id(user_id)
-
-    async def delete(self, user_id: str) -> bool:
-        existing = await self.get_by_id(user_id)
-
-        if not existing:
-            return False
-
+    async def delete_user_settings(self, user_id: str) -> None:
         await self.db.execute(
-            "DELETE FROM user_roles WHERE user_id = ?",
-            (user_id,),
+            "DELETE FROM region_settings WHERE id = ? AND owner_type = ?",
+            (user_id, RegionSettingOwnerType.USER.value),
         )
 
-        await self.db.execute(
-            "DELETE FROM users WHERE id = ?",
-            (user_id,),
-        )
-
-        return True
-
-    async def get_role_ids(self, user_id: str) -> list[str]:
-        rows = await self.db.fetch_all(
-            "SELECT role_id FROM user_roles WHERE user_id = ? ORDER BY role_id",
-            (user_id,),
-        )
-
-        return [row["role_id"] for row in rows]
-
-    async def replace_roles(
-        self,
-        user_id: str,
-        role_ids: list[UserRole],
-    ) -> None:
-        role_ids = self.normalise_role_ids(role_ids)
-        await self.db.execute(
-            "DELETE FROM user_roles WHERE user_id = ?",
-            (user_id,),
-        )
-
-        for role_id in role_ids:
-            await self.db.execute(
-                "INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)",
-                (user_id, role_id.value),
-            )
-
-    def normalise_role_ids(self, role_ids: list[UserRole]) -> list[UserRole]:
-        if not role_ids:
-            return [UserRole.STANDARD]
-
-        return list(dict.fromkeys(role_ids))
+    @staticmethod
+    def _to_model(row: Optional[Mapping[str, Any]]) -> Optional[RegionSettingModel]:
+        return RegionSettingModel(**row) if row else None

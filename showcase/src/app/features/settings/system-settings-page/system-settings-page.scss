@@ -1,0 +1,26 @@
+@use 'spacing';
+
+// A deliberately compact card, like ProfilePage — see
+// docs/frontend-conventions.md ("Layout").
+.SystemSettingsPage {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: var(--app-gutter);
+
+  &-content {
+    display: flex;
+    flex-direction: column;
+    gap: spacing.space(2);
+    padding-top: spacing.space(4);
+  }
+
+  &-muted {
+    margin: 0;
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  &-error {
+    margin: 0;
+    color: var(--mat-sys-error);
+  }
+}

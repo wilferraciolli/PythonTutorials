@@ -7,20 +7,20 @@
         <form class="ChatList-edit" (submit)="$event.preventDefault(); saveTitle(chat)">
           <input
             class="ChatList-control ChatList-editInput"
-            aria-label="Chat name"
+            [attr.aria-label]="'chat.list.chatName' | transloco"
             maxlength="60"
             [value]="editingTitle()"
             (input)="editingTitle.set($any($event.target).value)"
             [disabled]="saving()"
           />
-          <button matIconButton type="submit" aria-label="Save chat name" title="Save" [disabled]="saving()">
+          <button matIconButton type="submit" [attr.aria-label]="'chat.list.saveName' | transloco" [title]="'chat.list.save' | transloco" [disabled]="saving()">
             <mat-icon aria-hidden="true">check</mat-icon>
           </button>
           <button
             matIconButton
             type="button"
-            aria-label="Cancel renaming"
-            title="Cancel"
+            [attr.aria-label]="'chat.list.cancelRenaming' | transloco"
+            [title]="'chat.list.cancel' | transloco"
             [disabled]="saving()"
             (click)="cancelEditing()"
           >
@@ -30,12 +30,12 @@
       } @else {
         <select
           class="ChatList-control ChatList-select"
-          aria-label="Chat session"
+          [attr.aria-label]="'chat.list.session' | transloco"
           [disabled]="store.chats().length === 0"
           (change)="openChat($any($event.target).value)"
         >
           <option value="" [selected]="!currentChat()" disabled>
-            {{ store.isLoading() ? 'Loading…' : store.chats().length === 0 ? 'No chats yet' : 'Select a chat…' }}
+            {{ (store.isLoading() ? 'chat.list.loading' : store.chats().length === 0 ? 'chat.list.none' : 'chat.list.select') | transloco }}
           </option>
           @for (chat of store.chats(); track chat.id) {
             <option [value]="chat.id" [selected]="chat.id === currentChatId()">
@@ -47,8 +47,8 @@
           <button
             matIconButton
             type="button"
-            aria-label="Rename chat"
-            title="Rename chat"
+            [attr.aria-label]="'chat.list.rename' | transloco"
+            [title]="'chat.list.rename' | transloco"
             (click)="startEditing(chat)"
           >
             <mat-icon aria-hidden="true">edit</mat-icon>
@@ -60,15 +60,15 @@
     <div class="ChatList-row">
       <select
         class="ChatList-control ChatList-provider"
-        aria-label="Provider for new chats"
+        [attr.aria-label]="'chat.list.providerForNew' | transloco"
         (change)="selectProvider($any($event.target).value)"
       >
-        <option value="cloudflare" [selected]="selectedProvider() === 'cloudflare'">Cloudflare Workers AI</option>
-        <option value="groq" [selected]="selectedProvider() === 'groq'">Groq</option>
+        <option value="cloudflare" [selected]="selectedProvider() === 'cloudflare'">{{ 'chat.providers.cloudflare' | transloco }}</option>
+        <option value="groq" [selected]="selectedProvider() === 'groq'">{{ 'chat.providers.groq' | transloco }}</option>
       </select>
       <button matButton="filled" type="button" (click)="newChat()" [disabled]="creating()">
         <mat-icon aria-hidden="true">add</mat-icon>
-        {{ creating() ? 'Creating…' : 'New chat' }}
+        {{ (creating() ? 'chat.list.creating' : 'chat.list.new') | transloco }}
       </button>
     </div>
 

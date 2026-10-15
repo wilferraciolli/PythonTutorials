@@ -1,38 +1,60 @@
-from typing import Any, Optional
-
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from wiltech_labs_auth import Caller, get_caller
+from wiltech_labs_core import get_database
 
-from core.config.database import get_database
-from users.schemas import UserUpdate
-from users.user_repository import UserRepository
-from users.user_service import UserService
+from shared.settings.region.region_settings_repository import RegionSettingsRepository
+from users.exceptions import NotOwnerError
+from users.settings.schemas import UserSettingsResponse, UserSettingsUpdateRequest
+from users.settings.user_settings_service import UserSettingsService
 
-router = APIRouter(prefix="/users/{id}/settings", tags=["user settings"])
+# Personal resource: only the user in the path may use it (403 otherwise).
+router = APIRouter(prefix="/users/{user_id}/settings", tags=["user settings"])
 
 
-def get_user_service(request: Request) -> UserService:
+def get_user_settings_service(request: Request) -> UserSettingsService:
     db = get_database(request)
-    return UserService(UserRepository(db))
+    return UserSettingsService(RegionSettingsRepository(db))
 
 
 @router.get("")
-async def get_user_setting(
+async def get_user_settings(
         user_id: str,
-        service: UserService = Depends(get_user_service),
-) -> dict[str, Any]:
-    users = await service.get_users()
-    return service.build_response("users", users)
+        caller: Caller = Depends(get_caller),
+        service: UserSettingsService = Depends(get_user_settings_service),
+) -> UserSettingsResponse:
+    try:
+        user_settings = await service.get_user_settings(user_id, caller)
+    except NotOwnerError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+
+    return service.build_response(user_settings)
 
 
 @router.put("")
-async def update_user_setting(
+async def update_user_settings(
         user_id: str,
-        user: UserUpdate,
-        service: UserService = Depends(get_user_service),
-) -> dict[str, Any]:
-    updated = await service.update_user(user_id, user)
+        request: UserSettingsUpdateRequest,
+        caller: Caller = Depends(get_caller),
+        service: UserSettingsService = Depends(get_user_settings_service),
+) -> UserSettingsResponse:
+    try:
+        user_settings = await service.update_user_settings(user_id, request, caller)
+    except NotOwnerError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
 
-    if not updated:
-        raise HTTPException(status_code=404, detail="User not found")
+    return service.build_response(user_settings)
 
-    return service.build_response("user", updated)
+
+@router.delete("", status_code=204)
+async def reset_user_settings(
+        user_id: str,
+        caller: Caller = Depends(get_caller),
+        service: UserSettingsService = Depends(get_user_settings_service),
+) -> Response:
+    """Drop the user's own settings so they fall back to the system defaults."""
+    try:
+        await service.reset_user_settings(user_id, caller)
+    except NotOwnerError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+
+    return Response(status_code=204)

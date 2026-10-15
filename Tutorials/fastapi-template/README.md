@@ -7,7 +7,8 @@ each time. It already has:
 - **Clerk JWT authentication** wired into every route except `/api/health`.
 - **A portable `Database` protocol** — local SQLite for uvicorn/Docker, a
   Cloudflare D1 binding, or D1-over-HTTP, all through the same interface
-  (`src/core/config/database.py`). Business logic never touches SQLite or D1 directly.
+  (`Database` / `get_database` from `wiltech-labs-core`). Business logic never touches
+  SQLite or D1 directly.
 - **A working example resource** (`user_router.py`) built through the full
   router -> service -> repository -> database layering, so you can see the
   pattern before repeating it for your own domain.
@@ -15,6 +16,17 @@ each time. It already has:
   HATEOAS-style links, built in the service layer.
 - Routes mounted under `/api`, `pyproject.toml`/`uv.lock`, Docker, and a
   `wrangler.jsonc` ready for `pywrangler dev` / `wrangler deploy`.
+
+The cross-cutting code isn't in this folder: it comes from PyPI, so every app
+gets fixes with a version bump instead of copy-paste.
+
+| Package | Gives you |
+|---|---|
+| [`wiltech-labs-core`](https://pypi.org/project/wiltech-labs-core/) (`[sqlite]` extra) | `get_config`, `Database` / `get_database` (SQLite, D1 binding, D1 over HTTP, migrations), `AppError` + `register_error_handlers`, `EnvCORSMiddleware`, `health_router` |
+| [`wiltech-labs-auth`](https://pypi.org/project/wiltech-labs-auth/) | Clerk JWT (`get_authenticated_user`), `Caller` / `get_caller`, `require_admin`, `require_owner`, `UserRole`, `role_options`, service API keys, Clerk webhooks |
+| [`wiltech-labs-rest`](https://pypi.org/project/wiltech-labs-rest/) | The response envelope, links and field metadata |
+
+Upgrade them with `uv lock --upgrade-package <name> && uv sync`.
 
 See [`fastapi-cloudflare-d1`](../fastapi-cloudflare-d1) and
 [`fastapi-cloudflare-ai`](../fastapi-cloudflare-ai) for what a project built
@@ -35,30 +47,35 @@ when you start a real project from this.
 
 ## Project Structure
 
+Code is organised by domain, not by file type: each package holds its own
+router, service, repository and schemas.
+
 ```
 fastapi-template/
 ├── src/
-│   ├── entry.py                 # FastAPI app + Workers ASGI entrypoint
-│   ├── main.py                  # Plain FastAPI app for uvicorn/Docker; wires
-│   │                             # routers + the Clerk auth dependency
-│   ├── auth.py                  # Clerk JWT verification (JWKS fetch/cache)
-│   ├── database.py              # SQLite, D1 binding, and D1 HTTP adapters
-│   ├── config.py                # Runtime config from Worker env / .env / OS env
-│   ├── api_response.py          # Shared response envelope + API_PREFIX
-│   ├── models.py                # Pydantic DTOs and UTC date formatting
-│   ├── repositories/
-│   │   └── user_repository.py   # Example: raw parameterized SQL via Database protocol
-│   ├── services/
-│   │   ├── user_service.py          # /api/users CRUD — copy this pattern per resource
-│   │   ├── user_profile_service.py  # /api/users/{id}/profile navigation hub
-│   │   └── me_service.py            # /api/me — maps the Clerk identity to a users row
-│   └── routers/
-│       ├── health.py
-│       ├── me.py
-│       ├── user_profile.py
-│       └── users.py
+│   ├── entry.py                      # FastAPI app + Workers ASGI entrypoint
+│   ├── main.py                       # Plain FastAPI app for uvicorn/Docker; wires
+│   │                                  # routers + the Clerk auth dependency
+│   │                                  # (config, database, security, health and the
+│   │                                  # envelope come from the wiltech-labs-* packages)
+│   ├── shared/                       # Data owned by several domains
+│   │   └── settings/
+│   │       ├── region/               # region_settings: /api/admin/settings + the shared repository
+│   │       └── configuration/        # configuration_settings table: enums, models, repository
+│   └── users/
+│       ├── user_router.py            # /api/users CRUD — copy this pattern per resource
+│       ├── user_service.py           # Business rules, links, metadata, envelopes
+│       ├── user_repository.py        # SQL -> UserModel, reads via user_detail_view
+│       ├── models.py                 # UserModel
+│       ├── schemas.py                # Request / DTO / Metadata classes + Response aliases
+│       ├── constants.py              # `_data` key names and link names
+│       ├── exceptions.py             # SelfLockoutError
+│       ├── profiles/                 # /api/me and /api/users/{id}/profile
+│       └── settings/                 # /api/users/{id}/settings
 ├── migrations/
-│   └── 001_create_users_table.sql   # Auto-applied against local SQLite
+│   ├── 001_create_users_table.sql   # Auto-applied against local SQLite
+│   ├── 002_settings.sql
+│   └── 003_user_detail_view.sql     # A user + comma-joined role_ids, one row per user
 ├── Dockerfile
 ├── docker-compose.yml
 ├── .env.example
@@ -70,6 +87,61 @@ fastapi-template/
 └── .gitignore
 ```
 
+## Code conventions
+
+The full rules live in [`../docs/PYTHON_APP_CONVENTIONS.md`](../docs/PYTHON_APP_CONVENTIONS.md).
+The ones you'll hit first when adding a resource:
+
+**One class per layer, named for the layer.** `users/settings/` is the
+reference implementation:
+
+| Layer | Suffix | Example | Built by |
+|---|---|---|---|
+| Database row (entity) | `Model` | `RegionSettingModel` in `models.py` | repository |
+| Request body | `Request` | `UserSettingsUpdateRequest` in `schemas.py` | client; FastAPI validates it |
+| What the service returns | `DTO` | `UserSettingsDTO` in `schemas.py` (with `links`) | application service |
+| Field rules for the client | `Metadata` | `UserSettingsMetadata` in `schemas.py` | application service |
+| HTTP response envelope | `Response` | `UserSettingsResponse = ApiResponse[UserSettingsDTO, UserSettingsMetadata]` in `schemas.py` | application service |
+
+The classes don't inherit from each other. A Request holds only the fields the
+client may change; the DTO adds what the server decides (`id`, `links`, ...).
+
+**Every non-delete response uses the generic envelope** `ApiResponse` from
+the [`wiltech-labs-rest`](https://pypi.org/project/wiltech-labs-rest/)
+library, so a resource never defines its own
+`_data`/`_metadata` classes:
+
+```python
+# user_settings_service.py — metadata gets the DTO, so business rules can
+# change it based on the resource's current state
+def build_response(self, user_settings: UserSettingsDTO) -> UserSettingsResponse:
+    return UserSettingsResponse.of(
+        USER_SETTINGS_DATA_NAME,
+        user_settings,
+        self.build_metadata(user_settings),
+    )
+
+# user_settings_router.py
+return service.build_response(user_settings)
+```
+
+- The `_data` key name (`"userSettings"`) is a constant in the domain's
+  `constants.py`, together with the link names.
+- Shared building blocks come from `wiltech_labs_rest` too: `Link`,
+  `LinkedResource`, `EmbeddedRef` (an `{id, value}` option), `FieldMetadata`
+  (`readOnly` / `hidden` / `mandatory` / `values`), `choice_field(enum)`,
+  `Message` / `MessageType`, `API_PREFIX` and `format_utc_datetime`. It's
+  installed from PyPI like any other dependency; upgrade with
+  `uv lock --upgrade-package wiltech-labs-rest && uv sync`.
+- `_messages` is always present (an empty array when there's nothing to
+  say). `FieldMetadata` drops its own unset flags, so routes don't need
+  `response_model_exclude_none`, and a DTO's `None` fields still come back as
+  `null`.
+
+Every resource in the template follows these conventions: users, `/me`,
+profiles, user settings and system settings. `/api/health` is the one
+exception; it's an infrastructure probe and returns a plain object.
+
 ## Starting a new project from this template
 
 1. Copy this folder to `../your-new-project`.
@@ -78,12 +150,12 @@ fastapi-template/
    purpose (see the note above). Only stop-one-start-the-next, never a new
    port per project.
 4. Set `compatibility_date` in `wrangler.jsonc` to today, if deploying.
-5. Delete or repurpose the `user_router.py` resource: keep it if you want user
-   accounts, otherwise use it as the reference implementation and add your
-   own `repositories/`, `services/`, `routers/` per resource, following the
-   same layering.
+5. Delete or repurpose the `users/` package: keep it if you want user
+   accounts, otherwise use it (especially `users/settings/`) as the reference
+   implementation and add one package per domain with its own router,
+   service, repository and schemas, following the conventions above.
 6. Add bindings to `wrangler.jsonc` as needed (a commented D1 example is
-   already there — `database.py` supports it out of the box).
+   already there — `get_database` supports it out of the box).
 7. `uv sync`, then run locally (see below).
 
 ## Prerequisites (one-time machine setup)
@@ -108,12 +180,39 @@ fastapi-template/
 ## Authentication
 
 Every endpoint except `/api/health` requires a Clerk-issued JWT:
-`Authorization: Bearer <token>`. `auth.py` verifies it against
+`Authorization: Bearer <token>`. `get_authenticated_user` (`wiltech-labs-auth`) verifies it against
 `CLERK_JWKS_URL`/`CLERK_AUDIENCE` (from `.env` or `wrangler.jsonc` `vars`) —
 there is no dev bypass, so a plain `curl` with no header gets `401 Unauthorized`
 on every route below. Optionally set `CLERK_AUTHORIZED_PARTIES` (comma-separated frontend origins) to also require the token's `azp` claim to match one of them. The Clerk values checked into `.env.example` point at a
 shared dev instance; swap them for your own project's Clerk instance if this
 stops being a throwaway/tutorial app.
+
+### Roles
+
+Roles live in our own `user_roles` table, not only in Clerk:
+
+- **Clerk seeds them.** `/api/me` creates the user with the roles in the
+  token, and on every later call **adds** any token role the user doesn't
+  have yet. It never removes one.
+- **Our API is the source of truth after that.** An admin can grant or remove
+  roles through `PUT /api/users/{id}`, and a role granted here survives even
+  if Clerk stops sending it. To revoke a role, use the API, not Clerk.
+- **`get_caller`** (`wiltech-labs-auth`) returns a `Caller`
+  with the caller's saved roles. **`require_admin`** builds on it to guard
+  admin-only routes: `403` unless those roles include `ADMIN`. Both read
+  `user_detail_view` (`migrations/003_user_detail_view.sql`), so the library
+  never imports the `users` package. A project with a different users schema
+  overrides `get_caller_lookup` instead (see the library's README).
+- **Links follow permissions.** Services receive the `Caller`, so a
+  non-admin gets no `updateUser` / `deleteUser` links and no `createUser` /
+  `userTemplate` meta links. Nobody gets a `deleteUser` link on themselves.
+- **No lockout:** an admin can't remove their own `ADMIN` role or delete
+  themselves (`400`), so the system can't end up with no admin by accident.
+- **Personal resources:** your settings (`/api/users/{id}/settings`) are
+  yours alone. Anyone else gets `403`, admins included; system-wide defaults
+  live at `/api/admin/settings`. Profiles are viewable by everyone, but only
+  their owner may change one (`can_edit_profile`, ready for when a profile
+  `PUT` is added).
 
 ## Database modes
 
@@ -200,15 +299,20 @@ above) except `/api/health`, `/docs`, and `/openapi.json`.
 | Method | Path | Description |
 |---|---|---|
 | GET | `/api/health` | Health check |
-| GET | `/api/me` | Current user — upserted from the Clerk token's identity on first call |
+| GET | `/api/me` | Current user — created from the Clerk token's identity on first call; later calls add any new roles from the token (never remove) |
 | GET | `/api/users` | List users |
 | GET | `/api/users/search` | Search users by name or email (`?q=`); no `q` returns everyone |
 | GET | `/api/users/template` | Create-template payload for users |
 | GET | `/api/users/{id}` | Get one user |
-| POST | `/api/users` | Create a user |
-| PUT | `/api/users/{id}` | Update a user |
-| DELETE | `/api/users/{id}` | Delete a user (returns `204 No Content`) |
-| GET | `/api/users/{id}/profile` | **Where links live.** `/me` only returns the `userProfile` link; this returns the user (`id`, `externalId`, `name`, `email`, `roleIds`) plus every link the UI follows, built from the `{id}` in the path. `UserProfileService.can_view_profile` is the seam for "may the caller see this user's resources?" |
+| POST | `/api/users` | **Admin only.** Create a user |
+| PUT | `/api/users/{id}` | **Admin only.** Update a user, including their roles. You can't remove your own `ADMIN` role (`400`) |
+| DELETE | `/api/users/{id}` | **Admin only.** Delete a user (returns `204 No Content`). You can't delete yourself (`400`) |
+| GET | `/api/users/{id}/settings` | **Your own only** (`403` for anyone else, admins included). Your region settings (timezone, language, locale, currency, theme); falls back to the system defaults (`owner_type: SYSTEM`) until the user saves their own |
+| PUT | `/api/users/{id}/settings` | **Your own only.** Save your region settings |
+| DELETE | `/api/users/{id}/settings` | **Your own only.** Drop your settings so you fall back to the system defaults (returns `204 No Content`) |
+| GET | `/api/admin/settings` | **Admin only.** The system default region settings every user falls back to |
+| PUT | `/api/admin/settings` | **Admin only.** Update the system default region settings |
+| GET | `/api/users/{id}/profile` | **Where links live.** `/me` only returns the `userProfile` link; this returns the user (`id`, `externalId`, `name`, `email`, `roleIds`) plus every link the UI follows, built from the `{id}` in the path. `UserProfileService.can_view_profile` is the seam for "may the caller see this user's resources?" Anyone signed in can view any profile; the `userSettings` link only appears on your own, and `systemSettings` / `userTemplate` only for admins. |
 | GET | `/docs` | Interactive Swagger UI |
 | GET | `/openapi.json` | OpenAPI schema |
 
@@ -216,7 +320,7 @@ above) except `/api/health`, `/docs`, and `/openapi.json`.
 
 - **Python Workers are in beta.** The exact shape of D1 row objects returned
   by `.first()` / `.all()` is based on the documented JS-equivalent API;
-  `database.py`'s D1 adapters defensively handle both dict-like and
+  `wiltech-labs-core`'s D1 adapters defensively handle both dict-like and
   attribute-like access, but if a `workers-py` version update changes this
   shape, that's the first place to check.
 - No traditional SQLAlchemy ORM — repository SQL is raw and parameterized.
