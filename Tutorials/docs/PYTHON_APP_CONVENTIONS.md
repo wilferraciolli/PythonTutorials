@@ -11,6 +11,62 @@ The default target is a **portable local-development-first FastAPI app**:
 - Can be deployed to Cloudflare Workers with D1.
 - Keeps business logic independent from the hosting provider.
 - Uses a consistent response envelope for all non-delete API responses.
+- Builds on the shared `wiltech-labs-*` packages from
+  [`py-libraries`](https://github.com/wilferraciolli/py-libraries) instead of
+  copying common code from the last project (see "Shared libraries").
+
+## Contents
+
+- [Core principles](#core-principles)
+- [Shared libraries](#shared-libraries)
+- [Recommended project structure](#recommended-project-structure)
+- [Runtime targets](#runtime-targets)
+  - [1. Local uvicorn + SQLite](#1-local-uvicorn--sqlite)
+  - [2. Docker + SQLite](#2-docker--sqlite)
+  - [3. Cloudflare Workers + D1](#3-cloudflare-workers--d1)
+  - [4. Cloudflare D1 over HTTP](#4-cloudflare-d1-over-http)
+- [Dependency and tooling conventions](#dependency-and-tooling-conventions)
+- [Configuration conventions](#configuration-conventions)
+- [Database abstraction convention](#database-abstraction-convention)
+- [Migration conventions](#migration-conventions)
+- [Identifier conventions](#identifier-conventions)
+- [Date and time conventions](#date-and-time-conventions)
+- [Layering conventions](#layering-conventions)
+  - [Router layer](#router-layer)
+  - [Application service layer](#application-service-layer)
+  - [Repository layer](#repository-layer)
+  - [Database adapter layer](#database-adapter-layer)
+- [Response envelope convention](#response-envelope-convention)
+  - [Typed envelope: ApiResponse](#typed-envelope-apiresponse)
+  - [Single resource response](#single-resource-response)
+  - [Collection response](#collection-response)
+  - [Template response](#template-response)
+- [Metadata conventions](#metadata-conventions)
+- [Link conventions](#link-conventions)
+  - [Resource links](#resource-links)
+  - [Meta links](#meta-links)
+- [Message conventions](#message-conventions)
+- [Delete endpoint convention](#delete-endpoint-convention)
+- [Model, Request, DTO and Response conventions](#model-request-dto-and-response-conventions)
+- [Relationship and metadata conventions](#relationship-and-metadata-conventions)
+- [Error handling conventions](#error-handling-conventions)
+- [SQL conventions](#sql-conventions)
+  - [Database views](#database-views)
+- [Local development checklist](#local-development-checklist)
+- [Cloudflare checklist](#cloudflare-checklist)
+- [README conventions](#readme-conventions)
+- [AI agent instructions](#ai-agent-instructions)
+- [Default endpoint patterns](#default-endpoint-patterns)
+- [Naming conventions](#naming-conventions)
+- [Authentication and authorization conventions](#authentication-and-authorization-conventions)
+  - [Where roles come from](#where-roles-come-from)
+  - [Guarding routes](#guarding-routes)
+  - [Personal resources](#personal-resources)
+  - [Preventing lockout](#preventing-lockout)
+- [AI conventions](#ai-conventions)
+- [Security and secret conventions](#security-and-secret-conventions)
+- [Testing and validation conventions](#testing-and-validation-conventions)
+- [Final design summary](#final-design-summary)
 
 ## Core principles
 
@@ -35,6 +91,46 @@ The default target is a **portable local-development-first FastAPI app**:
     per backend, so only one Python service is ever meant to be running
     locally at a time. Switch which project is running (stop one, start the
     next) instead of giving each project its own port.
+12. Use the `wiltech-labs-*` packages for the envelope, links, metadata,
+    dates, config, database, errors, CORS, health, auth and AI. Never
+    re-create them inside an app.
+
+## Shared libraries
+
+The plumbing every app used to copy into `core/` now ships as packages from
+[`py-libraries`](https://github.com/wilferraciolli/py-libraries), published on
+PyPI:
+
+| Package | Import | Use it for |
+|---|---|---|
+| `wiltech-labs-rest` | `wiltech_labs_rest` | `ApiResponse` envelope, `API_PREFIX`, `Link`, `LinkedResource`, `FieldMetadata` (+ `choice_field`, `read_only`, `mandatory`, `NoMetadata`, `MetadataBase`), `EmbeddedRef`, `Message` / `MessageType`, UTC dates (`format_utc_datetime`, `UtcDateTime`, `UtcTimestamp`, `utc_now`, `to_db_datetime`, `to_db_date`), `Money`, `BlankAsNone`, `CamelModel` |
+| `wiltech-labs-core` | `wiltech_labs_core` | `get_config`, `get_binding`, the `Database` protocol and its `SQLiteDatabase` / `D1BindingDatabase` / `D1HttpDatabase` adapters, `get_database`, the migration runner, the `AppError` family + `register_error_handlers`, `EnvCORSMiddleware`, `health_router` |
+| `wiltech-labs-auth` | `wiltech_labs_auth` | Clerk JWT (`get_authenticated_user`), `Caller` / `get_caller`, `require_admin`, `require_owner`, `UserRole` / `role_options` / `parse_role_ids`, service API keys (`require_api_key`), Clerk webhooks (`clerk_webhook_event`) |
+| `wiltech-labs-ai` | `wiltech_labs_ai` | AI providers (Workers AI, Groq, Ollama), tool calling (`ToolAgent`), embeddings, `VectorStore` (database / Vectorize / Qdrant), hybrid search (`reciprocal_rank_fusion`) |
+
+```bash
+uv add wiltech-labs-rest "wiltech-labs-core[sqlite]" wiltech-labs-auth
+uv add wiltech-labs-ai        # only when the app has AI features
+```
+
+Rules:
+
+- Import from the package's top level (`from wiltech_labs_rest import
+  ApiResponse`), never from its sub-modules.
+- Depend on the published PyPI version only, never a `path` or `git` source,
+  so the app builds in Docker, in Cloudflare Workers and on any computer.
+  Commit `uv.lock`; upgrade with
+  `uv lock --upgrade-package <name> && uv sync`.
+- Install `wiltech-labs-core` with the `[sqlite]` extra for every app that
+  runs locally or in Docker. Only a Worker-only service leaves it out.
+- Do not copy library code into `core/` or wrap it in app-local re-exports.
+- When an app needs something every app would need (a new metadata flag,
+  error type or database adapter), add it to `py-libraries` and publish a new
+  version instead of writing it locally.
+- Each package's README lists its full public API and its configuration
+  variables.
+- `PythonTutorials/Tutorials/fastapi-template` is the reference app built on
+  these packages. Start new apps from it.
 
 ## Recommended project structure
 Organize by domain, not by file type. One package per bounded context.
@@ -45,18 +141,9 @@ my-python-api/
 ├── src/
 │   ├── main.py                    # Plain FastAPI app for uvicorn/Docker; registers routers
 │   ├── entry.py                   # Optional Cloudflare Worker ASGI entrypoint
-│   ├── core/                      # Cross-cutting code. Never imports a domain package.
-│   │   ├── common/
-│   │   │   ├── api_response.py    # ApiResponse envelope + API_PREFIX
-│   │   │   ├── base_dto.py        # Link, LinkedResource, EmbeddedRef, FieldMetadata, Message
-│   │   │   └── serializers.py     # UTC date formatting
-│   │   ├── config/
-│   │   │   ├── config.py          # Runtime config from env / .env / Worker env
-│   │   │   └── database.py        # Database protocol, adapters, migration runner
-│   │   └── security/
-│   │       ├── auth.py            # Token verification -> AuthenticatedUser
-│   │       ├── authorization.py   # Caller, get_caller, require_admin
-│   │       └── roles.py           # UserRole, role labels/options
+│   ├── core/                      # Optional: app-specific cross-cutting code only. Never imports a domain package.
+│   │   └── storage/               # e.g. a file-storage client. Envelope, config, database,
+│   │                              # errors and auth come from the wiltech-labs-* packages.
 │   ├── shared/                    # Data owned by several domains (e.g. settings)
 │   └── {domain}/                  # e.g. users/, todos/ — one package per bounded context
 │       ├── {domain}_router.py     # HTTP only
@@ -65,7 +152,7 @@ my-python-api/
 │       ├── models.py              # Database row models: {Name}Model
 │       ├── schemas.py             # Request, DTO, Metadata classes + Response aliases
 │       ├── constants.py           # `_data` key names, link names
-│       ├── exceptions.py          # Domain exceptions the router maps to HTTP errors
+│       ├── exceptions.py          # Domain exceptions, subclasses of the AppError family
 │       ├── enums.py               # Domain enums, when there are any
 │       └── {sub_resource}/        # Same layout, e.g. users/settings/
 ├── migrations/
@@ -82,9 +169,10 @@ my-python-api/
 
 Rules:
 
-- `core/` holds only cross-cutting code and never imports a domain package.
-  When `core/` needs domain data (e.g. the caller's roles), read it through a
-  database view (see "Database views").
+- `core/` holds only cross-cutting code that the `wiltech-labs-*` packages
+  don't provide, and never imports a domain package. Most apps don't need it.
+  When cross-cutting code needs domain data (e.g. `get_caller` needs the
+  caller's roles), read it through a database view (see "Database views").
 - `models.py` is only for database row models (`{Name}Model`). Request, DTO
   and Metadata classes, and the `{Name}Response` aliases, go in `schemas.py`
   (see "Model, Request, DTO and Response conventions").
@@ -192,8 +280,9 @@ Cloudflare-specific code should be limited to:
 
 - `entry.py`
 - `wrangler.jsonc`
-- D1 database adapter implementation
 - Cloudflare deployment docs
+
+The D1 adapters live in `wiltech-labs-core`, not in the app.
 
 Do not put Cloudflare-specific APIs in routers, services, or repositories.
 
@@ -213,8 +302,8 @@ The app should prefer the native D1 binding inside Cloudflare Workers:
 DATABASE_MODE=d1_binding
 ```
 
-If `DATABASE_MODE` is omitted and `env.DB` exists, the app may default to
-`d1_binding`.
+If `DATABASE_MODE` is omitted and `env.DB` exists, `get_database` from
+`wiltech-labs-core` defaults to `d1_binding`.
 
 ### 4. Cloudflare D1 over HTTP
 
@@ -251,15 +340,20 @@ name = "my-python-api"
 version = "0.1.0"
 requires-python = ">=3.13"
 dependencies = [
-    "aiosqlite",
     "fastapi",
-    "httpx",
     "uvicorn",
+    "wiltech-labs-auth>=1.0.1",
+    "wiltech-labs-core[sqlite]>=1.0.1",
+    "wiltech-labs-rest>=1.0.1",
 ]
 
 [dependency-groups]
 dev = []
 ```
+
+Add the `wiltech-labs-*` packages with `uv add` (see "Shared libraries")
+rather than typing versions by hand. `aiosqlite` comes with the
+`wiltech-labs-core[sqlite]` extra, so don't list it separately.
 
 If deploying to Cloudflare Python Workers, add:
 
@@ -300,11 +394,16 @@ local.db
 
 ## Configuration conventions
 
-The app should read configuration from:
+Read configuration with `get_config(request, key, default)` from
+`wiltech_labs_core`, never `os.environ` directly. It checks:
 
 1. Cloudflare Worker request env, when running inside Workers.
 2. Process environment variables.
-3. A local `.env` file for uvicorn/Docker development.
+3. A local `.env` file for uvicorn/Docker development, loaded on import
+   without overriding anything already set.
+
+Use `get_binding(request, name)` for other Cloudflare bindings (`AI`,
+`BUCKET`, …). It returns `None` outside a Worker.
 
 Use `.env.example` for safe committed defaults:
 
@@ -312,6 +411,14 @@ Use `.env.example` for safe committed defaults:
 # Local uvicorn/Docker mode
 DATABASE_MODE=sqlite
 DATABASE_PATH=./local.db
+MIGRATIONS_DIR=./migrations
+
+# CORS (EnvCORSMiddleware), comma-separated
+# CORS_ORIGINS=http://localhost:4200
+
+# Clerk (wiltech-labs-auth)
+# CLERK_JWKS_URL=https://<instance>.clerk.accounts.dev/.well-known/jwks.json
+# CLERK_AUDIENCE=wiltech-dev-api
 
 # Cloudflare Worker native D1 binding
 # DATABASE_MODE=d1_binding
@@ -328,37 +435,17 @@ active `DATABASE_MODE=` lines in the same `.env`; the last one may win.
 
 ## Database abstraction convention
 
-Repositories should depend on a protocol, not a concrete database client.
-
-Recommended protocol:
-
-```python
-from typing import Any, Optional, Protocol
-
-
-class Database(Protocol):
-    async def fetch_all(
-        self,
-        sql: str,
-        params: tuple[Any, ...] = (),
-    ) -> list[dict[str, Any]]: ...
-
-    async def fetch_one(
-        self,
-        sql: str,
-        params: tuple[Any, ...] = (),
-    ) -> Optional[dict[str, Any]]: ...
-
-    async def execute(
-        self,
-        sql: str,
-        params: tuple[Any, ...] = (),
-    ) -> None: ...
-```
+Repositories depend on the `Database` protocol from `wiltech_labs_core`, not
+on a concrete database client. It has `fetch_all`, `fetch_one`, `execute` and
+`batch`. Routers get the right adapter for the runtime from
+`get_database(request)`.
 
 Repositories should only call this protocol:
 
 ```python
+from wiltech_labs_core import Database
+
+
 class TodoRepository:
     def __init__(self, db: Database):
         self.db = db
@@ -380,6 +467,11 @@ request.scope["env"].DB.prepare(...)
 Cloudflare, SQLite, PostgreSQL, D1 HTTP, or any other storage technology should
 be hidden behind adapters.
 
+When one write must change several tables together, use `db.batch([...])`
+with `(sql, params)` statements. D1 has no interactive transactions. A batch
+is atomic on SQLite and the D1 binding, but **not** over D1 HTTP, which runs
+one request per statement.
+
 ## Migration conventions
 
 For portable local development, put SQLite-compatible migrations in:
@@ -396,8 +488,8 @@ Each migration should be named with a sortable prefix:
 003_add_indexes.sql
 ```
 
-The SQLite adapter should apply each migration once and track applied files in
-a `schema_migrations` table:
+`SQLiteDatabase` from `wiltech-labs-core` applies each migration once and
+tracks applied files in a `schema_migrations` table:
 
 ```sql
 CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -418,12 +510,12 @@ document why.
 Rules:
 
 - The migrations folder comes from the `MIGRATIONS_DIR` environment variable,
-  defaulting to `./migrations` relative to the working directory. Do not
-  compute it from `__file__` (`parents[3]`): that breaks whenever files move.
-  Docker sets `MIGRATIONS_DIR=/app/migrations` in both the `Dockerfile` and
+  defaulting to `./migrations` relative to the working directory
+  (`migrations_dir()` in `wiltech-labs-core`). Docker sets
+  `MIGRATIONS_DIR=/app/migrations` in both the `Dockerfile` and
   `docker-compose.yml`.
-- Fail at startup if the folder does not exist. A missing folder must never
-  silently mean "no migrations to run".
+- A missing folder raises at startup rather than silently meaning "no
+  migrations to run". Don't work around it.
 - `schema.sql` is a snapshot of every migration in order, with a header naming
   the migrations it covers. Update it in the same change as a new migration.
 - Seed rows in `schema.sql` use `INSERT OR IGNORE`, so re-running the file
@@ -482,26 +574,19 @@ Do not return:
 09/21/2026
 ```
 
-Recommended serializer helper:
+Use the helpers from `wiltech_labs_rest`. Don't write your own:
 
-```python
-from datetime import datetime, timezone
+| Helper | Use it for |
+|---|---|
+| `UtcTimestamp` | DTO field type: a `datetime` serialized as `YYYY-MM-DDTHH:MM:SSZ`, no `@field_serializer` needed |
+| `format_utc_datetime(value)` | `datetime` or ISO string → `YYYY-MM-DDTHH:MM:SSZ`, inside a `@field_serializer` |
+| `UtcDateTime`, `as_utc(value)` | `Model` field type: parses stored dates as timezone-aware UTC (naive = UTC), so they compare safely |
+| `utc_now()` | Current UTC time at second precision |
+| `to_db_datetime(value)`, `to_db_date(value)` | Store a `datetime` as the API's UTC string, or a `date` as `YYYY-MM-DD` |
 
-
-def format_utc_datetime(value: datetime | str) -> str:
-    if isinstance(value, str):
-        value = datetime.fromisoformat(value.replace("Z", "+00:00"))
-
-    if value.tzinfo is None:
-        value = value.replace(tzinfo=timezone.utc)
-
-    return value.astimezone(timezone.utc).replace(microsecond=0).strftime(
-        "%Y-%m-%dT%H:%M:%SZ"
-    )
-```
-
-When storing dates in SQLite/D1, store ISO-compatible UTC strings. When
-returning dates, serialize them through the same formatting helper.
+When storing dates in SQLite/D1, store ISO-compatible UTC strings
+(`to_db_datetime`). When returning dates, serialize them through the same
+helpers.
 
 ## Layering conventions
 
@@ -512,11 +597,13 @@ Routers should:
 - Define HTTP paths and methods.
 - Parse route/query/body inputs.
 - Call the application service.
-- Convert known service failures into HTTP errors.
 - Return the service's response (`service.build_response(...)`).
 
 Routers should not:
 
+- Catch service errors or raise `HTTPException`. Errors are `AppError`
+  subclasses that `register_error_handlers` turns into HTTP responses (see
+  "Error handling conventions").
 - Contain business rules.
 - Build metadata.
 - Build links.
@@ -526,9 +613,9 @@ Routers should not:
 Example:
 
 ```python
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, Request
+from wiltech_labs_core import get_database
 
-from core.config.database import get_database
 from todos.schemas import TodoResponse
 from todos.todo_repository import TodoRepository
 from todos.todo_service import TodoService
@@ -546,9 +633,7 @@ async def get_todo(
     todo_id: str,
     service: TodoService = Depends(get_todo_service),
 ) -> TodoResponse:
-    todo = await service.get_by_id(todo_id)
-    if not todo:
-        raise HTTPException(status_code=404, detail="Todo not found")
+    todo = await service.get_by_id(todo_id)  # raises NotFoundError -> 404
     return service.build_response(todo)
 ```
 
@@ -568,6 +653,8 @@ Application services should:
 - Add optional messages when useful.
 - Coordinate multiple repositories when one business operation affects more
   than one resource.
+- Raise an `AppError` subclass for every failure the client should see,
+  including "not found".
 
 Application services should not:
 
@@ -615,22 +702,17 @@ Repositories should not:
 
 ### Database adapter layer
 
-Database adapters should:
+The adapters come from `wiltech-labs-core`: `SQLiteDatabase`,
+`D1BindingDatabase` and `D1HttpDatabase`. Apps don't write their own.
+
+A new backend (e.g. `PostgresDatabase`) is added to `wiltech-labs-core`, not
+to an app. There it should:
 
 - Translate the common `Database` protocol into a concrete backend.
 - Own backend-specific details.
 - Normalize rows into `dict[str, Any]` where possible.
-
-Examples:
-
-- `SQLiteDatabase`
-- `D1BindingDatabase`
-- `D1HttpDatabase`
-- `PostgresDatabase`
-
-Keep optional backend imports lazy if they may not work in every runtime. For
-example, import `aiosqlite` only inside the SQLite adapter methods if the app is
-also packaged for Cloudflare Workers.
+- Keep optional backend imports lazy, behind an extra, so Cloudflare Workers
+  can still load the package (as `aiosqlite` is for SQLite).
 
 ## Response envelope convention
 
@@ -652,49 +734,20 @@ Rules:
 - `_metaLinks` is required, but may be an empty object.
 - `_messages` is required, but may be an empty array.
 - Delete endpoints return `204 No Content` and no response body.
-- The health check (`/health`) is the one exception: it is an
-  infrastructure probe, not a resource, and returns a plain JSON object.
+- The health check (`/api/health`, from `health_router()` in
+  `wiltech-labs-core`) is the one exception: it is an infrastructure probe,
+  not a resource, and returns a plain JSON object.
 
 ### Typed envelope: `ApiResponse`
 
-Build the envelope with the one generic class in
-`core/common/api_response.py`. Do not write per-resource `...Data` or
-`...Response` envelope classes, and do not return hand-built dicts.
+Build the envelope with the one generic class from `wiltech_labs_rest`:
+`ApiResponse[DataT, MetadataT].of(data_name, data, metadata, meta_links=None,
+messages=None)`. Do not write per-resource `...Data` or `...Response`
+envelope classes, and do not return hand-built dicts. Use `NoMetadata` as
+`MetadataT` for a response with no field rules.
 
 ```python
-from typing import Dict, Generic, List, Optional, TypeVar
-
-from pydantic import BaseModel, ConfigDict, Field
-
-from core.common.base_dto import Link
-
-DataT = TypeVar("DataT")
-MetadataT = TypeVar("MetadataT")
-
-
-class ApiResponse(BaseModel, Generic[DataT, MetadataT]):
-    model_config = ConfigDict(populate_by_name=True)
-
-    data: Dict[str, DataT] = Field(alias="_data")
-    metadata: MetadataT = Field(alias="_metadata")
-    meta_links: Dict[str, Link] = Field(default_factory=dict, alias="_metaLinks")
-    messages: List[Dict[str, str]] = Field(default_factory=list, alias="_messages")
-
-    @classmethod
-    def of(
-            cls,
-            data_name: str,
-            data: DataT,
-            metadata: MetadataT,
-            meta_links: Optional[Dict[str, Link]] = None,
-            messages: Optional[List[Dict[str, str]]] = None,
-    ) -> "ApiResponse[DataT, MetadataT]":
-        return cls(
-            data={data_name: data},
-            metadata=metadata,
-            meta_links=meta_links or {},
-            messages=messages or [],
-        )
+from wiltech_labs_rest import ApiResponse
 ```
 
 Each domain names its concrete response type once in `schemas.py`. The
@@ -739,9 +792,6 @@ Rules:
   `response_model_exclude_none=True` to routes; it would also strip `None`
   fields out of the DTO, and a client expects an optional field to be present
   as `null`.
-- Do not put a return type annotation on that `model_serializer` method.
-  Pydantic uses it for the OpenAPI schema, so `-> Dict[str, Any]` would turn
-  the documented response into a bare `object`.
 - `_data` is typed `Dict[str, DataT]`, so OpenAPI shows the key as "any
   string". That is the accepted trade-off for not writing one envelope class
   per resource.
@@ -1024,30 +1074,35 @@ Unhelpful metadata:
 ```
 
 Option lists used by several resources are built in one place. For example,
-`role_options()` in `core/security/roles.py` builds the `roleIds` values with
+`role_options()` from `wiltech_labs_auth` builds the `roleIds` values with
 their display labels. Do not copy the labels into each service.
 
 Type metadata with a per-resource `{Resource}Metadata` class whose fields are
-the shared `FieldMetadata` from `core/common/base_dto.py`. Use `EmbeddedRef`
-(`{id, value}`) for each option in `values`:
+the shared `FieldMetadata` from `wiltech_labs_rest`. It has `readOnly`,
+`hidden`, `mandatory` and `values`, plus the limits `maxLength`, `maxItems`,
+`min`, `max` and `default`, and it leaves unset flags out of the JSON. Use
+`EmbeddedRef` (`{id, value}`) for each option in `values`, and the shortcuts
+instead of spelling the flags out:
 
 ```python
-class FieldMetadata(BaseModel):
-    readOnly: Optional[bool] = None
-    hidden: Optional[bool] = None
-    mandatory: Optional[bool] = None
-    values: Optional[list[EmbeddedRef]] = None
-
-    @model_serializer(mode="wrap")
-    def _omit_unset_flags(self, handler: SerializerFunctionWrapHandler):
-        # Only the flags that were set appear in the response.
-        return {key: value for key, value in handler(self).items() if value is not None}
+from wiltech_labs_rest import FieldMetadata, choice_field, mandatory, read_only
 
 
 class TodoMetadata(BaseModel):
+    id: FieldMetadata
     title: FieldMetadata
     state: FieldMetadata
+
+
+TodoMetadata(
+    id=read_only(hidden=True),
+    title=mandatory(),
+    state=choice_field(TodoState),  # mandatory, every enum member as {id, value}
+)
 ```
+
+Use `MetadataBase` for metadata with dotted keys (`driver.licenseStatus`),
+and `CamelMetadataBase` when the API speaks camelCase.
 
 Metadata should be built in the application service layer because it may depend
 on:
@@ -1104,6 +1159,10 @@ Pass the `Caller` (see "Authentication and authorization conventions") into
 the service so links match what the API will actually allow:
 
 ```python
+from wiltech_labs_auth import Caller
+from wiltech_labs_rest import API_PREFIX, Link
+
+
 @staticmethod
 def build_links(user_id: str, caller: Caller) -> dict[str, Link]:
     url = f"{API_PREFIX}/users/{user_id}"
@@ -1185,7 +1244,7 @@ Add entries only when there is something useful for the client/user:
 ```
 
 Messages are typed: `Message(type=MessageType.INFO, value="...")` from
-`core/common/base_dto.py`. `MessageType` is one of:
+`wiltech_labs_rest`. `MessageType` is one of:
 
 - `INFO`
 - `WARNING`
@@ -1208,7 +1267,7 @@ Rules:
 - No response envelope.
 - No response body.
 - No `_messages`.
-- Return `404` if the resource does not exist.
+- `404` if the resource does not exist: the service raises `NotFoundError`.
 
 Example:
 
@@ -1218,9 +1277,7 @@ from fastapi import Response
 
 @router.delete("/{todo_id}", status_code=204)
 async def delete_todo(todo_id: str, service: TodoService = Depends(get_todo_service)):
-    deleted = await service.delete(todo_id)
-    if not deleted:
-        raise HTTPException(status_code=404, detail="Todo not found")
+    await service.delete(todo_id)  # raises NotFoundError -> 404
     return Response(status_code=204)
 ```
 
@@ -1260,8 +1317,11 @@ Rules:
 - The repository converts rows to `Model` in one private helper
   (`_to_model`). The service converts `Model` to `DTO` in one method
   (`to_dto`), which is where links are added.
-- Put reusable building blocks in `core/common/base_dto.py`, not in a domain:
-  `Link`, `LinkedResource`, `EmbeddedRef`, `FieldMetadata`.
+- The reusable building blocks come from `wiltech_labs_rest`: `Link`,
+  `LinkedResource` (the DTO base, adds `links`), `EmbeddedRef`,
+  `FieldMetadata`. For a camelCase API, use `CamelModel` /
+  `CamelLinkedResource` (snake_case attributes, camelCase JSON). Use
+  `BlankAsNone` on optional request strings and `Money` for amounts.
 
 ```python
 from datetime import datetime
@@ -1269,8 +1329,7 @@ from enum import Enum
 from typing import Optional
 
 from pydantic import BaseModel, field_serializer
-
-from core.common.base_dto import FieldMetadata, LinkedResource
+from wiltech_labs_rest import FieldMetadata, LinkedResource, format_utc_datetime
 
 
 class TodoState(str, Enum):
@@ -1368,27 +1427,52 @@ Example:
 
 ## Error handling conventions
 
-Services raise domain exceptions, defined in the domain's `exceptions.py`, for
-business-rule failures. The router catches them and maps them to HTTP errors.
-Services never raise `HTTPException`:
+Errors are raised by services and turned into HTTP responses by the
+library, never by routers. `main.py` calls `register_error_handlers(app)` from
+`wiltech_labs_core`, and any `AppError` subclass raised anywhere becomes
+`{"detail": ...}` with its status code:
 
-```python
-# users/exceptions.py
-class SelfLockoutError(Exception):
-    """An admin tried to remove their own ADMIN role or delete themselves."""
+| Error | Status |
+|---|---|
+| `AppError` | 400 |
+| `NotFoundError` | 404 |
+| `ForbiddenError` | 403 |
+| `ConflictError` | 409 |
+| `InvalidInputError` | 422 |
+| `TooManyRequestsError` | 429 + `Retry-After` |
+| `UpstreamError` | 502 |
+| `NotConfiguredError` | 503 |
+
+Rules:
+
+- Raise the library errors directly for generic cases:
+  `NotFoundError("Todo not found")`, `ConflictError` for a duplicate,
+  `NotConfiguredError` for a missing API key.
+- A business rule specific to the domain gets a named exception in the
+  domain's `exceptions.py` that subclasses the matching library error, so it
+  carries its own status code:
+
+  ```python
+  # users/exceptions.py
+  from wiltech_labs_core import AppError, ForbiddenError
 
 
-# users/user_router.py
-try:
-    updated = await service.update_user(user_id, request, caller)
-except SelfLockoutError as exc:
-    raise HTTPException(status_code=400, detail=str(exc)) from exc
-```
+  class SelfLockoutError(AppError):  # 400
+      """An admin tried to remove their own ADMIN role or delete themselves."""
 
-"Not found" is not an exception: services return `None` (or `False` for
-delete) and the router returns `404`. A missing row that the migrations seed,
-like the SYSTEM settings row, is a server error (`RuntimeError`, so `500`),
-not a `404`.
+
+  class NotOwnerError(ForbiddenError):  # 403
+      """The caller tried to use someone else's personal resource."""
+  ```
+
+- Never subclass plain `Exception` for a client-facing error, and never raise
+  `HTTPException` from a service or a router. Routers have no `try/except`
+  for service errors.
+- "Not found" is an exception: the repository returns `None`, and the
+  service raises `NotFoundError` (in one helper, e.g. `_get_or_raise`, when
+  several methods need it).
+- A missing row that the migrations seed, like the SYSTEM settings row, is a
+  server error (`RuntimeError`, so `500`), not a `NotFoundError`.
 
 Use proper HTTP status codes:
 
@@ -1478,7 +1562,10 @@ GROUP BY u.id;
   runtime.
 - `GROUP_CONCAT` returns a comma-separated string, or `NULL` when there are no
   rows, in no guaranteed order. Split and sort it in one helper
-  (`parse_role_ids`), never inline.
+  (`parse_role_ids` from `wiltech_labs_auth` for roles), never inline.
+- `get_caller` in `wiltech-labs-auth` reads
+  `user_detail_view (id, external_user_id, role_ids)` by default. Keep that
+  view, or override `get_caller_lookup` for a different schema.
 - Views are read-only: writes still go to the underlying tables.
 
 ## Local development checklist
@@ -1487,7 +1574,7 @@ A new app should support:
 
 1. `uv sync`
 2. `uv run uvicorn main:app --app-dir src --host 127.0.0.1 --port 8001 --reload`
-3. `GET /health`
+3. `GET /api/health`
 4. `GET /docs`
 5. Automatic local SQLite migration
 6. Docker Compose startup
@@ -1537,9 +1624,12 @@ When an AI agent creates a new Python FastAPI app using these conventions, it
 must:
 
 1. Start with local uvicorn + SQLite unless the user asks otherwise.
-2. Use `uv` and `pyproject.toml`.
-3. Create `src/main.py`.
-4. Create a database protocol before writing repositories.
+2. Use `uv` and `pyproject.toml`, and `uv add` the `wiltech-labs-*` packages
+   (see "Shared libraries"). Never re-create what they provide.
+3. Create `src/main.py` with `register_error_handlers(app)`,
+   `EnvCORSMiddleware` and `health_router()`, mounting routers under `/api`.
+4. Use the `Database` protocol and `get_database` from `wiltech_labs_core` in
+   repositories.
 5. Keep repositories backend-agnostic.
 6. Put business rules in services.
 7. Build links, metadata, meta links and the generic `ApiResponse` envelope
@@ -1554,12 +1644,14 @@ must:
 14. Add Docker support when requested or when useful for local reproducibility.
 15. Add Cloudflare support only as an adapter/entrypoint, not as a dependency
     throughout the app.
-16. Put authentication and authorization in `core/security/`; guard write
-    endpoints with `require_admin` and build links from the `Caller`.
-17. Keep `core/` free of domain imports; use a database view when `core/`
-    needs domain data.
-18. Raise domain exceptions from services and map them to HTTP errors in the
-    router.
+16. Use `wiltech_labs_auth` for authentication and authorization. Guard
+    write endpoints with `require_admin`, personal resources with
+    `require_owner`, and build links from the `Caller`.
+17. Keep `core/` (if any) free of domain imports. Use a database view when
+    cross-cutting code needs domain data.
+18. Raise `AppError` subclasses from services (domain exceptions subclass
+    them) and let `register_error_handlers` turn them into HTTP errors.
+    Routers never catch them.
 19. Validate the app with at least compile/import checks and a local smoke test.
 
 If the user asks for a quick prototype, the agent may simplify, but it should
@@ -1570,6 +1662,10 @@ router -> service -> repository -> database adapter
 ```
 
 ## Default endpoint patterns
+
+Every router is mounted under `API_PREFIX` (`/api`, from `wiltech_labs_rest`)
+in `main.py`, so `/todos` below is served at `/api/todos`. Build hrefs with
+`API_PREFIX` too.
 
 For a resource called `todos`, use:
 
@@ -1679,18 +1775,23 @@ reason to use another naming standard:
 
 ## Authentication and authorization conventions
 
-Authentication (who is calling) and authorization (what they may do) live in
-`core/security/`:
+Authentication (who is calling) and authorization (what they may do) come
+from `wiltech_labs_auth`. Configure it with `CLERK_JWKS_URL`,
+`CLERK_AUDIENCE` and, optionally, `CLERK_AUTHORIZED_PARTIES`.
 
-| Piece | File | What it does |
-|---|---|---|
-| `get_authenticated_user` | `auth.py` | Verifies the Clerk token and returns `AuthenticatedUser`. `401` if missing or invalid. |
-| `Caller`, `get_caller` | `authorization.py` | The caller as our database sees them: `external_id`, `user_id` (None before their first `/me`), saved `role_ids`, `is_admin`. |
-| `require_admin` | `authorization.py` | Returns the `Caller`, or `403` unless their saved roles include `ADMIN`. |
-| `UserRole`, `role_options()` | `roles.py` | The role enum and the metadata option list with labels. |
+| Piece | What it does |
+|---|---|
+| `get_authenticated_user` | Verifies the Clerk token and returns `AuthenticatedUser`. `401` if missing or invalid. |
+| `Caller`, `get_caller` | The caller as our database sees them: `external_id`, `user_id` (None before their first `/me`), saved `role_ids`, `is_admin`. |
+| `require_admin` | Returns the `Caller`, or `403` unless their saved roles include `ADMIN`. |
+| `require_owner` | For `/users/{user_id}/...`: `403` unless the caller *is* `user_id`. |
+| `UserRole`, `role_options()`, `parse_role_ids()` | The role enum, the metadata option list with labels, and the `GROUP_CONCAT` parser. |
+| `require_api_key(*scopes)`, `ServiceCaller`, `ApiKeyRepository` | App-to-app calls with an `X-Api-Key` header, where no person is signed in. Add `API_KEYS_TABLE_SQL` through a migration. |
+| `clerk_webhook_event` | Verified Clerk (Svix) webhook payload, keyed by `CLERK_WEBHOOK_SECRET`. The webhook route is **not** behind `get_authenticated_user`. |
 
-`get_caller` reads `user_detail_view`, not the users repository, so
-`core/security` never imports the users domain.
+`get_caller` reads `user_detail_view` through `get_caller_lookup`, not the
+users repository, so the package never imports the users domain. An app with
+a different schema overrides `get_caller_lookup` with its own `CallerLookup`.
 
 ### Where roles come from
 
@@ -1722,8 +1823,9 @@ Authentication (who is calling) and authorization (what they may do) live in
 Some resources belong to one user and nobody else may use them, not even an
 admin. The user's settings at `/users/{user_id}/settings` are one example:
 
-- The service checks ownership first (`caller.user_id == user_id`) and raises
-  a domain exception (`NotOwnerError`) that the router turns into `403`.
+- Guard the route with `require_owner` when the whole route is owner-only.
+  Otherwise the service checks ownership first (`caller.user_id == user_id`)
+  and raises `NotOwnerError` (a `ForbiddenError`, so `403`).
 - Check ownership before existence: someone else's id gets `403` whether or
   not it exists, so the API doesn't reveal which ids exist. The caller's own
   user always exists, so no separate `404` is needed.
@@ -1737,12 +1839,31 @@ admin. The user's settings at `/users/{user_id}/settings` are one example:
 ### Preventing lockout
 
 An admin must not be able to leave the system without an admin. The service
-refuses, with a domain exception that the router turns into `400`:
+refuses with `SelfLockoutError` (an `AppError`, so `400`):
 
 - removing your own `ADMIN` role;
 - deleting yourself.
 
 Compare by our id (`existing.id == caller.user_id`), not by name or email.
+
+## AI conventions
+
+AI features use `wiltech_labs_ai`. Don't call provider SDKs directly.
+
+- `get_ai(request, provider)` for plain chat, where `provider` is
+  `"cloudflare"`, `"groq"` or `"local"` (Ollama / any OpenAI-compatible
+  server).
+- `get_tool_llm(request, provider)` plus `ToolAgent(llm, model, tools)` for
+  "ask your data". Tools receive the **server-supplied** `user_id` (from
+  `require_owner`), never one chosen by the model. Put
+  `TOOL_RESULTS_ARE_DATA` in the system prompt.
+- `get_embedder(request)` and a `VectorStore` (`DatabaseVectorStore` by
+  default, `VectorizeVectorStore` or `QdrantVectorStore` when needed) for
+  embeddings. Add `RESOURCE_EMBEDDINGS_TABLE_SQL` through a migration for the
+  database store.
+- Merge vector and keyword results with `reciprocal_rank_fusion` (hybrid
+  search).
+- A missing provider key raises `NotConfiguredError` (`503`), never a crash.
 
 ## Security and secret conventions
 
@@ -1788,9 +1909,9 @@ uv run uvicorn main:app --app-dir src --host 127.0.0.1 --port 8001
 Then smoke test:
 
 ```powershell
-curl.exe http://127.0.0.1:8001/health
+curl.exe http://127.0.0.1:8001/api/health
 curl.exe http://127.0.0.1:8001/docs
-curl.exe http://127.0.0.1:8001/todos/template
+curl.exe http://127.0.0.1:8001/api/todos/template
 ```
 
 For CRUD resources, verify:
@@ -1819,7 +1940,7 @@ The default application shape is:
 FastAPI router
   -> application service
     -> repository
-      -> Database protocol
+      -> Database protocol (wiltech_labs_core)
         -> SQLite for local/Docker
         -> D1 binding for Cloudflare Workers
         -> D1 HTTP for optional external hosting

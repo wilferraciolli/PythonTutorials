@@ -145,6 +145,10 @@ to use which package and the rules for using it in an app.
 | Current user / region settings                | `ngx-region-settings` | `CurrentUserStore`, `RegionSettingsStore` (`UserSettingsStore`/`SystemSettingsStore`)                                                                  | An app-local `/me` → `userProfile` → `userSettings`/`systemSettings` link-following chain            |
 | A side panel / modal                          | `ngx-modals`          | `ModalService.open()`, `ModalCloseAction`/`ModalCloseResult`, `ModalContent`                                                                           | Hand-rolled `MatDialog.open()` calls, an app-local close-reason enum per feature                     |
 | Notification bell                             | `ngx-notifications`   | `provideNotifications()`, `NotificationsService`, `<ngx-notifications>`                                                                                | An app-local bell/badge/panel, a hand-rolled polling interval                                        |
+| Info/warning/error call-outs                  | `ngx-components`      | `Banner`, `Message`/`MessageType`                                                                                                                      | Ad hoc alert/banner markup per app                                                                   |
+| Expandable section / static card              | `ngx-components`      | `Panel` (`mat-expansion-panel`), `Card` (`mat-card`)                                                                                                   | Hand-written `mat-expansion-panel`/`mat-card` header markup per app                                  |
+| Day / week / month calendar                   | `ngx-calendar`        | `Calendar`, `CalendarEvent`, `CalendarEventMapper`                                                                                                     | Direct FullCalendar / angular-calendar use, an app-local agenda list                                 |
+| Org chart                                     | `ngx-organization`    | `OrganizationChart`, `OrgItem`, `OrgChartStore`                                                                                                        | Hand-drawn org trees, direct org-chart library use                                                   |
 | Shared Sass (breakpoints, spacing, M3 mixins) | `ngx-styles`          | `@use 'breakpoints'`/`'spacing'`/`'ui'` from `stylePreprocessorOptions.includePaths`                                                                   | A `src/styles/_breakpoints.scss`/`_spacing.scss`/`_ui.scss` copy-pasted per app                      |
 
 ### Setup
@@ -424,8 +428,30 @@ provideAuth({                                                // ngx-auth
   modal's outcomes don't fit.
 - Width is `--ngx-modal-width` (default `33vw`), full screen below the CDK's `XSmall` breakpoint —
   set the variable to change the default panel width app-wide, or pass `{ width: '...' }` per open.
+  It docks right by default; pass `{ side: 'left' }` for a left-hand panel.
+- `{ backdrop: false }` makes it modeless (the page behind stays usable) and `{ minimizable: true }`
+  adds a minimize-to-bar button. Swap an open panel's content with `ModalService.update(ref, …)`
+  instead of opening a second one.
 - `ModalService.confirm(message, options?)` is the same Yes/No prompt the unsaved-changes guard
   uses, for anything else that wants it (a delete confirmation, say).
+
+**`ngx-calendar`**
+
+- Add `@fullcalendar/angular/skeleton.css` and `@fullcalendar/angular/themes/monarch/theme.css` to
+  `angular.json` styles (and `@fullcalendar/angular` as a direct dependency). No palette file: the
+  package maps the theme to `--mat-sys-*` itself.
+- Events are instants (`startDateTime`/`endDateTime`, UTC `'YYYY-MM-DDTHH:mmZ'`), shown in the
+  calendar's `timeZone` (default the user's). Map your own objects with `CalendarEventMapper`.
+- The calendar only emits `eventSave`; apply the change to your own data.
+- `NGX_CALENDAR_LOCALE` / `NGX_CALENDAR_TEXT` are resolver tokens; wire them to `ngx-translations`.
+
+**`ngx-organization`**
+
+- Feed `OrganizationChart` the API's flat `OrgItem[]` (or `OrgChartStore.items()` after
+  `store.load(link)`). The API owns the structure rules; the chart doesn't validate.
+- Add `panzoom` to `angular.json`'s `allowedCommonJsDependencies`.
+- Read-only for now: a card click opens a modeless, minimizable left-hand `ngx-modals` panel (the
+  chart stays usable; another click swaps its content) and emits `nodeSelect`.
 
 **`ngx-notifications`**
 
