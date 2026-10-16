@@ -27,7 +27,7 @@ class Person:
     def generate_damage(self):
         return random.randint(self.atkl, self.atkh)
 
-    def generate_speed(self, i):
+    def generate_spell(self, i):
         mgl = self.magic[i]['dmg'] - 5
         mgh = self.magic[i]['dmg'] + 5
 
