@@ -5,6 +5,11 @@ To be able to parse json and write json, we need to install the simplejson libra
 pip install simplejson
 ``` 
 
+Image processing is used by a different library, we use binary data processor called `pillow`
+```bash
+pip install pillow
+```
+
 ## Creating virtual environments
 Virtual environments are good to keep python dependencies contained within an environment so only the necessary depoendencies are installed on an isolated area
 to create an virtual env, install and initiate it with `pip`
