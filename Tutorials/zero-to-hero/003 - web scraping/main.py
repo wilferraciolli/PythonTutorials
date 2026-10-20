@@ -1,31 +1,25 @@
-from bs4 import BeautifulSoup
-import requests
-from PIL import Image
-from io import BytesIO
-import os
+weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
 
-search = input('Enter search term: ')
-params = {'q': search}
-dir_name = search.replace(' ', '_')
+# Lists can be split and negative indexes goes end to beginning of the list
+print('Original list', weekdays)
+print('By index:', weekdays[1])
+print('First 3 starting at index 0:', weekdays[0:3])
 
-if not os.path.isdir(dir_name):
-    os.mkdir(dir_name)
+print('First 3 starting at index 1:', weekdays[1:3])
 
-r = requests.get('http://bing.com/images/search', params=params)
+print('First 3 starting at none:', weekdays[:3])
+print('All starting at index 3:', weekdays[3:])
 
-soup = BeautifulSoup(r.text, 'html.parser')
-links = soup.find_all('a', {'class': 'thumb'})
+print('First 2 items:', weekdays[:2])
+print('Last 2 items:', weekdays[-2:])
+print('All the items except for first and last:', weekdays[1:-1])
 
-for item in links:
-    try:
-        img_obj = requests.get(item.attrs['href'])
-        print('Getting image', item.attrs['href'])
-        title = item.attrs['href'].split('/')[-1]
+print('15 items starting at none:', weekdays[:15])
 
-        try:
-            img = Image.open(BytesIO(img_obj.content))
-            img.save('./' + dir_name + title, img.format)
-        except:
-            print('Image not found')
-    except:
-        print('Could not get images')
+print('Every 1 item:', weekdays[::1])
+print('Every 2 items:', weekdays[::2])
+print('Every 3 items:', weekdays[::3])
+
+print('Every 1 item reversed:', weekdays[::-1])
+print('Every 2 items reversed:', weekdays[::-2])
+print('Every 3 items reversed:', weekdays[::-3])
