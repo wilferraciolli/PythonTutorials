@@ -1,38 +1,42 @@
 import matplotlib.pyplot as plt
+import numpy as np
 
-years = [
-    1, 500, 1000, 1200, 1400, 1500, 1600, 1700, 1750, 
-    1800, 1850, 1900, 1920, 1950, 1970, 1980, 1990, 
-    2000, 2010, 2020, 2024, 2050, 2100
-]
+column_count = 3
+bar_width = 0.1
 
-pops = [
-    200, 190, 300, 400, 350, 450, 550, 610, 790, 
-    1000, 1260, 1650, 1860, 2520, 3700, 4440, 5330, 
-    6140, 6960, 7840, 8100, 9700, 10300
-]
+korea_scores = (554, 536, 538)
+canada_scores = (518, 523, 525)
+china_scores = (613, 570, 580)
+france_scores = (495, 505, 499)
 
-# Keep deaths in millions by dividing the thousands list by 1000
-annual_deaths_mil = [d / 1000 for d in [
-    8000, 7600, 11000, 15000, 15000, 16000, 19000, 21000, 26000,
-    32000, 38000, 48000, 55000, 50000, 47000, 47500, 50000,
-    52000, 56000, 63000, 63000, 74000, 90000
-]]
+index = np.arange(column_count)
 
-fig, ax1 = plt.subplots(figsize=(10, 6))
+k1 = plt.bar(index, korea_scores, bar_width, alpha=.4, label='Korea')
+c1 = plt.bar(index + 0.2, canada_scores, bar_width, alpha=.4, label='Canada')
+ch1 = plt.bar(index + 0.4, china_scores, bar_width, alpha=.3, label='China')
+f1 = plt.bar(index + 0.6, france_scores, bar_width, alpha=.4, label='France')
 
-# Plot Population on the left axis
-ax1.set_xlabel('Year')
-ax1.set_ylabel('World Population (Millions)', color='#FF6464')
-line1 = ax1.plot(years, pops, '--', color='#FF6464', label='Population')
-ax1.tick_params(axis='y', labelcolor='#FF6464')
 
-# Create a second Y-axis for Annual Deaths on the right
-ax2 = ax1.twinx()
-ax2.set_ylabel('Annual Deaths (Millions)', color='#3333CC')
-line2 = ax2.plot(years, annual_deaths_mil, color='#3333CC', label='Annual Deaths')
-ax2.tick_params(axis='y', labelcolor='#3333CC')
+def create_labels(data):
+    for item in data:
+        height = item.get_height()
+        plt.text(item.get_x() + item.get_width() / 2, height * 1.05,
+                 '%d' % int(height),
+                 ha='center',
+                 va='bottom')
 
-plt.title('World Population vs. Annual Deaths (Dual Axis)')
-fig.tight_layout()
+
+create_labels(k1)
+create_labels(c1)
+create_labels(ch1)
+create_labels(f1)
+
+plt.ylabel('Score')
+plt.xlabel('Subjects')
+plt.title('Country Scores')
+
+plt.xticks(index + .3 / 2, ('Maths', 'Reading', 'Science'))
+plt.legend(handles=[k1, c1, ch1, f1])
+plt.grid(True)
+
 plt.show()
