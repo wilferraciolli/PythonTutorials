@@ -69,7 +69,7 @@ print('\n')
 print('First 5 high-price days:')
 results = list(itertools.islice(find_high_price_days_new_way(FILE_NAME), 5))
 for date, price in results:
-    print(f'{date}: ${price:2f}')
+    print(f'{date}: ${price:.2f}')
 
 
 
